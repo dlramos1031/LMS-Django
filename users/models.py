@@ -4,6 +4,7 @@ from django.db import models
 class CustomUser(AbstractUser):
     full_name = models.CharField(max_length=255)
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    
     ROLE_CHOICES = (
         ('user', 'Standard User'),
         ('admin', 'Admin/Librarian'),
