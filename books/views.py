@@ -1,14 +1,18 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render, get_object_or_404
-from .models import Author, Book
-from .serializers import AuthorSerializer, BookSerializer
+from .models import Author, Book, Genre
+from .serializers import AuthorSerializer, BookSerializer, GenreSerializer
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
+
+class GenreViewSet(viewsets.ModelViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()

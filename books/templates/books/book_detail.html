@@ -119,15 +119,10 @@
                 <div class="book-title">{{ book.title }}</div>
                 <div class="book-author">by {{ book.author }}</div>
                 <div class="book-genres">
-                    <strong>Genres:</strong> 
-                    {% if book.genres.all %}
-                        {% for genre in book.genres.all %}
-                            <span class="genre-tag">{{ genre.name }}</span>{% if not forloop.last %}, {% endif %}
-                        {% endfor %}
-                    {% else %}
-                        <span>No genres assigned</span>
-                    {% endif %}
-                </div>
+                    {% for genre in book.genres.all %}
+                      <span class="genre-tag">{{ genre.name }}</span>
+                    {% endfor %}
+                  </div>
 
                 {% if book.open_library_id %}
                     <div class="book-id">Open Library ID: {{ book.open_library_id }}</div>
