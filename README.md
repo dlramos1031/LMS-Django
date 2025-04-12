@@ -1,6 +1,6 @@
 # 📚 Library Management System (LMS)
 
-A Django-based REST API for managing books, authors, and user interactions like borrowing, user registration, and more. This system supports authentication, user roles, book catalog management, and will be extended with borrowing and notification features.
+A Django-based REST API and admin interface for managing books, authors, genres, and user interactions like borrowing, user registration, and more. This system supports authentication, user roles, book catalog management, and admin/librarian dashboards.
 
 ---
 
@@ -8,10 +8,12 @@ A Django-based REST API for managing books, authors, and user interactions like 
 
 - User authentication (Register, Login, Logout, Change Password)
 - Custom user model with roles (User, Admin/Librarian)
-- Book and author models with cover image support
-- API to list, create, update, and delete books/authors
+- Book, author, and genre models with cover image support
+- Admin dashboard to manage books, genres, and authors
+- API to list, create, update, and delete books/authors/genres
 - Search and filter functionality
 - Token-based authentication
+- HTML views for book listings and details (Django templates)
 
 ---
 
@@ -28,19 +30,21 @@ A Django-based REST API for managing books, authors, and user interactions like 
 ---
 
 ### 📚 Books – `/api/books/`
-| Method | Endpoint             | Description                                 |
-|--------|----------------------|---------------------------------------------|
-| GET    | `/`                  | List all books (supports search/filter)     |
-| POST   | `/`                  | Create a new book                           |
-| GET    | `/:id/`              | Get details of a specific book              |
-| PUT    | `/:id/`              | Update book info                            |
-| DELETE | `/:id/`              | Delete a book                               |
+| Method | Endpoint     | Description                                 |
+|--------|--------------|---------------------------------------------|
+| GET    | `/`          | List all books (supports search/filter)     |
+| POST   | `/`          | Create a new book                           |
+| GET    | `/:id/`      | Get details of a specific book              |
+| PUT    | `/:id/`      | Update book info                            |
+| DELETE | `/:id/`      | Delete a book                               |
 
 🔍 Supports:
 - Search by `title`, `summary`:  
   `GET /api/books/?search=harry`
 - Filter by `author ID`:  
   `GET /api/books/?authors=1`
+- Filter by `genre ID`:  
+  `GET /api/books/?genres=1`
 
 ---
 
@@ -53,9 +57,34 @@ A Django-based REST API for managing books, authors, and user interactions like 
 | PUT    | `/:id/`              | Update author info                      |
 | DELETE | `/:id/`              | Delete an author                        |
 
-🔍 Supports:
-- Search by `name`:  
-  `GET /api/authors/?search=rowling`
+---
+
+### 🎨 Genres – `/api/genres/`
+| Method | Endpoint             | Description                             |
+|--------|----------------------|-----------------------------------------|
+| GET    | `/`                  | List all genres                         |
+| POST   | `/`                  | Create a new genre                      |
+| GET    | `/:id/`              | Get details of a specific genre         |
+| PUT    | `/:id/`              | Update genre info                       |
+| DELETE | `/:id/`              | Delete a genre                          |
+
+---
+
+## 🖥️ Admin Panel
+
+Visit `/admin/` with a superuser account to:
+- Manage Books, Authors, and Genres via dashboard
+- Use search, filters, and inline ManyToMany management
+- Upload and preview book cover images
+
+---
+
+## 🌐 HTML Views
+
+| Route            | Description                 |
+|------------------|-----------------------------|
+| `/books/`        | Book list with search       |
+| `/books/<id>/`   | Book detail page            |
 
 ---
 
@@ -73,7 +102,6 @@ A Django-based REST API for managing books, authors, and user interactions like 
 ```bash
 # 1. Clone the repo
 git clone https://github.com/dlramos1031/LMS-Django.git
-cd lms
 
 # 2. Set up virtual environment
 python -m venv venv
@@ -83,7 +111,8 @@ python -m venv venv
 pip install -r requirements.txt
 
 # 4. Apply migrations
-python manage.py makemigrations
+python manage.py makemigrations users
+python manage.py makemigrations books
 python manage.py migrate
 
 # 5. Create a superuser (admin account)
