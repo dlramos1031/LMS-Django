@@ -1,19 +1,28 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth.views import LoginView, PasswordChangeView
+from django.urls import reverse_lazy
+from django.contrib.auth import login
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 
-# Create your views here.
+# DRF
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import get_user_model
 
 from .serializers import RegisterSerializer, ChangePasswordSerializer
+from .forms import CustomUserCreationForm
 
 User = get_user_model()
+
+# ============================================
+# 🔐 API VIEWS
+# ============================================
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -73,3 +82,26 @@ class ChangePasswordView(APIView):
             return Response({"detail": "Password updated successfully."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ============================================
+# 🌐 TEMPLATE-BASED VIEWS
+# ============================================
+
+def register_view(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST, request.FILES)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('books_list')
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'users/register.html', {'form': form})
+
+class CustomLoginViewWeb(LoginView):
+    template_name = 'users/login.html'
+
+@method_decorator(login_required, name='dispatch')
+class CustomPasswordChangeView(PasswordChangeView):
+    template_name = 'users/change_password.html'
+    success_url = reverse_lazy('books_list')
