@@ -1,6 +1,7 @@
 from rest_framework import viewsets, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render, get_object_or_404
+from django.core.paginator import Paginator
 from .models import Author, Book, Genre
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer
 
@@ -27,7 +28,16 @@ def books_list_view(request):
     books = Book.objects.all()
     if search:
         books = books.filter(title__icontains=search)
-    return render(request, "books/books_list.html", {"books": books})
+
+    paginator = Paginator(books, 8) 
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "books/books_list.html", {
+        "books": page_obj,
+        "page_obj": page_obj,
+        "search": search,
+    })
 
 def book_detail_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
