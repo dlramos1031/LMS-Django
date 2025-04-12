@@ -117,7 +117,11 @@
             
             <div class="book-details">
                 <div class="book-title">{{ book.title }}</div>
-                <div class="book-author">by {{ book.author }}</div>
+                <div class="book-author">By 
+                    {% for author in book.authors.all %}
+                        {{ author.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
                 <div class="book-genres">
                     {% for genre in book.genres.all %}
                       <span class="genre-tag">{{ genre.name }}</span>
