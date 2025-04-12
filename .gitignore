@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Django migrations
+**/migrations/
+!*/migrations/__init__.py
+
+# Virtual environment
+venv/
+
+# Environment variables
+.env
+*.env
+
+# VS Code
+.vscode/
+
+# Pytest cache
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# Other
+.DS_Store
+.idea/
