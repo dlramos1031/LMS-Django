@@ -1,17 +1,129 @@
-{% extends "base.html" %}
-{% load bootstrap5 %}
+{% extends 'base.html' %}
 {% block title %}Register{% endblock %}
-
 {% block content %}
+
 <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-  <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
-    <h4 class="mb-3 text-center">Register</h4>
+  <div class="card shadow p-4" style="width: 100%; max-width: 450px;">
+    <h4 class="mb-3 text-center">Create an Account</h4>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
 
     <form method="post">
       {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary w-100 mt-2">Register</button>
+
+      <!-- Username -->
+      <div class="mb-3">
+        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+        <input type="text"
+               name="{{ form.username.name }}"
+               id="{{ form.username.id_for_label }}"
+               value="{{ form.username.value|default_if_none:'' }}"
+               class="form-control {% if form.username.errors %}is-invalid{% endif %}">
+        {% for error in form.username.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>      
+
+      <!-- Full Name -->
+      <div class="mb-3">
+        <label for="{{ form.full_name.id_for_label }}" class="form-label">Full Name</label>
+        <input type="text" name="{{ form.full_name.name }}"
+               class="form-control {% if form.full_name.errors %}is-invalid{% endif %}"
+               id="{{ form.full_name.id_for_label }}"
+               value="{{ form.full_name.value|default_if_none:'' }}">
+        {% for error in form.full_name.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Email -->
+      <div class="mb-3">
+        <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+        <input type="email" name="{{ form.email.name }}"
+               class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+               id="{{ form.email.id_for_label }}"
+               value="{{ form.email.value|default_if_none:'' }}">
+        {% for error in form.email.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Password -->
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" name="password" id="password"
+              class="form-control" required>
+        <small class="form-text text-muted">Must be at least 8 characters.</small>
+        <div id="password-strength" class="mt-1 small text-muted"></div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="mb-3">
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <input type="password" name="confirm_password" id="confirm_password"
+              class="form-control" required>
+        <div id="password-match" class="mt-1 small"></div>
+      </div>
+
+      <button type="submit" class="btn btn-success w-100">Register</button>
     </form>
   </div>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const passwordInput = document.getElementById("password");
+    const confirmInput = document.getElementById("confirm_password");
+    const matchText = document.getElementById("password-match");
+    const strengthText = document.getElementById("password-strength");
+  
+    function updateStrength(password) {
+      let strength = "Weak";
+      let color = "text-danger";
+  
+      if (password.length >= 12 && /[A-Z]/.test(password) && /\d/.test(password) && /[^a-zA-Z0-9]/.test(password)) {
+        strength = "Strong";
+        color = "text-success";
+      } else if (password.length >= 8) {
+        strength = "Moderate";
+        color = "text-warning";
+      }
+  
+      strengthText.textContent = "Strength: " + strength;
+      strengthText.className = `mt-1 small ${color}`;
+    }
+  
+    function checkMatch() {
+      const pass = passwordInput.value;
+      const confirm = confirmInput.value;
+  
+      if (!pass || !confirm) {
+        matchText.textContent = "";
+        return;
+      }
+  
+      if (pass === confirm) {
+        matchText.textContent = "Passwords match ✅";
+        matchText.className = "mt-1 small text-success";
+      } else {
+        matchText.textContent = "Passwords do not match ❌";
+        matchText.className = "mt-1 small text-danger";
+      }
+    }
+  
+    passwordInput.addEventListener("input", () => {
+      updateStrength(passwordInput.value);
+      checkMatch();
+    });
+  
+    confirmInput.addEventListener("input", checkMatch);
+  });
+  </script>  
+
 {% endblock %}

@@ -19,7 +19,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from books.models import Borrowing
-from .serializers import RegisterSerializer, ChangePasswordSerializer
+from .serializers import RegisterSerializer
 from .forms import CustomUserCreationForm
 
 User = get_user_model()
