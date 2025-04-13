@@ -16,6 +16,9 @@
   </li>
   <li class="nav-item">
     <a class="nav-link {% if tab == 'books' %}active{% endif %}" href="?tab=books">Books</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'users' %}active{% endif %}" href="?tab=users">Users</a>
   </li>  
 </ul>
 
@@ -236,6 +239,157 @@
   </button>
 </div>
 {% include "books/includes/pagination.html" with page_obj=book_page %}
+
+{% elif tab == 'users' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">User Accounts</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="users">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search users..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in user_page %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.full_name }}</td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.role|capfirst }}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
+        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        <!-- Edit User Modal -->
+        <div class="modal fade" id="editUserModal-{{ user.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="post" action="{% url 'edit_user' user.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title">Edit User</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-2">
+                    <label class="form-label">Username</label>
+                    <input name="username" class="form-control" value="{{ user.username }}" required>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Full Name</label>
+                    <input name="full_name" class="form-control" value="{{ user.full_name }}">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ user.email }}">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Password <small>(leave blank to keep current)</small></label>
+                    <input type="password" name="password" class="form-control">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Role</label>
+                    <select name="role" class="form-select">
+                      <option value="member" {% if user.role == "member" %}selected{% endif %}>Member</option>
+                      <option value="librarian" {% if user.role == "librarian" %}selected{% endif %}>Librarian</option>
+                      <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-primary">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- Delete User Modal -->
+        <div class="modal fade" id="deleteUserModal-{{ user.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="post" action="{% url 'delete_user' user.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title">Confirm Delete</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  Are you sure you want to delete <strong>{{ user.username }}</strong>?
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-danger">Delete</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No users found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Add User Button -->
+<div class="text-end mb-3">
+  <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
+</div>
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'add_user' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Add User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">Username</label>
+            <input name="username" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Full Name</label>
+            <input name="full_name" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Role</label>
+            <select name="role" class="form-select">
+              <option value="member">Member</option>
+              <option value="librarian">Librarian</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success">Add User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% include "books/includes/pagination.html" with page_obj=user_page %}
 
 <!-- Add Book Modal -->
 <div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">

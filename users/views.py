@@ -3,9 +3,12 @@ from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.urls import reverse_lazy
 from django.contrib.auth import login, get_user_model
 from django.utils.decorators import method_decorator
+from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponseForbidden
+from django.views.decorators.http import require_POST
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -102,6 +105,12 @@ def register_view(request):
 class CustomLoginViewWeb(LoginView):
     template_name = 'users/login.html'
 
+    def get_success_url(self):
+        user = self.request.user
+        if user.role in ['librarian', 'admin']:
+            return '/dashboard/'
+        return '/books/'
+
 @method_decorator(login_required, name='dispatch')
 class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'users/change_password.html'
@@ -121,3 +130,49 @@ def user_profile_view(request, user_id):
         'profile_user': target_user,
         'borrowings': borrowings
     })
+
+@staff_member_required
+@require_POST
+def add_user_view(request):
+    username = request.POST.get('username')
+    full_name = request.POST.get('full_name')
+    email = request.POST.get('email')
+    password = request.POST.get('password')
+    role = request.POST.get('role')
+
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        full_name=full_name,
+        role=role,
+        password=password
+    )
+
+    messages.success(request, "User added successfully.")
+    return redirect('/dashboard/?tab=users')
+
+@staff_member_required
+@require_POST
+def edit_user_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+
+    user.username = request.POST.get('username')
+    user.full_name = request.POST.get('full_name')
+    user.email = request.POST.get('email')
+    user.role = request.POST.get('role')
+
+    password = request.POST.get('password')
+    if password:
+        user.set_password(password)
+
+    user.save()
+    messages.success(request, "User updated successfully.")
+    return redirect('/dashboard/?tab=users')
+
+@staff_member_required
+@require_POST
+def delete_user_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    user.delete()
+    messages.success(request, "User deleted successfully.")
+    return redirect('/dashboard/?tab=users')

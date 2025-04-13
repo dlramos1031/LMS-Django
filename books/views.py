@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
@@ -160,6 +161,7 @@ from books.models import Book
 def librarian_dashboard_view(request):
     tab = request.GET.get('tab', 'pending')
     search = request.GET.get('search', '').strip()
+    User = get_user_model()
 
     pending_qs = Borrowing.objects.filter(
         request_type='borrow', status='pending'
@@ -174,6 +176,7 @@ def librarian_dashboard_view(request):
     ).select_related('book', 'user')
 
     book_qs = Book.objects.prefetch_related('authors', 'genres')
+    user_qs = User.objects.all()
 
     # Apply filters
     if tab == 'pending' and search:
@@ -190,6 +193,12 @@ def librarian_dashboard_view(request):
         )
     if tab == 'books' and search:
         book_qs = book_qs.filter(title__icontains=search)
+    if tab == 'users' and search:
+        user_qs = user_qs.filter(
+            Q(username__icontains=search) |
+            Q(full_name__icontains=search) |
+            Q(email__icontains=search)
+        )
 
     # Pagination helper
     def paginate(queryset, per_page=6):
@@ -204,6 +213,7 @@ def librarian_dashboard_view(request):
         'active_page': paginate(active_qs) if tab == 'active' else None,
         'history_page': paginate(history_qs) if tab == 'history' else None,
         'book_page': paginate(book_qs) if tab == 'books' else None,
+        'user_page': paginate(user_qs) if tab == 'users' else None,
     }
     return render(request, 'books/librarian_dashboard.html', context)
 
