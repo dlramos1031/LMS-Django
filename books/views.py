@@ -4,11 +4,15 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
+from django.db.models import Q
 from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
-from django.contrib.auth.decorators import login_required
-from django.utils.timezone import make_aware
+from django.utils.timezone import make_aware, now
 from datetime import datetime
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -96,13 +100,38 @@ def books_list_view(request):
         "search": search,
     })
 
+@login_required
 def book_detail_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    return render(request, "books/book_detail.html", {"book": book})
+
+    has_active_or_pending = Borrowing.objects.filter(
+        user=request.user,
+        book=book,
+        request_type='borrow',
+        status__in=['pending', 'approved'],
+        is_active=True
+    ).exists()
+
+    return render(request, 'books/book_detail.html', {
+        'book': book,
+        'has_active_or_pending': has_active_or_pending,
+    })
 
 @login_required
 def borrow_book_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
+
+    existing = Borrowing.objects.filter(
+        user=request.user,
+        book=book,
+        request_type='borrow',
+        status__in=['pending', 'approved'],
+        is_active=True,
+    ).exists()
+
+    if existing:
+        messages.warning(request, "You already have a pending or active borrow request for this book.")
+        return redirect('book_detail', pk=pk)
 
     if request.method == 'POST':
         return_date_str = request.POST.get('return_date')
@@ -112,19 +141,169 @@ def borrow_book_view(request, pk):
             messages.error(request, "Invalid return date.")
             return redirect('book_detail', pk=pk)
 
-        if book.quantity <= 0:
-            messages.error(request, "Book is not available.")
-            return redirect('book_detail', pk=pk)
-
         Borrowing.objects.create(
             user=request.user,
             book=book,
-            return_date=return_date
+            request_type='borrow',
+            return_date=return_date,
+            status='pending',
+            is_active=True,
         )
 
-        book.quantity -= 1
-        book.total_borrows += 1
-        book.save()
-
-        messages.success(request, "Book borrowed successfully!")
+        messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
+
+from books.models import Book
+
+...
+
+@staff_member_required
+def librarian_dashboard_view(request):
+    tab = request.GET.get('tab', 'pending')
+    search = request.GET.get('search', '').strip()
+    User = get_user_model()
+
+    pending_qs = Borrowing.objects.filter(
+        request_type='borrow', status='pending'
+    ).select_related('book', 'user')
+
+    active_qs = Borrowing.objects.filter(
+        request_type='borrow', status='approved', is_active=True
+    ).select_related('book', 'user')
+
+    history_qs = Borrowing.objects.filter(
+        request_type='borrow', status='approved', is_active=False
+    ).select_related('book', 'user')
+
+    book_qs = Book.objects.prefetch_related('authors', 'genres')
+    user_qs = User.objects.all()
+
+    # Apply filters
+    if tab == 'pending' and search:
+        pending_qs = pending_qs.filter(
+            Q(book__title__icontains=search) | Q(user__username__icontains=search)
+        )
+    if tab == 'active' and search:
+        active_qs = active_qs.filter(
+            Q(book__title__icontains=search) | Q(user__username__icontains=search)
+        )
+    if tab == 'history' and search:
+        history_qs = history_qs.filter(
+            Q(book__title__icontains=search) | Q(user__username__icontains=search)
+        )
+    if tab == 'books' and search:
+        book_qs = book_qs.filter(title__icontains=search)
+    if tab == 'users' and search:
+        user_qs = user_qs.filter(
+            Q(username__icontains=search) |
+            Q(full_name__icontains=search) |
+            Q(email__icontains=search)
+        )
+
+    # Pagination helper
+    def paginate(queryset, per_page=6):
+        paginator = Paginator(queryset, per_page)
+        page = request.GET.get('page')
+        return paginator.get_page(page)
+
+    context = {
+        'tab': tab,
+        'now': now(),
+        'pending_page': paginate(pending_qs) if tab == 'pending' else None,
+        'active_page': paginate(active_qs) if tab == 'active' else None,
+        'history_page': paginate(history_qs) if tab == 'history' else None,
+        'book_page': paginate(book_qs) if tab == 'books' else None,
+        'user_page': paginate(user_qs) if tab == 'users' else None,
+    }
+    return render(request, 'books/librarian_dashboard.html', context)
+
+
+@staff_member_required
+@require_POST
+def approve_borrow_view(request, borrow_id):
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending', request_type='borrow')
+    borrowing.status = 'approved'
+    borrowing.is_active = True
+    borrowing.book.quantity -= 1
+    borrowing.book.save()
+    borrowing.save()
+    messages.success(request, "Borrow request approved.")
+    return redirect('librarian_dashboard')
+
+@staff_member_required
+@require_POST
+def reject_borrow_view(request, borrow_id):
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending', request_type='borrow')
+    borrowing.status = 'rejected'
+    borrowing.is_active = False
+    borrowing.save()
+    messages.warning(request, "Borrow request rejected.")
+    return redirect('librarian_dashboard')
+
+@staff_member_required
+@require_POST
+def mark_returned_view(request, borrow_id):
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='approved', is_active=True)
+    borrowing.is_active = False
+    borrowing.book.quantity += 1
+    borrowing.book.save()
+    borrowing.save()
+    messages.success(request, "Book marked as returned.")
+    return redirect('librarian_dashboard')
+
+@staff_member_required
+@require_POST
+def add_book_view(request):
+    title = request.POST.get('title')
+    quantity = request.POST.get('quantity')
+    summary = request.POST.get('summary', '')
+    authors_raw = request.POST.get('authors', '')
+    genres_raw = request.POST.get('genres', '')
+
+    book = Book.objects.create(title=title, quantity=quantity, summary=summary)
+
+    for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
+        author, _ = Author.objects.get_or_create(name=name)
+        book.authors.add(author)
+
+    for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
+        genre, _ = Genre.objects.get_or_create(name=name)
+        book.genres.add(genre)
+
+    book.save()
+    messages.success(request, "Book added successfully.")
+    return redirect('/dashboard/?tab=books')
+
+@staff_member_required
+@require_POST
+def edit_book_view(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+
+    book.title = request.POST.get('title')
+    book.quantity = request.POST.get('quantity')
+    book.summary = request.POST.get('summary', '')
+
+    authors_raw = request.POST.get('authors', '')
+    genres_raw = request.POST.get('genres', '')
+
+    book.authors.clear()
+    for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
+        author, _ = Author.objects.get_or_create(name=name)
+        book.authors.add(author)
+
+    book.genres.clear()
+    for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
+        genre, _ = Genre.objects.get_or_create(name=name)
+        book.genres.add(genre)
+
+    book.save()
+    messages.success(request, "Book updated successfully.")
+    return redirect('/dashboard/?tab=books')
+
+@staff_member_required
+@require_POST
+def delete_book_view(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    book.delete()
+    messages.success(request, "Book deleted successfully.")
+    return redirect('/dashboard/?tab=books')
