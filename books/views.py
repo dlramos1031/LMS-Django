@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
+from django.db.models import Q
 from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
 from django.utils.timezone import make_aware, now
@@ -161,9 +162,28 @@ def librarian_dashboard_view(request):
         request_type='borrow', status='pending'
     ).select_related('book', 'user')
 
+    search = request.GET.get('search', '').strip()
     active_qs = Borrowing.objects.filter(
         request_type='borrow', status='approved', is_active=True
     ).select_related('book', 'user')
+
+    if tab == 'active' and search:
+        active_qs = active_qs.filter(
+            Q(book__title__icontains=search) |
+            Q(user__username__icontains=search)
+        )
+
+    if tab == 'pending' and search:
+        pending_qs = pending_qs.filter(
+            Q(book__title__icontains=search) |
+            Q(user__username__icontains=search)
+        )
+
+    if tab == 'history' and search:
+        history_qs = history_qs.filter(
+            Q(book__title__icontains=search) |
+            Q(user__username__icontains=search)
+        )
 
     history_qs = Borrowing.objects.filter(
         request_type='borrow', status='approved', is_active=False

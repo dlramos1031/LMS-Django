@@ -17,7 +17,15 @@
 </ul>
 
 {% if tab == 'pending' %}
-<h5>Pending Borrow Requests</h5>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Pending Borrow Requests</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="TAB_NAME">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
 <table class="table table-sm table-bordered">
   <thead>
     <tr><th>User</th><th>Book</th><th>Return Date</th><th>Requested</th><th>Actions</th></tr>
@@ -48,7 +56,15 @@
 {% include "books/includes/pagination.html" with page_obj=pending_page %}
 
 {% elif tab == 'active' %}
-<h5>Currently Borrowed Books</h5>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Currently Borrowed Books</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="TAB_NAME">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
 <table class="table table-sm table-bordered">
   <thead>
     <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Return Due</th><th>Status</th><th>Action</th></tr>
@@ -82,7 +98,16 @@
 {% include "books/includes/pagination.html" with page_obj=active_page %}
 
 {% elif tab == 'history' %}
-<h5>Completed Borrow History</h5>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Completed Borrow History</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="TAB_NAME">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+
 <table class="table table-sm table-bordered">
   <thead>
     <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Returned</th></tr>
