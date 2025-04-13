@@ -153,24 +153,36 @@ def borrow_book_view(request, pk):
 
 @staff_member_required
 def librarian_dashboard_view(request):
-    # Pending borrow requests
-    pending_borrows = Borrowing.objects.filter(
-        request_type='borrow',
-        status='pending'
+    # Get current tab
+    tab = request.GET.get('tab', 'pending')
+
+    # Base queryset for each section
+    pending_qs = Borrowing.objects.filter(
+        request_type='borrow', status='pending'
     ).select_related('book', 'user')
 
-    # Currently borrowed books
-    active_borrows = Borrowing.objects.filter(
-        request_type='borrow',
-        status='approved',
-        is_active=True
+    active_qs = Borrowing.objects.filter(
+        request_type='borrow', status='approved', is_active=True
     ).select_related('book', 'user')
 
-    return render(request, 'books/librarian_dashboard.html', {
-        'pending_borrows': pending_borrows,
-        'active_borrows': active_borrows,
+    history_qs = Borrowing.objects.filter(
+        request_type='borrow', status='approved', is_active=False
+    ).select_related('book', 'user')
+
+    # Paginate each section
+    def paginate(queryset, per_page=6):
+        paginator = Paginator(queryset, per_page)
+        page = request.GET.get('page')
+        return paginator.get_page(page)
+
+    context = {
+        'pending_page': paginate(pending_qs) if tab == 'pending' else None,
+        'active_page': paginate(active_qs) if tab == 'active' else None,
+        'history_page': paginate(history_qs) if tab == 'history' else None,
+        'tab': tab,
         'now': now(),
-    })
+    }
+    return render(request, 'books/librarian_dashboard.html', context)
 
 @staff_member_required
 @require_POST

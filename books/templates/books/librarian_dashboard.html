@@ -4,30 +4,37 @@
 
 <h2>Librarian Dashboard</h2>
 
-<h4 class="mt-4">Pending Borrow Requests</h4>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'pending' %}active{% endif %}" href="?tab=pending">Pending Requests</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'active' %}active{% endif %}" href="?tab=active">Currently Borrowed</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'history' %}active{% endif %}" href="?tab=history">Borrow History</a>
+  </li>
+</ul>
+
+{% if tab == 'pending' %}
+<h5>Pending Borrow Requests</h5>
 <table class="table table-sm table-bordered">
   <thead>
-    <tr>
-      <th>User</th>
-      <th>Book</th>
-      <th>Return Date</th>
-      <th>Request Time</th>
-      <th>Actions</th>
-    </tr>
+    <tr><th>User</th><th>Book</th><th>Return Date</th><th>Requested</th><th>Actions</th></tr>
   </thead>
   <tbody>
-    {% for borrow in pending_borrows %}
+    {% for borrow in pending_page %}
     <tr>
       <td>{{ borrow.user.username }}</td>
       <td>{{ borrow.book.title }}</td>
       <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
       <td>{{ borrow.borrow_date|date:"Y-m-d H:i" }}</td>
       <td>
-        <form method="post" action="{% url 'approve_borrow' borrow.id %}" style="display:inline;">
+        <form method="post" action="{% url 'approve_borrow' borrow.id %}" class="d-inline">
           {% csrf_token %}
           <button class="btn btn-success btn-sm">Approve</button>
         </form>
-        <form method="post" action="{% url 'reject_borrow' borrow.id %}" style="display:inline;">
+        <form method="post" action="{% url 'reject_borrow' borrow.id %}" class="d-inline">
           {% csrf_token %}
           <button class="btn btn-danger btn-sm">Reject</button>
         </form>
@@ -38,21 +45,16 @@
     {% endfor %}
   </tbody>
 </table>
+{% include "books/includes/pagination.html" with page_obj=pending_page %}
 
-<h4 class="mt-5">Currently Borrowed Books</h4>
+{% elif tab == 'active' %}
+<h5>Currently Borrowed Books</h5>
 <table class="table table-sm table-bordered">
   <thead>
-    <tr>
-      <th>User</th>
-      <th>Book</th>
-      <th>Borrowed</th>
-      <th>Return Due</th>
-      <th>Status</th>
-      <th>Action</th>
-    </tr>
+    <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Return Due</th><th>Status</th><th>Action</th></tr>
   </thead>
   <tbody>
-    {% for borrow in active_borrows %}
+    {% for borrow in active_page %}
     <tr>
       <td>{{ borrow.user.username }}</td>
       <td>{{ borrow.book.title }}</td>
@@ -60,9 +62,9 @@
       <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
       <td>
         {% if borrow.return_date < now %}
-          <span class="badge bg-danger">Overdue</span>
+        <span class="badge bg-danger">Overdue</span>
         {% else %}
-          <span class="badge bg-success">On time</span>
+        <span class="badge bg-success">On time</span>
         {% endif %}
       </td>
       <td>
@@ -73,9 +75,32 @@
       </td>
     </tr>
     {% empty %}
-    <tr><td colspan="6">No currently borrowed books.</td></tr>
+    <tr><td colspan="6">No active borrowings.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+{% include "books/includes/pagination.html" with page_obj=active_page %}
+
+{% elif tab == 'history' %}
+<h5>Completed Borrow History</h5>
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Returned</th></tr>
+  </thead>
+  <tbody>
+    {% for borrow in history_page %}
+    <tr>
+      <td>{{ borrow.user.username }}</td>
+      <td>{{ borrow.book.title }}</td>
+      <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">No completed borrows.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% include "books/includes/pagination.html" with page_obj=history_page %}
+{% endif %}
 
 {% endblock %}
