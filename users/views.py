@@ -1,11 +1,12 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.urls import reverse_lazy
-from django.contrib.auth import login
+from django.contrib.auth import login, get_user_model
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponseForbidden
 
-# DRF
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -13,8 +14,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.contrib.auth import get_user_model
 
+from books.models import Borrowing
 from .serializers import RegisterSerializer, ChangePasswordSerializer
 from .forms import CustomUserCreationForm
 
@@ -105,3 +106,18 @@ class CustomLoginViewWeb(LoginView):
 class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'users/change_password.html'
     success_url = reverse_lazy('books_list')
+
+@login_required
+def user_profile_view(request, user_id):
+    target_user = get_object_or_404(User, id=user_id)
+
+    # Restrict access unless it's the user themselves or a staff member
+    if request.user != target_user and not request.user.is_staff:
+        return HttpResponseForbidden("You are not allowed to view this profile.")
+
+    borrowings = Borrowing.objects.filter(user=target_user).order_by('-borrow_date')
+
+    return render(request, 'users/profile.html', {
+        'profile_user': target_user,
+        'borrowings': borrowings
+    })
