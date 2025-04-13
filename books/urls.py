@@ -10,7 +10,10 @@ from .views import (books_list_view,
                     librarian_dashboard_view,
                     approve_borrow_view,
                     reject_borrow_view,
-                    mark_returned_view
+                    mark_returned_view,
+                    add_book_view,
+                    edit_book_view,
+                    delete_book_view
                     )
 from django.urls import path, include
 
@@ -30,4 +33,8 @@ urlpatterns = [
     path('dashboard/approve/<int:borrow_id>/', approve_borrow_view, name='approve_borrow'),
     path('dashboard/reject/<int:borrow_id>/', reject_borrow_view, name='reject_borrow'),
     path('dashboard/return/<int:borrow_id>/', mark_returned_view, name='mark_returned'),
+
+    path('dashboard/books/add/', add_book_view, name='add_book'),
+    path('dashboard/books/<int:book_id>/edit/', edit_book_view, name='edit_book'),
+    path('dashboard/books/<int:book_id>/delete/', delete_book_view, name='delete_book'),
 ]

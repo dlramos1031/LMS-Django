@@ -152,57 +152,61 @@ def borrow_book_view(request, pk):
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
 
+from books.models import Book
+
+...
+
 @staff_member_required
 def librarian_dashboard_view(request):
-    # Get current tab
     tab = request.GET.get('tab', 'pending')
+    search = request.GET.get('search', '').strip()
 
-    # Base queryset for each section
     pending_qs = Borrowing.objects.filter(
         request_type='borrow', status='pending'
     ).select_related('book', 'user')
 
-    search = request.GET.get('search', '').strip()
     active_qs = Borrowing.objects.filter(
         request_type='borrow', status='approved', is_active=True
     ).select_related('book', 'user')
-
-    if tab == 'active' and search:
-        active_qs = active_qs.filter(
-            Q(book__title__icontains=search) |
-            Q(user__username__icontains=search)
-        )
-
-    if tab == 'pending' and search:
-        pending_qs = pending_qs.filter(
-            Q(book__title__icontains=search) |
-            Q(user__username__icontains=search)
-        )
-
-    if tab == 'history' and search:
-        history_qs = history_qs.filter(
-            Q(book__title__icontains=search) |
-            Q(user__username__icontains=search)
-        )
 
     history_qs = Borrowing.objects.filter(
         request_type='borrow', status='approved', is_active=False
     ).select_related('book', 'user')
 
-    # Paginate each section
+    book_qs = Book.objects.prefetch_related('authors', 'genres')
+
+    # Apply filters
+    if tab == 'pending' and search:
+        pending_qs = pending_qs.filter(
+            Q(book__title__icontains=search) | Q(user__username__icontains=search)
+        )
+    if tab == 'active' and search:
+        active_qs = active_qs.filter(
+            Q(book__title__icontains=search) | Q(user__username__icontains=search)
+        )
+    if tab == 'history' and search:
+        history_qs = history_qs.filter(
+            Q(book__title__icontains=search) | Q(user__username__icontains=search)
+        )
+    if tab == 'books' and search:
+        book_qs = book_qs.filter(title__icontains=search)
+
+    # Pagination helper
     def paginate(queryset, per_page=6):
         paginator = Paginator(queryset, per_page)
         page = request.GET.get('page')
         return paginator.get_page(page)
 
     context = {
+        'tab': tab,
+        'now': now(),
         'pending_page': paginate(pending_qs) if tab == 'pending' else None,
         'active_page': paginate(active_qs) if tab == 'active' else None,
         'history_page': paginate(history_qs) if tab == 'history' else None,
-        'tab': tab,
-        'now': now(),
+        'book_page': paginate(book_qs) if tab == 'books' else None,
     }
     return render(request, 'books/librarian_dashboard.html', context)
+
 
 @staff_member_required
 @require_POST
@@ -236,3 +240,60 @@ def mark_returned_view(request, borrow_id):
     borrowing.save()
     messages.success(request, "Book marked as returned.")
     return redirect('librarian_dashboard')
+
+@staff_member_required
+@require_POST
+def add_book_view(request):
+    title = request.POST.get('title')
+    quantity = request.POST.get('quantity')
+    summary = request.POST.get('summary', '')
+    authors_raw = request.POST.get('authors', '')
+    genres_raw = request.POST.get('genres', '')
+
+    book = Book.objects.create(title=title, quantity=quantity, summary=summary)
+
+    for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
+        author, _ = Author.objects.get_or_create(name=name)
+        book.authors.add(author)
+
+    for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
+        genre, _ = Genre.objects.get_or_create(name=name)
+        book.genres.add(genre)
+
+    book.save()
+    messages.success(request, "Book added successfully.")
+    return redirect('/dashboard/?tab=books')
+
+@staff_member_required
+@require_POST
+def edit_book_view(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+
+    book.title = request.POST.get('title')
+    book.quantity = request.POST.get('quantity')
+    book.summary = request.POST.get('summary', '')
+
+    authors_raw = request.POST.get('authors', '')
+    genres_raw = request.POST.get('genres', '')
+
+    book.authors.clear()
+    for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
+        author, _ = Author.objects.get_or_create(name=name)
+        book.authors.add(author)
+
+    book.genres.clear()
+    for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
+        genre, _ = Genre.objects.get_or_create(name=name)
+        book.genres.add(genre)
+
+    book.save()
+    messages.success(request, "Book updated successfully.")
+    return redirect('/dashboard/?tab=books')
+
+@staff_member_required
+@require_POST
+def delete_book_view(request, book_id):
+    book = get_object_or_404(Book, id=book_id)
+    book.delete()
+    messages.success(request, "Book deleted successfully.")
+    return redirect('/dashboard/?tab=books')

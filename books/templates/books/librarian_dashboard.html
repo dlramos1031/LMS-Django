@@ -14,6 +14,9 @@
   <li class="nav-item">
     <a class="nav-link {% if tab == 'history' %}active{% endif %}" href="?tab=history">Borrow History</a>
   </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'books' %}active{% endif %}" href="?tab=books">Books</a>
+  </li>  
 </ul>
 
 {% if tab == 'pending' %}
@@ -126,6 +129,154 @@
   </tbody>
 </table>
 {% include "books/includes/pagination.html" with page_obj=history_page %}
+
+{% elif tab == 'books' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Books Catalog</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="books">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search books..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr><th>Title</th><th>Authors</th><th>Genres</th><th>Quantity</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for book in book_page %}
+    <tr>
+      <td>{{ book.title }}</td>
+      <td>
+        {% for author in book.authors.all %}
+          {{ author.name }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </td>
+      <td>
+        {% for genre in book.genres.all %}
+          <span class="badge bg-info text-dark">{{ genre.name }}</span>
+        {% endfor %}
+      </td>
+      <td>{{ book.quantity }}</td>
+      <td>
+        <!-- Placeholder buttons for now -->
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal-{{ book.id }}">Edit</button>
+        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookModal-{{ book.id }}">Delete</button>
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editBookModal-{{ book.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <form method="post" action="{% url 'edit_book' book.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title">Edit Book</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ book.title }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" name="quantity" class="form-control" value="{{ book.quantity }}" min="0" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Authors (comma-separated)</label>
+                    <input type="text" name="authors" class="form-control" value="{% for author in book.authors.all %}{{ author.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Genres (comma-separated)</label>
+                    <input type="text" name="genres" class="form-control" value="{% for genre in book.genres.all %}{{ genre.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Summary</label>
+                    <textarea name="summary" class="form-control" rows="3">{{ book.summary }}</textarea>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </td>
+      <!-- Delete Modal -->
+      <div class="modal fade" id="deleteBookModal-{{ book.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'delete_book' book.id %}">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                Are you sure you want to delete <strong>{{ book.title }}</strong>?
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-danger">Delete</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No books found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="text-end mb-4">
+  <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
+    + Add Book
+  </button>
+</div>
+{% include "books/includes/pagination.html" with page_obj=book_page %}
+
+<!-- Add Book Modal -->
+<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="{% url 'add_book' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" min="0" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Authors (comma-separated)</label>
+            <input type="text" name="authors" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Genres (comma-separated)</label>
+            <input type="text" name="genres" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Summary</label>
+            <textarea name="summary" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Add Book</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endif %}
 
 {% endblock %}
