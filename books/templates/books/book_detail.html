@@ -1,161 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ book.title }} | Author's Lib</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        .book-container {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-        .book-cover {
-            flex: 0 0 200px;
-        }
-        .book-cover img {
-            max-width: 100%;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        .book-details {
-            flex: 1;
-        }
-        .book-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .book-author {
-            font-size: 18px;
-            color: #555;
-            margin-bottom: 20px;
-        }
-        .book-id {
-            font-size: 14px;
-            color: #777;
-            margin-bottom: 20px;
-        }
-        .book-summary {
-            margin-bottom: 20px;
-        }
-        .availability {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        .available {
-            background-color: #dff0d8;
-            color: #3c763d;
-        }
-        .borrowed {
-            background-color: #f2dede;
-            color: #a94442;
-        }
-        .reserved {
-            background-color: #fcf8e3;
-            color: #8a6d3b;
-        }
-        .action-button {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #337ab7;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .action-button:hover {
-            background-color: #23527c;
-        }
-        .favorite-button {
-            background-color: #f0ad4e;
-        }
-        .favorite-button:hover {
-            background-color: #ec971f;
-        }
-        .book-genres {
-        margin-bottom: 15px;
-        }
-        .genre-tag {
-            display: inline-block;
-            background-color: #e9ecef;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 14px;
-            margin-right: 5px;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>Author's Lib</h1>
-        <nav>
-            <a href="/">Home</a> |
-            <a href="/books">All Books</a>
-        </nav>
-    </header>
+{% extends "base.html" %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
 
-    <main>
-        <div class="book-container">
-            <div class="book-cover">
-                {% if book.cover_image %}
-                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }} cover">
-                {% else %}
-                    <div style="width: 200px; height: 300px; background-color: #eee; display: flex; align-items: center; justify-content: center;">
-                        No Cover Available
-                    </div>
-                {% endif %}
+<div class="row">
+    <div class="col-md-4">
+        {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow" alt="{{ book.title }} cover">
+        {% else %}
+            <div class="bg-light border d-flex align-items-center justify-content-center" style="height: 300px;">
+                <span>No Cover Available</span>
             </div>
-            
-            <div class="book-details">
-                <div class="book-title">{{ book.title }}</div>
-                <div class="book-author">By 
-                    {% for author in book.authors.all %}
-                        {{ author.name }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                </div>
-                <div class="book-genres">
-                    {% for genre in book.genres.all %}
-                      <span class="genre-tag">{{ genre.name }}</span>
-                    {% endfor %}
-                  </div>
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <h2>{{ book.title }}</h2>
+        <p>
+            <strong>Authors:</strong>
+            {% for author in book.authors.all %}
+                <span class="badge bg-secondary">{{ author.name }}</span>
+            {% endfor %}
+        </p>
+        <p>
+            <strong>Genres:</strong>
+            {% for genre in book.genres.all %}
+                <span class="badge bg-info text-dark">{{ genre.name }}</span>
+            {% endfor %}
+        </p>
+        {% if book.open_library_id %}
+            <p><strong>Open Library ID:</strong> {{ book.open_library_id }}</p>
+        {% endif %}
+        <p><strong>Summary:</strong><br>{{ book.summary|default:"No summary available." }}</p>
+        <p>
+            <strong>Availability:</strong>
+            {% if book.is_available %}
+                <span class="badge bg-success">Available</span>
+            {% else %}
+                <span class="badge bg-danger">Unavailable</span>
+            {% endif %}
+        </p>
 
-                {% if book.open_library_id %}
-                    <div class="book-id">Open Library ID: {{ book.open_library_id }}</div>
-                {% endif %}
-                
-                <div class="book-summary">
-                    <h3>Summary</h3>
-                    <p>{{ book.summary|default:"No summary available." }}</p>
-                </div>
-                
-                <div>
-                    <h3>Availability</h3>
-                    <span class="availability {{ book.availability }}">
-                        {{ book.availability|title }}
-                    </span>
-                </div>
-                
-                <div>
-                    {% if book.availability == 'available' %}
-                        <a href="#" class="action-button">Borrow this Book</a>
-                    {% endif %}
-                    <a href="#" class="action-button favorite-button">Add to Favorites</a>
-                </div>
-            </div>
+        <div class="mt-3">
+            {% if book.is_available %}
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#borrowModal">
+                    Borrow this Book
+                </button>
+            {% endif %}
+            <a href="#" class="btn btn-warning">Add to Favorites</a>
         </div>
-    </main>
+    </div>
+</div>
 
-    <footer>
-        <p>&copy; 2025 Library Management System</p>
-    </footer>
-</body>
-</html>
+<div class="modal fade" id="borrowModal" tabindex="-1" aria-labelledby="borrowModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="{% url 'borrow_book' book.id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title" id="borrowModalLabel">Select Return Date</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Return Date:</label>
+              <input type="date" name="return_date" class="form-control" required>
+              <small class="form-text text-muted">Or choose a duration below</small>
+            </div>
+  
+            <div class="btn-group w-100" role="group">
+              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(1)">1 Day</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(3)">3 Days</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(7)">1 Week</button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary w-100">Confirm Borrow</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>  
+
+  <script>
+    function setReturnDate(days) {
+      const today = new Date();
+      today.setDate(today.getDate() + days);
+      document.querySelector('input[name="return_date"]').value = today.toISOString().split('T')[0];
+    }
+  </script>  
+
+{% endblock %}
