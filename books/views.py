@@ -4,11 +4,13 @@ from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
-from django.contrib.auth.decorators import login_required
-from django.utils.timezone import make_aware
+from django.utils.timezone import make_aware, now
 from datetime import datetime
 
 class AuthorViewSet(viewsets.ModelViewSet):
@@ -148,3 +150,57 @@ def borrow_book_view(request, pk):
 
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
+
+@staff_member_required
+def librarian_dashboard_view(request):
+    # Pending borrow requests
+    pending_borrows = Borrowing.objects.filter(
+        request_type='borrow',
+        status='pending'
+    ).select_related('book', 'user')
+
+    # Currently borrowed books
+    active_borrows = Borrowing.objects.filter(
+        request_type='borrow',
+        status='approved',
+        is_active=True
+    ).select_related('book', 'user')
+
+    return render(request, 'books/librarian_dashboard.html', {
+        'pending_borrows': pending_borrows,
+        'active_borrows': active_borrows,
+        'now': now(),
+    })
+
+@staff_member_required
+@require_POST
+def approve_borrow_view(request, borrow_id):
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending', request_type='borrow')
+    borrowing.status = 'approved'
+    borrowing.is_active = True
+    borrowing.book.quantity -= 1
+    borrowing.book.save()
+    borrowing.save()
+    messages.success(request, "Borrow request approved.")
+    return redirect('librarian_dashboard')
+
+@staff_member_required
+@require_POST
+def reject_borrow_view(request, borrow_id):
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending', request_type='borrow')
+    borrowing.status = 'rejected'
+    borrowing.is_active = False
+    borrowing.save()
+    messages.warning(request, "Borrow request rejected.")
+    return redirect('librarian_dashboard')
+
+@staff_member_required
+@require_POST
+def mark_returned_view(request, borrow_id):
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='approved', is_active=True)
+    borrowing.is_active = False
+    borrowing.book.quantity += 1
+    borrowing.book.save()
+    borrowing.save()
+    messages.success(request, "Book marked as returned.")
+    return redirect('librarian_dashboard')

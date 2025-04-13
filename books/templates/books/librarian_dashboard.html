@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Librarian Dashboard{% endblock %}
+{% block content %}
+
+<h2>Librarian Dashboard</h2>
+
+<h4 class="mt-4">Pending Borrow Requests</h4>
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Book</th>
+      <th>Return Date</th>
+      <th>Request Time</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for borrow in pending_borrows %}
+    <tr>
+      <td>{{ borrow.user.username }}</td>
+      <td>{{ borrow.book.title }}</td>
+      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.borrow_date|date:"Y-m-d H:i" }}</td>
+      <td>
+        <form method="post" action="{% url 'approve_borrow' borrow.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button class="btn btn-success btn-sm">Approve</button>
+        </form>
+        <form method="post" action="{% url 'reject_borrow' borrow.id %}" style="display:inline;">
+          {% csrf_token %}
+          <button class="btn btn-danger btn-sm">Reject</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No pending requests.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h4 class="mt-5">Currently Borrowed Books</h4>
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Book</th>
+      <th>Borrowed</th>
+      <th>Return Due</th>
+      <th>Status</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for borrow in active_borrows %}
+    <tr>
+      <td>{{ borrow.user.username }}</td>
+      <td>{{ borrow.book.title }}</td>
+      <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+      <td>
+        {% if borrow.return_date < now %}
+          <span class="badge bg-danger">Overdue</span>
+        {% else %}
+          <span class="badge bg-success">On time</span>
+        {% endif %}
+      </td>
+      <td>
+        <form method="post" action="{% url 'mark_returned' borrow.id %}">
+          {% csrf_token %}
+          <button class="btn btn-primary btn-sm">Mark Returned</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No currently borrowed books.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
