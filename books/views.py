@@ -96,13 +96,38 @@ def books_list_view(request):
         "search": search,
     })
 
+@login_required
 def book_detail_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
-    return render(request, "books/book_detail.html", {"book": book})
+
+    has_active_or_pending = Borrowing.objects.filter(
+        user=request.user,
+        book=book,
+        request_type='borrow',
+        status__in=['pending', 'approved'],
+        is_active=True
+    ).exists()
+
+    return render(request, 'books/book_detail.html', {
+        'book': book,
+        'has_active_or_pending': has_active_or_pending,
+    })
 
 @login_required
 def borrow_book_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
+
+    existing = Borrowing.objects.filter(
+        user=request.user,
+        book=book,
+        request_type='borrow',
+        status__in=['pending', 'approved'],
+        is_active=True,
+    ).exists()
+
+    if existing:
+        messages.warning(request, "You already have a pending or active borrow request for this book.")
+        return redirect('book_detail', pk=pk)
 
     if request.method == 'POST':
         return_date_str = request.POST.get('return_date')
@@ -112,19 +137,14 @@ def borrow_book_view(request, pk):
             messages.error(request, "Invalid return date.")
             return redirect('book_detail', pk=pk)
 
-        if book.quantity <= 0:
-            messages.error(request, "Book is not available.")
-            return redirect('book_detail', pk=pk)
-
         Borrowing.objects.create(
             user=request.user,
             book=book,
-            return_date=return_date
+            request_type='borrow',
+            return_date=return_date,
+            status='pending',
+            is_active=True,
         )
 
-        book.quantity -= 1
-        book.total_borrows += 1
-        book.save()
-
-        messages.success(request, "Book borrowed successfully!")
+        messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
