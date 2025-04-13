@@ -2,10 +2,14 @@ from rest_framework import viewsets, permissions, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.core.paginator import Paginator
 from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
+from django.contrib.auth.decorators import login_required
+from django.utils.timezone import make_aware
+from datetime import datetime
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -23,27 +27,6 @@ class BookViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['authors']  
     search_fields = ['title', 'summary']  
-
-
-def books_list_view(request):
-    search = request.GET.get("search", "")
-    books = Book.objects.all()
-    if search:
-        books = books.filter(title__icontains=search)
-
-    paginator = Paginator(books, 8) 
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
-    return render(request, "books/books_list.html", {
-        "books": page_obj,
-        "page_obj": page_obj,
-        "search": search,
-    })
-
-def book_detail_view(request, pk):
-    book = get_object_or_404(Book, pk=pk)
-    return render(request, "books/book_detail.html", {"book": book})
 
 class BorrowingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -96,3 +79,52 @@ class BorrowingViewSet(viewsets.ViewSet):
         borrowing.book.save()
 
         return Response({"detail": "Book returned successfully."})
+
+def books_list_view(request):
+    search = request.GET.get("search", "")
+    books = Book.objects.all()
+    if search:
+        books = books.filter(title__icontains=search)
+
+    paginator = Paginator(books, 8) 
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, "books/books_list.html", {
+        "books": page_obj,
+        "page_obj": page_obj,
+        "search": search,
+    })
+
+def book_detail_view(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+    return render(request, "books/book_detail.html", {"book": book})
+
+@login_required
+def borrow_book_view(request, pk):
+    book = get_object_or_404(Book, pk=pk)
+
+    if request.method == 'POST':
+        return_date_str = request.POST.get('return_date')
+        try:
+            return_date = make_aware(datetime.strptime(return_date_str, '%Y-%m-%d'))
+        except ValueError:
+            messages.error(request, "Invalid return date.")
+            return redirect('book_detail', pk=pk)
+
+        if book.quantity <= 0:
+            messages.error(request, "Book is not available.")
+            return redirect('book_detail', pk=pk)
+
+        Borrowing.objects.create(
+            user=request.user,
+            book=book,
+            return_date=return_date
+        )
+
+        book.quantity -= 1
+        book.total_borrows += 1
+        book.save()
+
+        messages.success(request, "Book borrowed successfully!")
+        return redirect('books_list')

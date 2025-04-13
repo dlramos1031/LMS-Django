@@ -41,11 +41,51 @@
 
         <div class="mt-3">
             {% if book.is_available %}
-                <a href="#" class="btn btn-primary">Borrow this Book</a>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#borrowModal">
+                    Borrow this Book
+                </button>
             {% endif %}
             <a href="#" class="btn btn-warning">Add to Favorites</a>
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="borrowModal" tabindex="-1" aria-labelledby="borrowModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="{% url 'borrow_book' book.id %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title" id="borrowModalLabel">Select Return Date</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Return Date:</label>
+              <input type="date" name="return_date" class="form-control" required>
+              <small class="form-text text-muted">Or choose a duration below</small>
+            </div>
+  
+            <div class="btn-group w-100" role="group">
+              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(1)">1 Day</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(3)">3 Days</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(7)">1 Week</button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary w-100">Confirm Borrow</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>  
+
+  <script>
+    function setReturnDate(days) {
+      const today = new Date();
+      today.setDate(today.getDate() + days);
+      document.querySelector('input[name="return_date"]').value = today.toISOString().split('T')[0];
+    }
+  </script>  
 
 {% endblock %}
