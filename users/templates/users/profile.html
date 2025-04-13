@@ -35,7 +35,7 @@
   <tbody>
     {% for b in borrowings %}
     <tr>
-      <td>{{ b.book.title }}</td>
+      <td><a href="{% url 'book_detail' b.book.id %}">{{ b.book.title }}</a></td>
       <td>{{ b.borrow_date|date:"Y-m-d H:i" }}</td>
       <td>{{ b.return_date|date:"Y-m-d" }}</td>
       <td>
