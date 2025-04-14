@@ -1,17 +1,42 @@
-{% extends "base.html" %}
-{% load bootstrap5 %}
+{% extends 'base.html' %}
 {% block title %}Login{% endblock %}
-
 {% block content %}
+
 <div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
   <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
     <h4 class="mb-3 text-center">Login</h4>
 
     <form method="post">
       {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary w-100 mt-2">Login</button>
+
+      <!-- Username Field -->
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+        <input type="text"
+               name="{{ form.username.name }}"
+               class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+               id="{{ form.username.id_for_label }}"
+               value="{{ form.username.value|default_if_none:'' }}">
+        {% for error in form.username.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Password Field -->
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+        <input type="password"
+               name="{{ form.password.name }}"
+               class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+               id="{{ form.password.id_for_label }}">
+        {% for error in form.password.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100">Login</button>
     </form>
   </div>
 </div>
+
 {% endblock %}
