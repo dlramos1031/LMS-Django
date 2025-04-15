@@ -39,7 +39,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Borrowing
         fields = ['id', 'book', 'book_title', 'borrow_date', 'return_date', 'status', 'is_overdue']
-        read_only_fields = ['borrow_date', 'status']
+        read_only_fields = ['borrow_date']
 
     def get_is_overdue(self, obj):
         return obj.status == 'borrowed' and timezone.now() > obj.return_date    

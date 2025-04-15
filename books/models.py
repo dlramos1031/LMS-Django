@@ -34,39 +34,19 @@ class Book(models.Model):
 
 class Borrowing(models.Model):
     STATUS_CHOICES = [
-        ('borrowed', 'Borrowed'),
-        ('returned', 'Returned'),
-    ]
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    book = models.ForeignKey('Book', on_delete=models.CASCADE)
-    borrow_date = models.DateTimeField(auto_now_add=True)
-    return_date = models.DateTimeField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='borrowed')
-
-    def __str__(self):
-        return f"{self.user.username} → {self.book.title} ({self.status})"
-
-class Borrowing(models.Model):
-    STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
+        ('returned', 'Returned'),
         ('rejected', 'Rejected'),
-    ]
-
-    REQUEST_CHOICES = [
-        ('borrow', 'Borrow'),
-        ('return', 'Return'),
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
-    request_type = models.CharField(max_length=10, choices=REQUEST_CHOICES)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     borrow_date = models.DateTimeField(auto_now_add=True)
     return_date = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=False)  # active borrow
+    is_active = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user.username} → {self.book.title} ({self.request_type}, {self.status})"
+        return f"{self.user.username} → {self.book.title} ({self.status})"
 

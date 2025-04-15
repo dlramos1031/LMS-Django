@@ -107,7 +107,6 @@ def book_detail_view(request, pk):
     has_active_or_pending = Borrowing.objects.filter(
         user=request.user,
         book=book,
-        request_type='borrow',
         status__in=['pending', 'approved'],
         is_active=True
     ).exists()
@@ -124,7 +123,6 @@ def borrow_book_view(request, pk):
     existing = Borrowing.objects.filter(
         user=request.user,
         book=book,
-        request_type='borrow',
         status__in=['pending', 'approved'],
         is_active=True,
     ).exists()
@@ -144,7 +142,6 @@ def borrow_book_view(request, pk):
         Borrowing.objects.create(
             user=request.user,
             book=book,
-            request_type='borrow',
             return_date=return_date,
             status='pending',
             is_active=True,
@@ -155,8 +152,6 @@ def borrow_book_view(request, pk):
 
 from books.models import Book
 
-...
-
 @staff_member_required
 def librarian_dashboard_view(request):
     tab = request.GET.get('tab', 'pending')
@@ -164,15 +159,15 @@ def librarian_dashboard_view(request):
     User = get_user_model()
 
     pending_qs = Borrowing.objects.filter(
-        request_type='borrow', status='pending'
+        status='pending'
     ).select_related('book', 'user')
 
     active_qs = Borrowing.objects.filter(
-        request_type='borrow', status='approved', is_active=True
+        status='approved', is_active=True
     ).select_related('book', 'user')
 
     history_qs = Borrowing.objects.filter(
-        request_type='borrow', status='approved', is_active=False
+        status='approved', is_active=False
     ).select_related('book', 'user')
 
     book_qs = Book.objects.prefetch_related('authors', 'genres')
@@ -221,7 +216,7 @@ def librarian_dashboard_view(request):
 @staff_member_required
 @require_POST
 def approve_borrow_view(request, borrow_id):
-    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending', request_type='borrow')
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending')
     borrowing.status = 'approved'
     borrowing.is_active = True
     borrowing.book.quantity -= 1
@@ -233,7 +228,7 @@ def approve_borrow_view(request, borrow_id):
 @staff_member_required
 @require_POST
 def reject_borrow_view(request, borrow_id):
-    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending', request_type='borrow')
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending')
     borrowing.status = 'rejected'
     borrowing.is_active = False
     borrowing.save()
@@ -244,6 +239,7 @@ def reject_borrow_view(request, borrow_id):
 @require_POST
 def mark_returned_view(request, borrow_id):
     borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='approved', is_active=True)
+    borrowing.status = 'returned'
     borrowing.is_active = False
     borrowing.book.quantity += 1
     borrowing.book.save()

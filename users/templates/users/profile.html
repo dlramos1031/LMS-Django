@@ -39,8 +39,10 @@
       <td>{{ b.borrow_date|date:"Y-m-d H:i" }}</td>
       <td>{{ b.return_date|date:"Y-m-d" }}</td>
       <td>
-        {% if b.status == 'returned' %}
-          <span class="badge bg-success">Returned</span>
+        {% if b.status == 'pending' %}
+          <span class="badge bg-success">Pending</span>
+        {% elif b.status == 'returned' %}
+          <span class="badge bg-secondary">Returned</span>
         {% elif b.return_date < now and b.status == 'borrowed' %}
           <span class="badge bg-danger">Overdue</span>
         {% else %}
