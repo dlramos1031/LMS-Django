@@ -1,12 +1,78 @@
-{% extends "base.html" %}
-{% load bootstrap5 %}
+{% extends 'base.html' %}
 {% block title %}Login{% endblock %}
-
 {% block content %}
-<h2>Login</h2>
-<form method="post">
-  {% csrf_token %}
-  {% bootstrap_form form %}
-  <button type="submit" class="btn btn-primary">Login</button>
-</form>
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+    <h4 class="mb-3 text-center">Login</h4>
+
+    {% if form.errors %}
+    <div class="alert alert-danger">
+      {% if form.non_field_errors %}
+        {% for error in form.non_field_errors %}
+          <div>Invalid username or password.</div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="login-form">
+      {% csrf_token %}
+
+      <!-- Username Field -->
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+        <input type="text"
+               name="{{ form.username.name }}"
+               class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+               id="{{ form.username.id_for_label }}"
+               value="{{ form.username.value|default_if_none:'' }}">
+        {% for error in form.username.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Password Field -->
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+        <div class="position-relative">
+          <input type="password"
+                 name="{{ form.password.name }}"
+                 class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                 id="{{ form.password.id_for_label }}" required>
+          <span class="position-absolute top-50 end-0 translate-middle-y me-3"
+                style="cursor: pointer;" onclick="togglePasswordVisibility()">
+            <i id="eye-icon" class="bi bi-eye-slash"></i>
+          </span>
+          {% for error in form.password.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+          {% endfor %}
+        </div>
+      </div>      
+
+      <button type="submit" class="btn btn-primary w-100">Login</button>
+    </form>
+  </div>
+</div>
+
+<!-- Include Bootstrap Icons if not already -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+<script>
+function togglePasswordVisibility() {
+  const passwordInput = document.getElementById("id_password");
+  const icon = document.getElementById("eye-icon");
+
+  if (passwordInput.type === "password") {
+    passwordInput.type = "text";
+    icon.classList.remove("bi-eye-slash");
+    icon.classList.add("bi-eye");
+  } else {
+    passwordInput.type = "password";
+    icon.classList.remove("bi-eye");
+    icon.classList.add("bi-eye-slash");
+  }
+}
+</script>
+
 {% endblock %}

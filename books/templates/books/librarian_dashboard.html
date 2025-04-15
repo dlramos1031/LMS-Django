@@ -1,0 +1,436 @@
+{% extends "base.html" %}
+{% block title %}Librarian Dashboard{% endblock %}
+{% block content %}
+
+<h2>Librarian Dashboard</h2>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'pending' %}active{% endif %}" href="?tab=pending">Pending Requests</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'active' %}active{% endif %}" href="?tab=active">Currently Borrowed</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'history' %}active{% endif %}" href="?tab=history">Borrow History</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'books' %}active{% endif %}" href="?tab=books">Books</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab == 'users' %}active{% endif %}" href="?tab=users">Users</a>
+  </li>  
+</ul>
+
+{% if tab == 'pending' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Pending Borrow Requests</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="TAB_NAME">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr><th>User</th><th>Book</th><th>Return Date</th><th>Requested</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for borrow in pending_page %}
+    <tr>
+      <td>{{ borrow.user.username }}</td>
+      <td>{{ borrow.book.title }}</td>
+      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.borrow_date|date:"Y-m-d H:i" }}</td>
+      <td>
+        <form method="post" action="{% url 'approve_borrow' borrow.id %}" class="d-inline">
+          {% csrf_token %}
+          <button class="btn btn-success btn-sm">Approve</button>
+        </form>
+        <form method="post" action="{% url 'reject_borrow' borrow.id %}" class="d-inline">
+          {% csrf_token %}
+          <button class="btn btn-danger btn-sm">Reject</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No pending requests.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% include "books/includes/pagination.html" with page_obj=pending_page %}
+
+{% elif tab == 'active' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Currently Borrowed Books</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="TAB_NAME">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Return Due</th><th>Status</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+    {% for borrow in active_page %}
+    <tr>
+      <td>{{ borrow.user.username }}</td>
+      <td>{{ borrow.book.title }}</td>
+      <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+      <td>
+        {% if borrow.return_date < now %}
+        <span class="badge bg-danger">Overdue</span>
+        {% else %}
+        <span class="badge bg-success">On time</span>
+        {% endif %}
+      </td>
+      <td>
+        <form method="post" action="{% url 'mark_returned' borrow.id %}">
+          {% csrf_token %}
+          <button class="btn btn-primary btn-sm">Mark Returned</button>
+        </form>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6">No active borrowings.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% include "books/includes/pagination.html" with page_obj=active_page %}
+
+{% elif tab == 'history' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Completed Borrow History</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="TAB_NAME">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Returned</th></tr>
+  </thead>
+  <tbody>
+    {% for borrow in history_page %}
+    <tr>
+      <td>{{ borrow.user.username }}</td>
+      <td>{{ borrow.book.title }}</td>
+      <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4">No completed borrows.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% include "books/includes/pagination.html" with page_obj=history_page %}
+
+{% elif tab == 'books' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Books Catalog</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="books">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search books..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr><th>Title</th><th>Authors</th><th>Genres</th><th>Quantity</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for book in book_page %}
+    <tr>
+      <td>{{ book.title }}</td>
+      <td>
+        {% for author in book.authors.all %}
+          {{ author.name }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+      </td>
+      <td>
+        {% for genre in book.genres.all %}
+          <span class="badge bg-info text-dark">{{ genre.name }}</span>
+        {% endfor %}
+      </td>
+      <td>{{ book.quantity }}</td>
+      <td>
+        <!-- Placeholder buttons for now -->
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal-{{ book.id }}">Edit</button>
+        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookModal-{{ book.id }}">Delete</button>
+        <!-- Edit Modal -->
+        <div class="modal fade" id="editBookModal-{{ book.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <form method="post" action="{% url 'edit_book' book.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title">Edit Book</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ book.title }}" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Quantity</label>
+                    <input type="number" name="quantity" class="form-control" value="{{ book.quantity }}" min="0" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Authors (comma-separated)</label>
+                    <input type="text" name="authors" class="form-control" value="{% for author in book.authors.all %}{{ author.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Genres (comma-separated)</label>
+                    <input type="text" name="genres" class="form-control" value="{% for genre in book.genres.all %}{{ genre.name }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Summary</label>
+                    <textarea name="summary" class="form-control" rows="3">{{ book.summary }}</textarea>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </td>
+      <!-- Delete Modal -->
+      <div class="modal fade" id="deleteBookModal-{{ book.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="post" action="{% url 'delete_book' book.id %}">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                Are you sure you want to delete <strong>{{ book.title }}</strong>?
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-danger">Delete</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No books found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="text-end mb-4">
+  <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
+    + Add Book
+  </button>
+</div>
+{% include "books/includes/pagination.html" with page_obj=book_page %}
+
+{% elif tab == 'users' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">User Accounts</h5>
+  <form method="get" class="d-flex" style="gap: 0.5rem;">
+    <input type="hidden" name="tab" value="users">
+    <input type="text" name="search" class="form-control form-control-sm"
+           placeholder="Search users..." value="{{ request.GET.search }}" style="width: 200px;">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+  </form>
+</div>
+
+<table class="table table-sm table-bordered">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Full Name</th>
+      <th>Email</th>
+      <th>Role</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in user_page %}
+    <tr>
+      <td>{{ user.username }}</td>
+      <td>{{ user.full_name }}</td>
+      <td>{{ user.email }}</td>
+      <td>{{ user.role|capfirst }}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
+        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        <!-- Edit User Modal -->
+        <div class="modal fade" id="editUserModal-{{ user.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="post" action="{% url 'edit_user' user.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title">Edit User</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="mb-2">
+                    <label class="form-label">Username</label>
+                    <input name="username" class="form-control" value="{{ user.username }}" required>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Full Name</label>
+                    <input name="full_name" class="form-control" value="{{ user.full_name }}">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ user.email }}">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Password <small>(leave blank to keep current)</small></label>
+                    <input type="password" name="password" class="form-control">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label">Role</label>
+                    <select name="role" class="form-select">
+                      <option value="member" {% if user.role == "member" %}selected{% endif %}>Member</option>
+                      <option value="librarian" {% if user.role == "librarian" %}selected{% endif %}>Librarian</option>
+                      <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-primary">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- Delete User Modal -->
+        <div class="modal fade" id="deleteUserModal-{{ user.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <form method="post" action="{% url 'delete_user' user.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                  <h5 class="modal-title">Confirm Delete</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                  Are you sure you want to delete <strong>{{ user.username }}</strong>?
+                </div>
+                <div class="modal-footer">
+                  <button class="btn btn-danger">Delete</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No users found.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Add User Button -->
+<div class="text-end mb-3">
+  <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
+</div>
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'add_user' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Add User</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label">Username</label>
+            <input name="username" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Full Name</label>
+            <input name="full_name" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Role</label>
+            <select name="role" class="form-select">
+              <option value="member">Member</option>
+              <option value="librarian">Librarian</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success">Add User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% include "books/includes/pagination.html" with page_obj=user_page %}
+
+<!-- Add Book Modal -->
+<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="{% url 'add_book' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" min="0" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Authors (comma-separated)</label>
+            <input type="text" name="authors" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Genres (comma-separated)</label>
+            <input type="text" name="genres" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Summary</label>
+            <textarea name="summary" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Add Book</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

@@ -1,12 +1,177 @@
-{% extends "base.html" %}
-{% load bootstrap5 %}
+{% extends 'base.html' %}
 {% block title %}Register{% endblock %}
-
 {% block content %}
-<h2>Register</h2>
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  {% bootstrap_form form %}
-  <button type="submit" class="btn btn-success">Register</button>
-</form>
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="card shadow p-4" style="width: 100%; max-width: 450px;">
+    <h4 class="mb-3 text-center">Create an Account</h4>
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form method="post" id="register-form" novalidate>
+      {% csrf_token %}
+
+      <!-- Username -->
+      <div class="mb-3">
+        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+        <input type="text" name="username" id="username" class="form-control" required>
+        {% for error in form.username.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>      
+
+      <!-- Full Name -->
+      <div class="mb-3">
+        <label for="{{ form.full_name.id_for_label }}" class="form-label">Full Name</label>
+        <input type="text" name="{{ form.full_name.name }}"
+               class="form-control {% if form.full_name.errors %}is-invalid{% endif %}"
+               id="{{ form.full_name.id_for_label }}"
+               value="{{ form.full_name.value|default_if_none:'' }}">
+        {% for error in form.full_name.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Email -->
+      <div class="mb-3">
+        <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+        <input type="email" name="email" id="email" class="form-control" required>
+        {% for error in form.email.errors %}
+          <div class="invalid-feedback">{{ error }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Password -->
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" name="password" id="password" class="form-control" required>
+        <small class="form-text text-muted">Must be at least 8 characters.</small>
+        <div id="password-strength" class="mt-1 small text-muted"></div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="mb-3">
+        <label for="confirm_password" class="form-label">Confirm Password</label>
+        <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
+        <div id="password-match" class="mt-1 small"></div>
+      </div>
+
+      <button type="submit" class="btn btn-success w-100 mt-2" id="register-btn" disabled>Register</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("register-form");
+  
+    const username = document.getElementById("username");
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const confirm = document.getElementById("confirm_password");
+  
+    const matchText = document.getElementById("password-match");
+    const strengthText = document.getElementById("password-strength");
+
+    const registerBtn = document.getElementById("register-btn");
+  
+    // 🔐 Password Strength
+    function updateStrength(pass) {
+      let strength = "Weak";
+      let color = "text-danger";
+  
+      if (pass.length >= 12 && /[A-Z]/.test(pass) && /\d/.test(pass) && /[^a-zA-Z0-9]/.test(pass)) {
+        strength = "Strong";
+        color = "text-success";
+      } else if (pass.length >= 8) {
+        strength = "Moderate";
+        color = "text-warning";
+      }
+  
+      strengthText.textContent = "Strength: " + strength;
+      strengthText.className = `mt-1 small ${color}`;
+    }
+  
+    // 🔄 Match Check
+    function checkMatch() {
+      if (!password.value || !confirm.value) {
+        confirm.classList.remove("is-valid", "is-invalid");
+        matchText.textContent = "";
+        return true;
+      }
+  
+      if (password.value === confirm.value) {
+        confirm.classList.add("is-valid");
+        confirm.classList.remove("is-invalid");
+        matchText.textContent = "Passwords match ✅";
+        matchText.className = "mt-1 small text-success";
+        return true;
+      } else {
+        confirm.classList.add("is-invalid");
+        confirm.classList.remove("is-valid");
+        matchText.textContent = "Passwords do not match ❌";
+        matchText.className = "mt-1 small text-danger";
+        return false;
+      }
+    }
+  
+    // ✅ Live field validation
+    function validateField(field) {
+      if (field.value.trim().length > 0) {
+        field.classList.add("is-valid");
+        field.classList.remove("is-invalid");
+      } else {
+        field.classList.add("is-invalid");
+        field.classList.remove("is-valid");
+      }
+    }
+
+    function checkFormValidity() {
+      const isValid =
+        username.value.trim() !== "" &&
+        email.value.trim() !== "" &&
+        password.value.length >= 8 &&
+        confirm.value !== "" &&
+        password.value === confirm.value;
+
+      registerBtn.disabled = !isValid;
+    }
+
+    // Re-check button state after every input
+    [username, email, password, confirm].forEach(field => {
+      field.addEventListener("input", checkFormValidity);
+    });
+
+    // Run once on load in case fields are prefilled
+    checkFormValidity();
+  
+    username.addEventListener("input", () => validateField(username));
+    email.addEventListener("input", () => validateField(email));
+    password.addEventListener("input", () => {
+      validateField(password);
+      updateStrength(password.value);
+      checkMatch();
+    });
+    confirm.addEventListener("input", checkMatch);
+  
+    // 🔐 Final validation on submit
+    form.addEventListener("submit", function (e) {
+      validateField(username);
+      validateField(email);
+      validateField(password);
+  
+      if (!checkMatch()) {
+        e.preventDefault();
+      }
+    });
+  });
+
+  </script>  
+
 {% endblock %}
