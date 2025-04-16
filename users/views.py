@@ -1,8 +1,8 @@
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.utils.decorators import method_decorator
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth import login, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, PasswordChangeView
@@ -158,3 +158,15 @@ def delete_user_view(request, user_id):
     user.delete()
     messages.success(request, "User deleted successfully.")
     return redirect('/dashboard/?tab=users')
+
+@require_GET
+def check_username(request):
+    username = request.GET.get('username', '').strip()
+    exists = User.objects.filter(username__iexact=username).exists()
+    return JsonResponse({'exists': exists})
+
+@require_GET
+def check_email(request):
+    email = request.GET.get('email', '').strip()
+    exists = User.objects.filter(email__iexact=email).exists()
+    return JsonResponse({'exists': exists})
