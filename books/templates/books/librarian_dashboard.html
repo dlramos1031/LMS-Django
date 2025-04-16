@@ -164,14 +164,14 @@
       </td>
       <td>{{ book.quantity }}</td>
       <td>
-        <!-- Placeholder buttons for now -->
+        <!-- Book Edit & Delete Buttons -->
         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal-{{ book.id }}">Edit</button>
         <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookModal-{{ book.id }}">Delete</button>
         <!-- Edit Modal -->
         <div class="modal fade" id="editBookModal-{{ book.id }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-lg">
             <div class="modal-content">
-              <form method="post" action="{% url 'edit_book' book.id %}">
+              <form method="post" action="{% url 'edit_book' book.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                   <h5 class="modal-title">Edit Book</h5>
@@ -197,6 +197,19 @@
                   <div class="col-12">
                     <label class="form-label">Summary</label>
                     <textarea name="summary" class="form-control" rows="3">{{ book.summary }}</textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Open Library ID</label>
+                    <input type="text" name="open_library_id" class="form-control" value="{{ book.open_library_id }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Cover Image</label>
+                    {% if book.cover_image %}
+                      <div class="mb-2">
+                        <img src="{{ book.cover_image.url }}" class="img-thumbnail" style="max-height: 100px;">
+                      </div>
+                    {% endif %}
+                    <input type="file" name="cover_image" class="form-control">
                   </div>
                 </div>
                 <div class="modal-footer">
@@ -234,7 +247,7 @@
   </tbody>
 </table>
 
-<!-- Add User Button -->
+<!-- Add Book Button -->
 <div class="text-end mb-4">
   <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
     + Add Book
@@ -245,7 +258,7 @@
 <div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <form method="post" action="{% url 'add_book' %}">
+      <form method="post" action="{% url 'add_book' %}" enctype="multipart/form-data">
         {% csrf_token %}
         <div class="modal-header">
           <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
@@ -268,6 +281,14 @@
             <label class="form-label">Genres (comma-separated)</label>
             <input type="text" name="genres" class="form-control">
           </div>
+          <div class="col-md-6">
+            <label class="form-label">Open Library ID</label>
+            <input type="text" name="open_library_id" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cover Image</label>
+            <input type="file" name="cover_image" class="form-control">
+          </div>
           <div class="col-12">
             <label class="form-label">Summary</label>
             <textarea name="summary" class="form-control" rows="3"></textarea>
@@ -276,7 +297,7 @@
         <div class="modal-footer">
           <button type="submit" class="btn btn-success">Add Book</button>
         </div>
-      </form>
+      </form>      
     </div>
   </div>
 </div>

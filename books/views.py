@@ -253,15 +253,19 @@ def add_book_view(request):
     title = request.POST.get('title')
     quantity = request.POST.get('quantity')
     summary = request.POST.get('summary', '')
-    authors_raw = request.POST.get('authors', '')
-    genres_raw = request.POST.get('genres', '')
-
+    
     book = Book.objects.create(title=title, quantity=quantity, summary=summary)
+    book.open_library_id = request.POST.get('open_library_id', '')
 
+    if 'cover_image' in request.FILES:
+        book.cover_image = request.FILES['cover_image']
+
+    authors_raw = request.POST.get('authors', '')
     for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
         author, _ = Author.objects.get_or_create(name=name)
         book.authors.add(author)
 
+    genres_raw = request.POST.get('genres', '') 
     for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
         genre, _ = Genre.objects.get_or_create(name=name)
         book.genres.add(genre)
@@ -278,15 +282,18 @@ def edit_book_view(request, book_id):
     book.title = request.POST.get('title')
     book.quantity = request.POST.get('quantity')
     book.summary = request.POST.get('summary', '')
+    book.open_library_id = request.POST.get('open_library_id', '')
+
+    if 'cover_image' in request.FILES:
+        book.cover_image = request.FILES['cover_image']
 
     authors_raw = request.POST.get('authors', '')
-    genres_raw = request.POST.get('genres', '')
-
     book.authors.clear()
     for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
         author, _ = Author.objects.get_or_create(name=name)
         book.authors.add(author)
 
+    genres_raw = request.POST.get('genres', '')
     book.genres.clear()
     for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
         genre, _ = Genre.objects.get_or_create(name=name)
