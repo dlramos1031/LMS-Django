@@ -194,8 +194,7 @@ def librarian_dashboard_view(request):
             Q(full_name__icontains=search) |
             Q(email__icontains=search)
         )
-
-    # Pagination helper
+        
     def paginate(queryset, per_page=6):
         paginator = Paginator(queryset, per_page)
         page = request.GET.get('page')

@@ -31,6 +31,9 @@ class Book(models.Model):
     @property
     def is_available(self):
         return self.quantity > 0
+    
+    class Meta:
+        ordering = ['title']
 
 class Borrowing(models.Model):
     STATUS_CHOICES = [
@@ -49,4 +52,7 @@ class Borrowing(models.Model):
 
     def __str__(self):
         return f"{self.user.username} → {self.book.title} ({self.status})"
+    
+    class Meta:
+        ordering = ['-borrow_date']
 
