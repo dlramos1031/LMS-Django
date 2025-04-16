@@ -4,15 +4,13 @@ from .views import (register_view,
                     add_user_view, 
                     edit_user_view, 
                     delete_user_view)
-from .views import (CustomLoginView, 
-                    CustomPasswordChangeView, 
-                    CustomLoginViewWeb)
-from django.contrib.auth.views import LogoutView
+from .views import (CustomPasswordChangeView, CustomLoginViewWeb)   
+from django.contrib.auth.views import LogoutView as DjangoLogoutView
 
 urlpatterns = [
     path('register/', register_view, name='register'),
     path('login/', CustomLoginViewWeb.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', DjangoLogoutView.as_view(next_page='login'), name='logout'),
     path('change-password/', CustomPasswordChangeView.as_view(), name='change_password'),
     path('profile/<int:user_id>/', user_profile_view, name='user_profile'),
     
