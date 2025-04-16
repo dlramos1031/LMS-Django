@@ -40,16 +40,13 @@
       <div class="mb-3">
         <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
         <input type="email" name="email" id="email" class="form-control" required>
-        {% for error in form.email.errors %}
-          <div class="invalid-feedback">{{ error }}</div>
-        {% endfor %}
+        <div id="email-feedback" class="invalid-feedback"></div>
       </div>
 
       <!-- Password -->
       <div class="mb-3">
         <label for="password" class="form-label">Password</label>
         <input type="password" name="password" id="password" class="form-control" required>
-        <small class="form-text text-muted">Must be at least 8 characters.</small>
         <div id="password-strength" class="mt-1 small text-muted"></div>
       </div>
 
@@ -80,17 +77,30 @@
     function updateStrength(pass) {
       let strength = "Weak";
       let color = "text-danger";
-  
-      if (pass.length >= 12 && /[A-Z]/.test(pass) && /\d/.test(pass) && /[^a-zA-Z0-9]/.test(pass)) {
+
+      const strong = pass.length >= 12 && /[A-Z]/.test(pass) && /\d/.test(pass) && /[^a-zA-Z0-9]/.test(pass);
+      const moderate = pass.length >= 8;
+
+      if (strong) {
         strength = "Strong";
         color = "text-success";
-      } else if (pass.length >= 8) {
+      } else if (moderate) {
         strength = "Moderate";
         color = "text-warning";
       }
-  
+
       strengthText.textContent = "Strength: " + strength;
       strengthText.className = `mt-1 small ${color}`;
+
+      if (strong || moderate) {
+        password.classList.add("is-valid");
+        password.classList.remove("is-invalid");
+        password.setCustomValidity("");
+      } else {
+        password.classList.add("is-invalid");
+        password.classList.remove("is-valid");
+        password.setCustomValidity("Password is too weak.");
+      }
     }
   
     function checkMatch() {
@@ -173,6 +183,7 @@
 
       const res = await fetch(`/api/auth/check-email/?email=${encodeURIComponent(value)}`);
       const data = await res.json();
+      const emailFeedback = document.getElementById("email-feedback");
 
       const validFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
@@ -180,10 +191,12 @@
         email.classList.add("is-invalid");
         email.classList.remove("is-valid");
         email.setCustomValidity("Invalid email format.");
+        emailFeedback.textContent = "Invalid email format.";
       } else if (data.exists) {
         email.classList.add("is-invalid");
         email.classList.remove("is-valid");
         email.setCustomValidity("Email is already registered.");
+        emailFeedback.textContent = "Email is already registered.";
       } else {
         email.classList.remove("is-invalid");
         email.classList.add("is-valid");
