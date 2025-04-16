@@ -86,12 +86,12 @@ A Django-based web application and RESTful API for managing a physical library, 
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/lms-django.git
+git clone https://github.com/dlramos1031/LMS-Django.git
 cd lms-django
 
 # Set up a virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+.\venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
