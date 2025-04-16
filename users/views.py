@@ -1,18 +1,17 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.urls import reverse_lazy
-from django.contrib.auth import login, get_user_model
-from django.utils.decorators import method_decorator
 from django.contrib import messages
-from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponseForbidden
+from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
+from django.contrib.auth import login, get_user_model
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView, PasswordChangeView
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render, redirect, get_object_or_404
 
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authentication import TokenAuthentication
@@ -74,19 +73,6 @@ class LogoutView(APIView):
 # 🌐 TEMPLATE-BASED VIEWS
 # ============================================
 
-def register_view(request):
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST, request.FILES)
-        print(form.is_valid())
-        print(form.errors)  # Add this to see specific errors
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('books_list')
-    else:
-        form = UserRegistrationForm()
-    return render(request, 'users/register.html', {'form': form})
-
 class CustomLoginViewWeb(LoginView):
     template_name = 'users/login.html'
 
@@ -101,20 +87,31 @@ class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'users/change_password.html'
     success_url = reverse_lazy('books_list')
 
+def register_view(request):
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            return redirect('login')
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'users/register.html', {'form': form})
+
 @login_required
 def user_profile_view(request, user_id):
     target_user = get_object_or_404(User, id=user_id)
 
-    # Restrict access unless it's the user themselves or a staff member
-    if request.user != target_user and not request.user.is_staff:
+    if not request.user.is_staff and request.user != target_user:
         return HttpResponseForbidden("You are not allowed to view this profile.")
 
-    borrowings = Borrowing.objects.filter(user=target_user).order_by('-borrow_date')
+    borrowings = None
+    if target_user.role == 'member':
+        borrowings = Borrowing.objects.filter(user=target_user).order_by('-borrow_date')
 
     return render(request, 'users/profile.html', {
         'profile_user': target_user,
         'borrowings': borrowings
-    })
+    })       
 
 @staff_member_required
 @require_POST
@@ -125,7 +122,7 @@ def add_user_view(request):
     password = request.POST.get('password')
     role = request.POST.get('role')
 
-    user = User.objects.create_user(
+    User.objects.create_user(
         username=username,
         email=email,
         full_name=full_name,
