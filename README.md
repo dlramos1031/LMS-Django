@@ -40,45 +40,45 @@ A Django-based web application and RESTful API for managing a physical library, 
 ## 🔌 API Endpoints
 
 ### 🔐 Authentication (`/api/auth/`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST   | `/register/`         | Register new user |
-| POST   | `/login/`            | Get token |
-| POST   | `/logout/`           | Logout and revoke token |
-| POST   | `/change-password/`  | Change password |
-| GET    | `/check-username/`   | Check if username is taken |
-| GET    | `/check-email/`      | Check if email is registered |
+| Method | Endpoint             | Description                   |
+|--------|----------------------|-------------------------------|
+| POST   | `/register/`         | Register new user             |
+| POST   | `/login/`            | Get token                     |
+| POST   | `/logout/`           | Logout and revoke token       |
+| POST   | `/change-password/`  | Change password               |
+| GET    | `/check-username/`   | Check if username is taken    |
+| GET    | `/check-email/`      | Check if email is registered  |
 
 ### 📚 Books API (`/api/`)
-| Method | Endpoint           | Description |
-|--------|--------------------|-------------|
-| GET    | `/books/`          | List books with filters |
-| GET    | `/books/<id>/`     | Get book details |
-| GET    | `/authors/`        | List authors (name filter) |
-| GET    | `/genres/`         | List genres |
-| GET    | `/borrow/`         | List borrow records |
-| POST   | `/borrow/`         | Submit borrow request |
+| Method | Endpoint             | Description                   |
+|--------|----------------------|-------------------------------|
+| GET    | `/books/`            | List books with filters       |
+| GET    | `/books/<id>/`       | Get book details              |
+| GET    | `/authors/`          | List authors (name filter)    |
+| GET    | `/genres/`           | List genres                   |
+| GET    | `/borrow/`           | List borrow records           |
+| POST   | `/borrow/`           | Submit borrow request         |
 
 ---
 
 ## 🖥️ Web Routes
 
-| Route                        | Description |
-|-----------------------------|-------------|
-| `/register/`                | Web register page |
-| `/login/`                   | Login page |
-| `/logout/`                  | Logout (redirects to login) |
-| `/change-password/`         | Change password |
-| `/books/`                   | Book list view |
-| `/books/<id>/`              | Book detail page |
-| `/books/<id>/borrow/`       | Submit borrow request (form modal) |
-| `/profile/<user_id>/`       | User profile and borrow history |
-| `/dashboard/`               | Librarian dashboard |
-| `/dashboard/users/...`      | Add/edit/delete users |
-| `/dashboard/books/...`      | Add/edit/delete books |
-| `/dashboard/approve/...`    | Approve borrow request |
-| `/dashboard/reject/...`     | Reject borrow request |
-| `/dashboard/return/...`     | Confirm book return |
+| Route                         | Description                         |
+|-------------------------------|-------------------------------------|
+| `/register/`                  | Web register page                   |
+| `/login/`                     | Login page                          |
+| `/logout/`                    | Logout (redirects to login)         |
+| `/change-password/`           | Change password                     |
+| `/books/`                     | Book list view                      |
+| `/books/<id>/`                | Book detail page                    |
+| `/books/<id>/borrow/`         | Submit borrow request (form modal)  |
+| `/profile/<user_id>/`         | User profile and borrow history     |
+| `/dashboard/`                 | Librarian dashboard                 |
+| `/dashboard/users/...`        | Add/edit/delete users               |
+| `/dashboard/books/...`        | Add/edit/delete books               |
+| `/dashboard/approve/...`      | Approve borrow request              |
+| `/dashboard/reject/...`       | Reject borrow request               |
+| `/dashboard/return/...`       | Confirm book return                 |
 
 ---
 
