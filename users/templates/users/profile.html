@@ -21,6 +21,7 @@
   </div>
 </div>
 
+{% if borrowings %}
 <h4>Borrow History</h4>
 
 <table class="table table-sm table-striped">
@@ -55,5 +56,6 @@
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
 
 {% endblock %}
