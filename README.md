@@ -1,122 +1,107 @@
 # 📚 Library Management System (LMS)
 
-A Django-based REST API and admin interface for managing books, authors, genres, and user interactions like borrowing, user registration, and more. This system supports authentication, user roles, book catalog management, and admin/librarian dashboards.
+A Django-based web application and RESTful API for managing a physical library, built with Django REST Framework, Bootstrap 5, and role-based access control.
 
 ---
 
 ## 🚀 Features
 
-- User authentication (Register, Login, Logout, Change Password)
-- Custom user model with roles (User, Admin/Librarian)
-- Book, author, and genre models with cover image support
-- Admin dashboard to manage books, genres, and authors
-- API to list, create, update, and delete books/authors/genres
-- Search and filter functionality
-- Token-based authentication
-- HTML views for book listings and details (Django templates)
+### 👤 User Management
+- Register and login (Web and API)
+- Token-based authentication for API
+- Change password and view user profile
+- Roles: `member`, `librarian`/`admin`
+
+### 📚 Book Management
+- Admins can add, edit, or delete books
+- Books support multiple authors and genres
+- Book list with search and filters
+- Detail view with availability and borrow modal
+
+### 🔄 Borrowing System
+- Members request to borrow books
+- Borrow requests require librarian approval
+- Return handled in person, confirmed by librarian
+- Users choose return date (fixed duration or custom)
+- `total_borrows` field tracks popularity of books
+
+### 🧑‍🏫 Librarian Dashboard
+- Tabs for pending, active, and completed borrowings
+- Add/edit/delete users and books with Bootstrap modals
+- Search and pagination in dashboard tables
+
+### 🔍 Real-Time Validation
+- Live username and email availability check on registration
+- Password match and strength feedback
+- Frontend validation synced with backend logic
 
 ---
 
-## 📦 API Endpoints
+## 🔌 API Endpoints
 
-### 🔐 Authentication – `/api/auth/`
-| Method | Endpoint             | Description                         |
-|--------|----------------------|-------------------------------------|
-| POST   | `/register/`         | Register a new user                 |
-| POST   | `/login/`            | Login and get auth token            |
-| POST   | `/logout/`           | Logout and invalidate token         |
-| POST   | `/change-password/`  | Change user password                |
+### 🔐 Authentication (`/api/auth/`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | `/register/`         | Register new user |
+| POST   | `/login/`            | Get token |
+| POST   | `/logout/`           | Logout and revoke token |
+| POST   | `/change-password/`  | Change password |
+| GET    | `/check-username/`   | Check if username is taken |
+| GET    | `/check-email/`      | Check if email is registered |
 
----
-
-### 📚 Books – `/api/books/`
-| Method | Endpoint     | Description                                 |
-|--------|--------------|---------------------------------------------|
-| GET    | `/`          | List all books (supports search/filter)     |
-| POST   | `/`          | Create a new book                           |
-| GET    | `/:id/`      | Get details of a specific book              |
-| PUT    | `/:id/`      | Update book info                            |
-| DELETE | `/:id/`      | Delete a book                               |
-
-🔍 Supports:
-- Search by `title`, `summary`:  
-  `GET /api/books/?search=harry`
-- Filter by `author ID`:  
-  `GET /api/books/?authors=1`
-- Filter by `genre ID`:  
-  `GET /api/books/?genres=1`
+### 📚 Books API (`/api/`)
+| Method | Endpoint           | Description |
+|--------|--------------------|-------------|
+| GET    | `/books/`          | List books with filters |
+| GET    | `/books/<id>/`     | Get book details |
+| GET    | `/authors/`        | List authors (name filter) |
+| GET    | `/genres/`         | List genres |
+| GET    | `/borrow/`         | List borrow records |
+| POST   | `/borrow/`         | Submit borrow request |
 
 ---
 
-### ✍️ Authors – `/api/authors/`
-| Method | Endpoint             | Description                             |
-|--------|----------------------|-----------------------------------------|
-| GET    | `/`                  | List all authors (supports name search) |
-| POST   | `/`                  | Create a new author                     |
-| GET    | `/:id/`              | Get details of a specific author        |
-| PUT    | `/:id/`              | Update author info                      |
-| DELETE | `/:id/`              | Delete an author                        |
+## 🖥️ Web Routes
+
+| Route                        | Description |
+|-----------------------------|-------------|
+| `/register/`                | Web register page |
+| `/login/`                   | Login page |
+| `/logout/`                  | Logout (redirects to login) |
+| `/change-password/`         | Change password |
+| `/books/`                   | Book list view |
+| `/books/<id>/`              | Book detail page |
+| `/books/<id>/borrow/`       | Submit borrow request (form modal) |
+| `/profile/<user_id>/`       | User profile and borrow history |
+| `/dashboard/`               | Librarian dashboard |
+| `/dashboard/users/...`      | Add/edit/delete users |
+| `/dashboard/books/...`      | Add/edit/delete books |
+| `/dashboard/approve/...`    | Approve borrow request |
+| `/dashboard/reject/...`     | Reject borrow request |
+| `/dashboard/return/...`     | Confirm book return |
 
 ---
 
-### 🎨 Genres – `/api/genres/`
-| Method | Endpoint             | Description                             |
-|--------|----------------------|-----------------------------------------|
-| GET    | `/`                  | List all genres                         |
-| POST   | `/`                  | Create a new genre                      |
-| GET    | `/:id/`              | Get details of a specific genre         |
-| PUT    | `/:id/`              | Update genre info                       |
-| DELETE | `/:id/`              | Delete a genre                          |
-
----
-
-## 🖥️ Admin Panel
-
-Visit `/admin/` with a superuser account to:
-- Manage Books, Authors, and Genres via dashboard
-- Use search, filters, and inline ManyToMany management
-- Upload and preview book cover images
-
----
-
-## 🌐 HTML Views
-
-| Route            | Description                 |
-|------------------|-----------------------------|
-| `/books/`        | Book list with search       |
-| `/books/<id>/`   | Book detail page            |
-
----
-
-## 💻 Getting Started
-
-### 🔧 Requirements
-- Python 3.8+
-- pip
-- Git
-
----
-
-### 📥 Installation
+## 🛠️ Setup & Installation
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/dlramos1031/LMS-Django.git
+# Clone the repo
+git clone https://github.com/yourusername/lms-django.git
+cd lms-django
 
-# 2. Set up virtual environment
+# Set up a virtual environment
 python -m venv venv
-.\venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 3. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4. Apply migrations
-python manage.py makemigrations users
-python manage.py makemigrations books
+# Apply migrations
+python manage.py makemigrations
 python manage.py migrate
 
-# 5. Create a superuser (admin account)
+# Create a superuser
 python manage.py createsuperuser
 
-# 6. Run the development server
+# Run the development server
 python manage.py runserver
