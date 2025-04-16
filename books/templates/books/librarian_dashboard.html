@@ -233,10 +233,52 @@
     {% endfor %}
   </tbody>
 </table>
+
+<!-- Add User Button -->
 <div class="text-end mb-4">
   <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
     + Add Book
   </button>
+</div>
+
+<!-- Add Book Modal -->
+<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="{% url 'add_book' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" min="0" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Authors (comma-separated)</label>
+            <input type="text" name="authors" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Genres (comma-separated)</label>
+            <input type="text" name="genres" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Summary</label>
+            <textarea name="summary" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Add Book</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% include "books/includes/pagination.html" with page_obj=book_page %}
 
@@ -346,6 +388,7 @@
 <div class="text-end mb-3">
   <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
 </div>
+
 <!-- Add User Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -390,46 +433,6 @@
   </div>
 </div>
 {% include "books/includes/pagination.html" with page_obj=user_page %}
-
-<!-- Add Book Modal -->
-<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form method="post" action="{% url 'add_book' %}">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Quantity</label>
-            <input type="number" name="quantity" class="form-control" min="0" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Authors (comma-separated)</label>
-            <input type="text" name="authors" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Genres (comma-separated)</label>
-            <input type="text" name="genres" class="form-control">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Summary</label>
-            <textarea name="summary" class="form-control" rows="3"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Add Book</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 {% endif %}
 
