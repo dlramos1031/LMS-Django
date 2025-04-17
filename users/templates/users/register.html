@@ -57,6 +57,7 @@
         <div id="password-match" class="mt-1 small"></div>
       </div>
 
+      <!-- Register Button -->
       <button type="submit" class="btn btn-success w-100 mt-2" id="register-btn" disabled>Register</button>
     </form>
   </div>
@@ -173,7 +174,6 @@
         username.setCustomValidity("");
         usernameFeedback.textContent = "";
       }
-
       checkFormValidity();
     }
 
@@ -182,10 +182,9 @@
       if (!value) return;
 
       const res = await fetch(`/api/auth/check-email/?email=${encodeURIComponent(value)}`);
-      const data = await res.json();
       const emailFeedback = document.getElementById("email-feedback");
-
       const validFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      const data = await res.json();
 
       if (!validFormat) {
         email.classList.add("is-invalid");
@@ -202,7 +201,6 @@
         email.classList.add("is-valid");
         email.setCustomValidity("");
       }
-
       checkFormValidity();
     }
 
@@ -240,7 +238,6 @@
       }
     });
   });
-
   </script>  
 
 {% endblock %}

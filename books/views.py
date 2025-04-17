@@ -150,8 +150,6 @@ def borrow_book_view(request, pk):
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
 
-from books.models import Book
-
 @staff_member_required
 def librarian_dashboard_view(request):
     tab = request.GET.get('tab', 'pending')
@@ -173,7 +171,6 @@ def librarian_dashboard_view(request):
     book_qs = Book.objects.prefetch_related('authors', 'genres')
     user_qs = User.objects.all()
 
-    # Apply filters
     if tab == 'pending' and search:
         pending_qs = pending_qs.filter(
             Q(book__title__icontains=search) | Q(user__username__icontains=search)
@@ -210,7 +207,6 @@ def librarian_dashboard_view(request):
         'user_page': paginate(user_qs) if tab == 'users' else None,
     }
     return render(request, 'books/librarian_dashboard.html', context)
-
 
 @staff_member_required
 @require_POST
@@ -252,7 +248,6 @@ def add_book_view(request):
     title = request.POST.get('title')
     quantity = request.POST.get('quantity')
     summary = request.POST.get('summary', '')
-    
     book = Book.objects.create(title=title, quantity=quantity, summary=summary)
     book.open_library_id = request.POST.get('open_library_id', '')
 
@@ -277,7 +272,6 @@ def add_book_view(request):
 @require_POST
 def edit_book_view(request, book_id):
     book = get_object_or_404(Book, id=book_id)
-
     book.title = request.POST.get('title')
     book.quantity = request.POST.get('quantity')
     book.summary = request.POST.get('summary', '')
