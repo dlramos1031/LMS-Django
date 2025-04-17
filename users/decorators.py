@@ -21,3 +21,12 @@ def admin_only(view_func):
         else:
             return redirect('books_list')
     return wrapper
+
+def members_only(view_func):
+    @wraps(view_func)
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if request.user.role == 'librarian' or request.user.is_staff:
+            return redirect('librarian_dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper

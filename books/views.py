@@ -15,7 +15,7 @@ from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
 from django.utils.timezone import make_aware, now
 from datetime import datetime
-from users.decorators import admin_only
+from users.decorators import members_only, admin_only
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -86,7 +86,7 @@ class BorrowingViewSet(viewsets.ViewSet):
 
         return Response({"detail": "Book returned successfully."})
 
-@login_required
+@members_only
 def books_list_view(request):
     search = request.GET.get("search", "")
     books = Book.objects.all()
@@ -103,7 +103,7 @@ def books_list_view(request):
         "search": search,
     })
 
-@login_required
+@members_only
 def book_detail_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
 
