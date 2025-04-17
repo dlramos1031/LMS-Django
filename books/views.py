@@ -10,10 +10,12 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import HttpResponseForbidden
 from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
 from django.utils.timezone import make_aware, now
 from datetime import datetime
+from users.decorators import admin_only
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -84,6 +86,7 @@ class BorrowingViewSet(viewsets.ViewSet):
 
         return Response({"detail": "Book returned successfully."})
 
+@login_required
 def books_list_view(request):
     search = request.GET.get("search", "")
     books = Book.objects.all()
@@ -150,7 +153,7 @@ def borrow_book_view(request, pk):
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
 
-@staff_member_required
+@admin_only
 def librarian_dashboard_view(request):
     tab = request.GET.get('tab', 'pending')
     search = request.GET.get('search', '').strip()

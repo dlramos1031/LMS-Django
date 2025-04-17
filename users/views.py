@@ -17,9 +17,10 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from books.models import Borrowing
+from .decorators import redirect_authenticated_user
 from .serializers import RegisterSerializer
 from .forms import UserRegistrationForm
+from books.models import Borrowing
 
 User = get_user_model()
 
@@ -73,6 +74,7 @@ class LogoutView(APIView):
 # 🌐 TEMPLATE-BASED VIEWS
 # ============================================
 
+@method_decorator(redirect_authenticated_user, name='dispatch')
 class CustomLoginViewWeb(LoginView):
     template_name = 'users/login.html'
 
@@ -87,6 +89,7 @@ class CustomPasswordChangeView(PasswordChangeView):
     template_name = 'users/change_password.html'
     success_url = reverse_lazy('books_list')
 
+@redirect_authenticated_user
 def register_view(request):
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST, request.FILES)
