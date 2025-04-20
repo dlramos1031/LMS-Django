@@ -114,7 +114,24 @@ def user_profile_view(request, user_id):
     return render(request, 'users/profile.html', {
         'profile_user': target_user,
         'borrowings': borrowings
-    })       
+    })
+
+@login_required
+@require_POST
+def edit_profile_view(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+
+    user.username = request.POST.get('username')
+    user.full_name = request.POST.get('full_name')
+    user.email = request.POST.get('email')
+
+    password = request.POST.get('password')
+    if password:
+        user.set_password(password)
+
+    user.save()
+    messages.success(request, "User updated successfully.")
+    return redirect('user_profile', user_id=user.id)
 
 @staff_member_required
 @require_POST
