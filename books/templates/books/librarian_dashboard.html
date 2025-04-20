@@ -164,14 +164,14 @@
       </td>
       <td>{{ book.quantity }}</td>
       <td>
-        <!-- Placeholder buttons for now -->
+        <!-- Book Edit & Delete Buttons -->
         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editBookModal-{{ book.id }}">Edit</button>
         <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteBookModal-{{ book.id }}">Delete</button>
         <!-- Edit Modal -->
         <div class="modal fade" id="editBookModal-{{ book.id }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog modal-lg">
             <div class="modal-content">
-              <form method="post" action="{% url 'edit_book' book.id %}">
+              <form method="post" action="{% url 'edit_book' book.id %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-header">
                   <h5 class="modal-title">Edit Book</h5>
@@ -197,6 +197,19 @@
                   <div class="col-12">
                     <label class="form-label">Summary</label>
                     <textarea name="summary" class="form-control" rows="3">{{ book.summary }}</textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Open Library ID</label>
+                    <input type="text" name="open_library_id" class="form-control" value="{{ book.open_library_id }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Cover Image</label>
+                    {% if book.cover_image %}
+                      <div class="mb-2">
+                        <img src="{{ book.cover_image.url }}" class="img-thumbnail" style="max-height: 100px;">
+                      </div>
+                    {% endif %}
+                    <input type="file" name="cover_image" class="form-control">
                   </div>
                 </div>
                 <div class="modal-footer">
@@ -233,10 +246,60 @@
     {% endfor %}
   </tbody>
 </table>
+
+<!-- Add Book Button -->
 <div class="text-end mb-4">
   <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addBookModal">
     + Add Book
   </button>
+</div>
+
+<!-- Add Book Modal -->
+<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="{% url 'add_book' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" min="0" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Authors (comma-separated)</label>
+            <input type="text" name="authors" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Genres (comma-separated)</label>
+            <input type="text" name="genres" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Open Library ID</label>
+            <input type="text" name="open_library_id" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cover Image</label>
+            <input type="file" name="cover_image" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Summary</label>
+            <textarea name="summary" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Add Book</button>
+        </div>
+      </form>      
+    </div>
+  </div>
 </div>
 {% include "books/includes/pagination.html" with page_obj=book_page %}
 
@@ -269,8 +332,25 @@
       <td>{{ user.email }}</td>
       <td>{{ user.role|capfirst }}</td>
       <td>
-        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
-        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        {% if user != request.user and request.user.role == 'admin' %}
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        {% elif user.role == 'member' and user != request.user and request.user.role == 'librarian' %}
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        {% elif user == request.user %}
+          <span class="text-muted">Your account</span>
+        {% else %}
+          <span class="text-muted">No permission</span>
+        {% endif %}
         <!-- Edit User Modal -->
         <div class="modal fade" id="editUserModal-{{ user.id }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog">
@@ -300,11 +380,16 @@
                   </div>
                   <div class="mb-2">
                     <label class="form-label">Role</label>
+                    {% if user.role != 'admin' %}
                     <select name="role" class="form-select">
                       <option value="member" {% if user.role == "member" %}selected{% endif %}>Member</option>
                       <option value="librarian" {% if user.role == "librarian" %}selected{% endif %}>Librarian</option>
-                      <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
                     </select>
+                    {% else %}
+                    <select name="role" class="form-select">
+                      <option value="admin">Admin</option>
+                    </select>
+                    {% endif %}
                   </div>
                 </div>
                 <div class="modal-footer">
@@ -346,6 +431,7 @@
 <div class="text-end mb-3">
   <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addUserModal">+ Add User</button>
 </div>
+
 <!-- Add User Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -377,8 +463,9 @@
             <label class="form-label">Role</label>
             <select name="role" class="form-select">
               <option value="member">Member</option>
+              {% if request.user.role == 'admin' %}
               <option value="librarian">Librarian</option>
-              <option value="admin">Admin</option>
+              {% endif %}
             </select>
           </div>
         </div>
@@ -390,46 +477,6 @@
   </div>
 </div>
 {% include "books/includes/pagination.html" with page_obj=user_page %}
-
-<!-- Add Book Modal -->
-<div class="modal fade" id="addBookModal" tabindex="-1" aria-labelledby="addBookModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form method="post" action="{% url 'add_book' %}">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title" id="addBookModalLabel">Add Book</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Quantity</label>
-            <input type="number" name="quantity" class="form-control" min="0" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Authors (comma-separated)</label>
-            <input type="text" name="authors" class="form-control" required>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Genres (comma-separated)</label>
-            <input type="text" name="genres" class="form-control">
-          </div>
-          <div class="col-12">
-            <label class="form-label">Summary</label>
-            <textarea name="summary" class="form-control" rows="3"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Add Book</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
 
 {% endif %}
 

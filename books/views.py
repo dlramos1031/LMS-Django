@@ -10,10 +10,12 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import HttpResponseForbidden
 from .models import Author, Book, Genre, Borrowing
 from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
 from django.utils.timezone import make_aware, now
 from datetime import datetime
+from users.decorators import members_only, admin_only
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -84,6 +86,7 @@ class BorrowingViewSet(viewsets.ViewSet):
 
         return Response({"detail": "Book returned successfully."})
 
+@members_only
 def books_list_view(request):
     search = request.GET.get("search", "")
     books = Book.objects.all()
@@ -100,7 +103,7 @@ def books_list_view(request):
         "search": search,
     })
 
-@login_required
+@members_only
 def book_detail_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
 
@@ -150,9 +153,7 @@ def borrow_book_view(request, pk):
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
 
-from books.models import Book
-
-@staff_member_required
+@admin_only
 def librarian_dashboard_view(request):
     tab = request.GET.get('tab', 'pending')
     search = request.GET.get('search', '').strip()
@@ -173,7 +174,6 @@ def librarian_dashboard_view(request):
     book_qs = Book.objects.prefetch_related('authors', 'genres')
     user_qs = User.objects.all()
 
-    # Apply filters
     if tab == 'pending' and search:
         pending_qs = pending_qs.filter(
             Q(book__title__icontains=search) | Q(user__username__icontains=search)
@@ -194,8 +194,7 @@ def librarian_dashboard_view(request):
             Q(full_name__icontains=search) |
             Q(email__icontains=search)
         )
-
-    # Pagination helper
+        
     def paginate(queryset, per_page=6):
         paginator = Paginator(queryset, per_page)
         page = request.GET.get('page')
@@ -211,7 +210,6 @@ def librarian_dashboard_view(request):
         'user_page': paginate(user_qs) if tab == 'users' else None,
     }
     return render(request, 'books/librarian_dashboard.html', context)
-
 
 @staff_member_required
 @require_POST
@@ -253,15 +251,18 @@ def add_book_view(request):
     title = request.POST.get('title')
     quantity = request.POST.get('quantity')
     summary = request.POST.get('summary', '')
-    authors_raw = request.POST.get('authors', '')
-    genres_raw = request.POST.get('genres', '')
-
     book = Book.objects.create(title=title, quantity=quantity, summary=summary)
+    book.open_library_id = request.POST.get('open_library_id', '')
 
+    if 'cover_image' in request.FILES:
+        book.cover_image = request.FILES['cover_image']
+
+    authors_raw = request.POST.get('authors', '')
     for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
         author, _ = Author.objects.get_or_create(name=name)
         book.authors.add(author)
 
+    genres_raw = request.POST.get('genres', '') 
     for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
         genre, _ = Genre.objects.get_or_create(name=name)
         book.genres.add(genre)
@@ -274,19 +275,21 @@ def add_book_view(request):
 @require_POST
 def edit_book_view(request, book_id):
     book = get_object_or_404(Book, id=book_id)
-
     book.title = request.POST.get('title')
     book.quantity = request.POST.get('quantity')
     book.summary = request.POST.get('summary', '')
+    book.open_library_id = request.POST.get('open_library_id', '')
+
+    if 'cover_image' in request.FILES:
+        book.cover_image = request.FILES['cover_image']
 
     authors_raw = request.POST.get('authors', '')
-    genres_raw = request.POST.get('genres', '')
-
     book.authors.clear()
     for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
         author, _ = Author.objects.get_or_create(name=name)
         book.authors.add(author)
 
+    genres_raw = request.POST.get('genres', '')
     book.genres.clear()
     for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
         genre, _ = Genre.objects.get_or_create(name=name)

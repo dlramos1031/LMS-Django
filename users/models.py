@@ -9,7 +9,10 @@ class CustomUser(AbstractUser):
         ('user', 'Standard User'),
         ('admin', 'Admin/Librarian'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='admin')
 
     def __str__(self):
         return self.username
+    
+    class Meta:
+        ordering = ['full_name']

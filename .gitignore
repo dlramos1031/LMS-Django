@@ -1,7 +1,6 @@
 # Python
 __pycache__/
 *.py[cod]
-*.sqlite3
 *.log
 *.pot
 *.pyc
