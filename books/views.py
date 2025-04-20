@@ -168,7 +168,7 @@ def librarian_dashboard_view(request):
     ).select_related('book', 'user')
 
     history_qs = Borrowing.objects.filter(
-        status='approved', is_active=False
+        status='returned', is_active=False
     ).select_related('book', 'user')
 
     book_qs = Book.objects.prefetch_related('authors', 'genres')
