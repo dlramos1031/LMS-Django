@@ -332,8 +332,25 @@
       <td>{{ user.email }}</td>
       <td>{{ user.role|capfirst }}</td>
       <td>
-        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
-        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        {% if user != request.user and request.user.role == 'admin' %}
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        {% elif user.role == 'member' and user != request.user and request.user.role == 'librarian' %}
+          <button class="btn btn-sm btn-outline-secondary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editUserModal-{{ user.id }}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#deleteUserModal-{{ user.id }}">Delete</button>
+        {% elif user == request.user %}
+          <span class="text-muted">Your account</span>
+        {% else %}
+          <span class="text-muted">No permission</span>
+        {% endif %}
         <!-- Edit User Modal -->
         <div class="modal fade" id="editUserModal-{{ user.id }}" tabindex="-1" aria-hidden="true">
           <div class="modal-dialog">
@@ -363,11 +380,16 @@
                   </div>
                   <div class="mb-2">
                     <label class="form-label">Role</label>
+                    {% if user.role != 'admin' %}
                     <select name="role" class="form-select">
                       <option value="member" {% if user.role == "member" %}selected{% endif %}>Member</option>
                       <option value="librarian" {% if user.role == "librarian" %}selected{% endif %}>Librarian</option>
-                      <option value="admin" {% if user.role == "admin" %}selected{% endif %}>Admin</option>
                     </select>
+                    {% else %}
+                    <select name="role" class="form-select">
+                      <option value="admin">Admin</option>
+                    </select>
+                    {% endif %}
                   </div>
                 </div>
                 <div class="modal-footer">
@@ -441,8 +463,9 @@
             <label class="form-label">Role</label>
             <select name="role" class="form-select">
               <option value="member">Member</option>
+              {% if request.user.role == 'admin' %}
               <option value="librarian">Librarian</option>
-              <option value="admin">Admin</option>
+              {% endif %}
             </select>
           </div>
         </div>
