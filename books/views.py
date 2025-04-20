@@ -1,21 +1,29 @@
-from rest_framework import viewsets, permissions, filters
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from django_filters.rest_framework import DjangoFilterBackend
-from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django_filters.rest_framework import DjangoFilterBackend
 from django.views.decorators.http import require_POST
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.http import HttpResponseForbidden
-from .models import Author, Book, Genre, Borrowing
-from .serializers import AuthorSerializer, BookSerializer, GenreSerializer, BorrowingSerializer
 from django.utils.timezone import make_aware, now
+from django.core.paginator import Paginator
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
+
+from rest_framework import viewsets, permissions, filters
+from rest_framework.response import Response
+from rest_framework.decorators import action
+
 from datetime import datetime
+from .models import Author, Book, Genre, Borrowing
 from users.decorators import members_only, admin_only
+from .serializers import (
+    AuthorSerializer, 
+    BookSerializer, 
+    GenreSerializer, 
+    BorrowingSerializer
+)
+
+# ================================ View Sets ================================
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -153,6 +161,8 @@ def borrow_book_view(request, pk):
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
         return redirect('books_list')
 
+# =========================== Librarian Dashboard ===========================
+
 @admin_only
 def librarian_dashboard_view(request):
     tab = request.GET.get('tab', 'pending')
@@ -211,6 +221,8 @@ def librarian_dashboard_view(request):
     }
     return render(request, 'books/librarian_dashboard.html', context)
 
+# ========================= Librarian Borrowing Views =========================
+
 @staff_member_required
 @require_POST
 def approve_borrow_view(request, borrow_id):
@@ -244,6 +256,8 @@ def mark_returned_view(request, borrow_id):
     borrowing.save()
     messages.success(request, "Book marked as returned.")
     return redirect('librarian_dashboard')
+
+# =========================== Librarian Book Views ===========================
 
 @staff_member_required
 @require_POST
