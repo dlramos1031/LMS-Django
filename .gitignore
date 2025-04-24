@@ -36,3 +36,6 @@ coverage.xml
 # Other
 .DS_Store
 .idea/
+
+media/book_covers/
+db.sqlite3
