@@ -7,8 +7,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # API routes
-    path('api/auth/', include('users.api_urls')), 
     path('api/', include('books.api_urls')), 
+    path('api/auth/', include('users.api_urls')), 
+    path('api/auth/password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')), 
 
     # Web routes
     path('', include('books.urls')), 

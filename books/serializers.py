@@ -1,6 +1,5 @@
 from rest_framework import serializers
-from .models import Author, Book, Genre, Borrowing
-from datetime import datetime
+from .models import Author, Book, Genre, Borrowing, Notification
 from django.utils import timezone
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -23,6 +22,8 @@ class BookSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(), many=True, write_only=True, source='genres'
     )
 
+    is_favorite = serializers.SerializerMethodField()
+
     class Meta:
         model = Book
         fields = [
@@ -31,6 +32,18 @@ class BookSerializer(serializers.ModelSerializer):
             'genres', 'genre_ids'
         ]
         read_only_fields = ['is_available']
+    
+    def get_is_favorite(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return obj.favorited_by.filter(pk=user.pk).exists()
+        return False
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'message', 'read', 'created_at']
+        read_only_fields = ['id', 'title', 'message', 'created_at']  
 
 class BorrowingSerializer(serializers.ModelSerializer):
     book_title = serializers.CharField(source='book.title', read_only=True)

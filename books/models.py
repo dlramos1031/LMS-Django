@@ -25,6 +25,12 @@ class Book(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     total_borrows = models.PositiveIntegerField(default=0)
 
+    favorited_by = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, 
+        related_name='favorite_books', 
+        blank=True
+    )
+
     def __str__(self):
         return self.title
 
@@ -34,6 +40,21 @@ class Book(models.Model):
     
     class Meta:
         ordering = ['title']
+
+class Notification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+    message = models.TextField()
+    read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    NOTIFICATION_TYPES = [('approval', 'Approval'), ('reminder', 'Reminder'), ('overdue', 'Overdue')]
+    type = models.CharField(max_length=10, choices=NOTIFICATION_TYPES, default='approval')
+
+    def __str__(self):
+        return f"Notification for {self.user.username}: {self.title}"
+
+    class Meta:
+        ordering = ['-created_at']
 
 class Borrowing(models.Model):
     STATUS_CHOICES = [

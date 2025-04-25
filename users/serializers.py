@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import UserDevice
 
 User = get_user_model()
 
@@ -27,3 +28,14 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.role = 'member'
         user.save()
         return user
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'full_name', 'email', 'role']
+        read_only_fields = ['email', 'role', 'id']
+        
+class UserDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserDevice
+        fields = ['device_token']

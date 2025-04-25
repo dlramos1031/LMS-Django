@@ -9,7 +9,7 @@ from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -18,8 +18,9 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .decorators import redirect_authenticated_user
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, UserProfileSerializer, UserDeviceSerializer
 from .forms import UserRegistrationForm
+from .models import UserDevice
 from books.models import Borrowing
 
 User = get_user_model()
@@ -69,6 +70,27 @@ class LogoutView(APIView):
     def post(self, request):
         request.user.auth_token.delete()
         return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+
+# ============================================
+# 📱 MOBILE VIEWS
+# ============================================
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+class RegisterDeviceView(generics.CreateAPIView):
+    serializer_class = UserDeviceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        UserDevice.objects.update_or_create(
+            device_token=serializer.validated_data['device_token'],
+            defaults={'user': self.request.user}
+        )
 
 # ============================================
 # 🌐 TEMPLATE-BASED VIEWS

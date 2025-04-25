@@ -14,16 +14,18 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from datetime import datetime
-from .models import Author, Book, Genre, Borrowing
+from .models import Author, Book, Genre, Borrowing, Notification
 from users.decorators import members_only, admin_only
 from .serializers import (
     AuthorSerializer, 
     BookSerializer, 
     GenreSerializer, 
-    BorrowingSerializer
+    BorrowingSerializer,
+    NotificationSerializer
 )
 
 # ================================ View Sets ================================
+
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -31,16 +33,71 @@ class AuthorViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
+
+
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
+
+
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['authors']  
-    search_fields = ['title', 'summary']  
+    filterset_fields = ['authors', 'genres']
+    search_fields = ['title', 'summary', 'authors__name']  
+
+    @action(detail=True, methods=['post', 'delete'], permission_classes=[permissions.IsAuthenticated])
+    def favorite(self, request, pk=None):
+        book = self.get_object()
+        user = request.user
+
+        if request.method == 'POST':
+            book.favorited_by.add(user)
+            return Response({'status': 'book favorited'}, status=status.HTTP_200_OK)
+        elif request.method == 'DELETE':
+            book.favorited_by.remove(user)
+            return Response({'status': 'book unfavorited'}, status=status.HTTP_204_NO_CONTENT)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
+
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        if notification.user != request.user:
+             return Response({'detail': 'Not authorized.'}, status=status.HTTP_403_FORBIDDEN)
+        notification.read = True
+        notification.save()
+        return Response(NotificationSerializer(notification).data)
+
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        Notification.objects.filter(user=request.user, read=False).update(read=True)
+        return Response({'status': 'all marked as read'})
+
+    @action(detail=False, methods=['delete'])
+    def clear_all(self, request):
+         Notification.objects.filter(user=request.user).delete()
+         return Response({'status': 'all notifications cleared'}, status=status.HTTP_204_NO_CONTENT)
+
+def create_notification(user, title, message):
+    Notification.objects.create(user=user, title=title, message=message)
+
+
 
 class BorrowingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -232,6 +289,13 @@ def approve_borrow_view(request, borrow_id):
     borrowing.book.quantity -= 1
     borrowing.book.save()
     borrowing.save()
+
+    create_notification(
+        user=borrowing.user, 
+        title="Borrow Request Approved", 
+        message=f"Your request to borrow '{borrowing.book.title}' has been approved."
+    )
+
     messages.success(request, "Borrow request approved.")
     return redirect('librarian_dashboard')
 
@@ -242,6 +306,13 @@ def reject_borrow_view(request, borrow_id):
     borrowing.status = 'rejected'
     borrowing.is_active = False
     borrowing.save()
+
+    create_notification(
+        user=borrowing.user, 
+        title="Borrow Request Rejected", 
+        message=f"Your request to borrow '{borrowing.book.title}' has been rejected."
+    )
+
     messages.warning(request, "Borrow request rejected.")
     return redirect('librarian_dashboard')
 
