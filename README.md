@@ -4,6 +4,39 @@ A Django-based web application and RESTful API for managing a physical library, 
 
 ---
 
+## 🛠️ Setup & Installation
+
+```bash
+# Clone the repo
+git clone https://github.com/dlramos1031/LMS-Django.git
+cd LMS-Django
+
+# Set up a virtual environment
+python -m venv venv
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Apply migrations
+python manage.py makemigrations
+python manage.py migrate
+
+# Create your admin account (type y if password is too common)
+python manage.py createsuperuser
+
+# Run the development server
+python manage.py runserver
+
+```
+
+#### Important Note:
+
+- Go to http://127.0.0.1:8000/login/ for the Login Page
+- Login with your superuser account (admin account)
+
+---
+
 ## 🚀 Features
 
 ### 👤 User Management
@@ -80,28 +113,3 @@ A Django-based web application and RESTful API for managing a physical library, 
 | `/dashboard/reject/...`       | Reject borrow request               |
 | `/dashboard/return/...`       | Confirm book return                 |
 
----
-
-## 🛠️ Setup & Installation
-
-```bash
-# Clone the repo
-git clone https://github.com/dlramos1031/LMS-Django.git
-cd lms-django
-
-# Set up a virtual environment
-python -m venv venv
-.\venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Apply migrations
-python manage.py makemigrations
-python manage.py migrate
-
-# Create a superuser
-python manage.py createsuperuser
-
-# Run the development server
-python manage.py runserver
