@@ -18,7 +18,7 @@ python -m venv venv
 # Install dependencies
 pip install -r requirements.txt
 
-# Apply migrations
+# Apply migrations (optional)
 python manage.py makemigrations
 python manage.py migrate
 
