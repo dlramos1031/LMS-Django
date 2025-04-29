@@ -29,31 +29,30 @@ class BookSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'summary', 'cover_image', 'open_library_id',
             'quantity', 'is_available', 'authors', 'author_ids',
-            'genres', 'genre_ids'
-            , 'is_favorite'
+            'genres', 'genre_ids', 'is_favorite'
         ]
-        read_only_fields = ['is_available']
+        read_only_fields = ['is_available', 'is_favorite']
     
     def get_is_favorite(self, obj):
-        user = self.context['request'].user
+        user = self.context.get('request', None).user
         if user.is_authenticated:
             return obj.favorited_by.filter(pk=user.pk).exists()
         return False
+
+class BorrowingSerializer(serializers.ModelSerializer):
+    book = BookSerializer(read_only=True)
+    is_overdue = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Borrowing
+        fields = ['id', 'book', 'book_title', 'borrow_date', 'return_date', 'status', 'is_overdue', 'is_active']
+        read_only_fields = ['id', 'borrow_date', 'is_overdue', 'is_active', 'book']
+
+    def get_is_overdue(self, obj):
+        return obj.status == 'approved' and obj.is_active and obj.return_date and timezone.now() > obj.return_date  
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'title', 'message', 'read', 'created_at']
         read_only_fields = ['id', 'title', 'message', 'created_at']  
-
-class BorrowingSerializer(serializers.ModelSerializer):
-    book_title = serializers.CharField(source='book.title', read_only=True)
-    is_overdue = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Borrowing
-        fields = ['id', 'book', 'book_title', 'borrow_date', 'return_date', 'status', 'is_overdue']
-        read_only_fields = ['borrow_date']
-
-    def get_is_overdue(self, obj):
-        return obj.status == 'borrowed' and timezone.now() > obj.return_date    
