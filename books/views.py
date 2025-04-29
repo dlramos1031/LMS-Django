@@ -10,7 +10,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
@@ -124,55 +124,101 @@ def create_notification(user, title, message):
 
 class BorrowingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = BorrowingSerializer
 
     def list(self, request):
-        borrowings = Borrowing.objects.filter(user=request.user).order_by('-borrow_date')
-        serializer = BorrowingSerializer(borrowings, many=True)
+        borrowings = Borrowing.objects.filter(user=request.user).select_related('book').prefetch_related('book__authors', 'book__genres').order_by('-borrow_date')
+        serializer = BorrowingSerializer(borrowings, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
     def borrow(self, request):
         book_id = request.data.get('book')
-        return_date = request.data.get('return_date')
+        return_date_str = request.data.get('return_date')
 
-        if not book_id or not return_date:
-            return Response({"error": "Book and return_date are required."}, status=400)
+        if not book_id or not return_date_str:
+            return Response({"error": "Book ID and return_date (YYYY-MM-DD) are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             book = Book.objects.get(pk=book_id)
         except Book.DoesNotExist:
-            return Response({"error": "Book not found."}, status=404)
+            return Response({"error": "Book not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        existing_pending_or_active = Borrowing.objects.filter(
+            user=request.user,
+            book=book,
+            status__in=['pending', 'approved'],
+            is_active=True
+        ).exists()
+        if existing_pending_or_active:
+             return Response({"error": "You already have an active or pending borrow request for this book."}, status=status.HTTP_400_BAD_REQUEST)
 
         if book.quantity <= 0:
             return Response({"error": "Book is not available."}, status=400)
 
+        borrowing_status = 'pending'
+        is_borrow_active = True
+        book_quantity_change = 0
+
+        try:
+            # Convert string date 'YYYY-MM-DD' to datetime object
+            # DRF serializers normally handle this, but ViewSet action needs manual conversion
+            from datetime import datetime
+            from django.utils.timezone import make_aware
+            parsed_return_date = make_aware(datetime.strptime(return_date_str, '%Y-%m-%d'))
+        except ValueError:
+             return Response({"error": "Invalid return_date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+
         borrowing = Borrowing.objects.create(
             user=request.user,
             book=book,
-            return_date=return_date,
+            return_date=parsed_return_date,
+            status=borrowing_status,
+            is_active=is_borrow_active,
         )
-        book.quantity -= 1
-        book.total_borrows += 1
-        book.save()
 
-        return Response(BorrowingSerializer(borrowing).data, status=201)
+        if book_quantity_change != 0:
+            book.quantity += book_quantity_change
+            if borrowing_status == 'approved':
+                book.total_borrows +=1
+            book.save()
+
+        serializer = BorrowingSerializer(borrowing, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['post'])
     def return_book(self, request):
         borrowing_id = request.data.get('id')
 
+        if not borrowing_id:
+            return Response({"error": "Borrowing record ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            borrowing = Borrowing.objects.get(pk=borrowing_id, user=request.user, status='borrowed')
+            borrowing = Borrowing.objects.get(pk=borrowing_id, user=request.user, status='approved', is_active=True)
         except Borrowing.DoesNotExist:
-            return Response({"error": "Borrowing record not found."}, status=404)
+            return Response({"error": "Active borrowing record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
         borrowing.status = 'returned'
+        borrowing.is_active = False
         borrowing.save()
 
         borrowing.book.quantity += 1
         borrowing.book.save()
 
         return Response({"detail": "Book returned successfully."})
+    
+    @action(detail=True, methods=['delete']) # Use DELETE method, detail=True means it acts on a specific borrowing ID
+    def cancel_request(self, request, pk=None):
+        """
+        Allows a user to cancel their own 'pending' borrow request.
+        """
+        try:
+            borrowing = Borrowing.objects.get(pk=pk, user=request.user, status='pending')
+        except Borrowing.DoesNotExist:
+            return Response({"error": "Pending borrowing request not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+
+        borrowing.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 @members_only
 def books_list_view(request):

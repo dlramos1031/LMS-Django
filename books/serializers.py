@@ -45,7 +45,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Borrowing
-        fields = ['id', 'book', 'book_title', 'borrow_date', 'return_date', 'status', 'is_overdue', 'is_active']
+        fields = ['id', 'book', 'borrow_date', 'return_date', 'status', 'is_overdue', 'is_active']
         read_only_fields = ['id', 'borrow_date', 'is_overdue', 'is_active', 'book']
 
     def get_is_overdue(self, obj):
