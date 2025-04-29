@@ -26,8 +26,10 @@ SECRET_KEY = 'django-insecure-y-cp0uq&+&yeh6mfe^q17()t7qp^8-06aoy-9%1#2=1d9tu52c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+# Allowed IP Addresses:
+# 10.0.2.2 = Mobile
+# 127.0.0.1 = Website (e.g. https://127.0.0.1:8000/login/)
+ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1']
 
 # Application definition
 
@@ -78,6 +80,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lms.wsgi.application'
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',

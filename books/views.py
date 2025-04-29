@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django_filters import rest_framework as dj_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.views.decorators.http import require_POST
 from django.utils.timezone import make_aware, now
@@ -24,6 +25,26 @@ from .serializers import (
     NotificationSerializer
 )
 
+class BookFilter(dj_filters.FilterSet):
+    # Allows filtering like /api/books/?genre=Fiction
+    genre = dj_filters.CharFilter(field_name='genres__name', lookup_expr='icontains')
+    # Allows filtering like /api/books/?is_favorite=true
+    is_favorite = dj_filters.BooleanFilter(method='filter_is_favorite')
+
+    class Meta:
+        model = Book
+        # Add fields you want to filter directly by ID or exact match
+        fields = ['authors'] # Keep existing author ID filter
+
+    def filter_is_favorite(self, queryset, name, value):
+        user = self.request.user
+        if user.is_authenticated and value is True:
+            # Return only books favorited by the current user
+            return queryset.filter(favorited_by=user)
+        # If value is False or user not authenticated, return original queryset
+        # Or implement logic to return non-favorites if needed for `is_favorite=false`
+        return queryset
+
 # ================================ View Sets ================================
 
 
@@ -42,10 +63,11 @@ class GenreViewSet(viewsets.ModelViewSet):
 
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = Book.objects.all()
+    queryset = Book.objects.all().prefetch_related('authors', 'genres', 'favorited_by')
     serializer_class = BookSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_class = BookFilter
     filterset_fields = ['authors', 'genres']
     search_fields = ['title', 'summary', 'authors__name']  
 
@@ -56,6 +78,7 @@ class BookViewSet(viewsets.ModelViewSet):
 
         if request.method == 'POST':
             book.favorited_by.add(user)
+            serializer = self.get_serializer(book)
             return Response({'status': 'book favorited'}, status=status.HTTP_200_OK)
         elif request.method == 'DELETE':
             book.favorited_by.remove(user)

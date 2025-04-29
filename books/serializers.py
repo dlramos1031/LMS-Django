@@ -30,6 +30,7 @@ class BookSerializer(serializers.ModelSerializer):
             'id', 'title', 'summary', 'cover_image', 'open_library_id',
             'quantity', 'is_available', 'authors', 'author_ids',
             'genres', 'genre_ids'
+            , 'is_favorite'
         ]
         read_only_fields = ['is_available']
     
