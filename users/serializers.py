@@ -36,6 +36,25 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['username', 'email', 'role', 'id']
         
 class UserDeviceSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the UserDevice model.
+    Disables default uniqueness validation for device_token,
+    as uniqueness is handled in the RegisterDeviceView using update_or_create.
+    """
     class Meta:
         model = UserDevice
-        fields = ['device_token']
+        fields = [
+            'device_token',
+            # Include 'user' if you want it in the response, mark as read-only
+            # 'user',
+            # Include 'id' if you want it in the response
+            # 'id',
+        ]
+        extra_kwargs = {
+            'device_token': {
+                # Override default validators, removing the UniqueValidator
+                'validators': [],
+            },
+            # If including user in fields, make it read-only in requests
+            # 'user': {'read_only': True},
+        }

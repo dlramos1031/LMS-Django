@@ -27,9 +27,10 @@ SECRET_KEY = 'django-insecure-y-cp0uq&+&yeh6mfe^q17()t7qp^8-06aoy-9%1#2=1d9tu52c
 DEBUG = True
 
 # Allowed IP Addresses:
-# 10.0.2.2 = Mobile
+# 10.0.2.2 = Android Emulator
 # 127.0.0.1 = Website (e.g. https://127.0.0.1:8000/login/)
-ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1']
+# 192.168.197.211 = Actual Phone (Wireless LAN Adapter Wi-Fi) 
+ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1', '192.168.197.211']
 
 # Application definition
 
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'django_rest_passwordreset',
+    'push_notifications',
     'bootstrap5',
     'users',
     'books',
@@ -87,6 +89,13 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
     ]
+}
+
+PUSH_NOTIFICATIONS_SETTINGS = {
+    "FCM_API_KEY": "[your_fcm_server_key]",
+    # "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
+    # "APNS_PRIVATE_KEY": "/path/to/your/private_key.pem",
+    # ... other settings like APNS_TOPIC, etc.
 }
 
 # Database

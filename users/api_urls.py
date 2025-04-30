@@ -5,6 +5,7 @@ from .views import (
     LogoutView,
     CustomPasswordChangeView,
     UserProfileView,
+    RegisterDeviceView,
     check_username,
     check_email,
 )
@@ -17,4 +18,5 @@ urlpatterns = [
     path('check-username/', check_username, name='check_username'),
     path('check-email/', check_email, name='check_email'),
     path('profile/', UserProfileView.as_view(), name='api_user_profile'),
+    path('device/register/', RegisterDeviceView.as_view(), name='device-register'),
 ]
