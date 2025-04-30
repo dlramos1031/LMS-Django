@@ -79,10 +79,10 @@ class BookViewSet(viewsets.ModelViewSet):
         if request.method == 'POST':
             book.favorited_by.add(user)
             serializer = self.get_serializer(book)
-            return Response({'status': 'book favorited'}, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_200_OK)
         elif request.method == 'DELETE':
             book.favorited_by.remove(user)
-            return Response({'status': 'book unfavorited'}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -115,7 +115,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['delete'])
     def clear_all(self, request):
          Notification.objects.filter(user=request.user).delete()
-         return Response({'status': 'all notifications cleared'}, status=status.HTTP_204_NO_CONTENT)
+         return Response(status=status.HTTP_204_NO_CONTENT)
 
 def create_notification(user, title, message):
     Notification.objects.create(user=user, title=title, message=message)
