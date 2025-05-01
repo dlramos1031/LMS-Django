@@ -9,6 +9,7 @@ from django.utils.timezone import make_aware, now
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
+from django.urls import reverse
 
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.response import Response
@@ -379,61 +380,165 @@ def mark_returned_view(request, borrow_id):
 @staff_member_required
 @require_POST
 def add_book_view(request):
-    title = request.POST.get('title')
-    quantity = request.POST.get('quantity')
-    summary = request.POST.get('summary', '')
-    book = Book.objects.create(title=title, quantity=quantity, summary=summary)
-    book.open_library_id = request.POST.get('open_library_id', '')
+    try:
+        title = request.POST.get('title', '').strip()
+        quantity_str = request.POST.get('quantity', '1').strip() 
+        summary = request.POST.get('summary', '').strip()
+        publisher = request.POST.get('publisher', '').strip()
+        publish_date_str = request.POST.get('publish_date', '').strip()
+        isbn_13 = request.POST.get('isbn_13', '').strip()
+        isbn_10 = request.POST.get('isbn_10', '').strip()
+        language = request.POST.get('language', '').strip()
+        page_count_str = request.POST.get('page_count', '').strip()
+        open_library_id = request.POST.get('open_library_id', '').strip()
+        authors_raw = request.POST.get('authors', '').strip() 
+        genres_raw = request.POST.get('genres', '').strip()
 
-    if 'cover_image' in request.FILES:
-        book.cover_image = request.FILES['cover_image']
+        if not title:
+            messages.error(request, "Book title is required.")
+            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+        try:
+            quantity = int(quantity_str)
+            if quantity < 0: raise ValueError("Quantity cannot be negative.")
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid quantity provided.")
+            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
 
-    authors_raw = request.POST.get('authors', '')
-    for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
-        author, _ = Author.objects.get_or_create(name=name)
-        book.authors.add(author)
+        page_count = None
+        if page_count_str:
+            try:
+                page_count = int(page_count_str)
+                if page_count <= 0: raise ValueError("Page count must be positive.")
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid page count provided.")
+                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
 
-    genres_raw = request.POST.get('genres', '') 
-    for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
-        genre, _ = Genre.objects.get_or_create(name=name)
-        book.genres.add(genre)
+        publish_date = None
+        if publish_date_str:
+            try:
+                publish_date = datetime.strptime(publish_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                messages.error(request, "Invalid publish date format. Use YYYY-MM-DD.")
+                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
 
-    book.save()
-    messages.success(request, "Book added successfully.")
-    return redirect('/dashboard/?tab=books')
+        book = Book.objects.create(
+            title=title,
+            quantity=quantity,
+            summary=summary or None,
+            publisher=publisher or None,
+            publish_date=publish_date,
+            isbn_13=isbn_13 or None,
+            isbn_10=isbn_10 or None,
+            language=language or None,
+            page_count=page_count,
+            open_library_id=open_library_id or None
+        )
+
+        if 'cover_image' in request.FILES:
+            book.cover_image = request.FILES['cover_image']
+            # Save needed again after setting image if create didn't handle it
+            # book.save(update_fields=['cover_image']) # Usually create handles it
+
+        author_ids = []
+        for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
+            author, _ = Author.objects.get_or_create(name=name)
+            author_ids.append(author.id)
+        if author_ids:
+            book.authors.set(author_ids) 
+
+        genre_ids = []
+        for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
+            genre, _ = Genre.objects.get_or_create(name=name)
+            genre_ids.append(genre.id)
+        if genre_ids:
+            book.genres.set(genre_ids) 
+
+        book.save()
+        messages.success(request, f"Book '{book.title}' added successfully.")
+    except Exception as e:
+         messages.error(request, f"Error adding book: {e}")
+
+    return redirect(f"{reverse('librarian_dashboard')}?tab=books")
 
 @staff_member_required
 @require_POST
 def edit_book_view(request, book_id):
     book = get_object_or_404(Book, id=book_id)
-    book.title = request.POST.get('title')
-    book.quantity = request.POST.get('quantity')
-    book.summary = request.POST.get('summary', '')
-    book.open_library_id = request.POST.get('open_library_id', '')
+    try:
+        book.title = request.POST.get('title', book.title).strip()
+        quantity_str = request.POST.get('quantity', str(book.quantity)).strip()
+        book.summary = request.POST.get('summary', book.summary).strip()
+        book.publisher = request.POST.get('publisher', book.publisher).strip() or None
+        publish_date_str = request.POST.get('publish_date', '').strip()
+        book.isbn_13 = request.POST.get('isbn_13', book.isbn_13).strip() or None
+        book.isbn_10 = request.POST.get('isbn_10', book.isbn_10).strip() or None
+        book.language = request.POST.get('language', book.language).strip() or None
+        page_count_str = request.POST.get('page_count', '').strip()
+        book.open_library_id = request.POST.get('open_library_id', book.open_library_id).strip() or None
+        authors_raw = request.POST.get('authors', '').strip() 
+        genres_raw = request.POST.get('genres', '').strip() 
 
-    if 'cover_image' in request.FILES:
-        book.cover_image = request.FILES['cover_image']
+        if not book.title:
+            messages.error(request, "Book title cannot be empty.")
+            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+        try:
+            book.quantity = int(quantity_str)
+            if book.quantity < 0: raise ValueError("Quantity cannot be negative.")
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid quantity provided.")
+            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
 
-    authors_raw = request.POST.get('authors', '')
-    book.authors.clear()
-    for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
-        author, _ = Author.objects.get_or_create(name=name)
-        book.authors.add(author)
+        if page_count_str:
+            try:
+                book.page_count = int(page_count_str)
+                if book.page_count <= 0: raise ValueError("Page count must be positive.")
+            except (ValueError, TypeError):
+                messages.error(request, "Invalid page count provided.")
+                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+        else:
+             book.page_count = None 
 
-    genres_raw = request.POST.get('genres', '')
-    book.genres.clear()
-    for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
-        genre, _ = Genre.objects.get_or_create(name=name)
-        book.genres.add(genre)
+        if publish_date_str:
+            try:
+                book.publish_date = datetime.strptime(publish_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                messages.error(request, "Invalid publish date format. Use YYYY-MM-DD.")
+                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+        else:
+             book.publish_date = None 
 
-    book.save()
-    messages.success(request, "Book updated successfully.")
-    return redirect('/dashboard/?tab=books')
+        if 'cover_image' in request.FILES:
+            book.cover_image = request.FILES['cover_image']
+        elif request.POST.get('clear_cover_image'): 
+             book.cover_image = None
+
+        author_ids = []
+        for name in [n.strip() for n in authors_raw.split(',') if n.strip()]:
+            author, _ = Author.objects.get_or_create(name=name)
+            author_ids.append(author.id)
+        book.authors.set(author_ids)
+
+        genre_ids = []
+        for name in [n.strip() for n in genres_raw.split(',') if n.strip()]:
+            genre, _ = Genre.objects.get_or_create(name=name)
+            genre_ids.append(genre.id)
+        book.genres.set(genre_ids)
+
+        book.save()
+        messages.success(request, f"Book '{book.title}' updated successfully.")
+    except Exception as e:
+         messages.error(request, f"Error updating book: {e}")
+
+    return redirect(f"{reverse('librarian_dashboard')}?tab=books")
 
 @staff_member_required
 @require_POST
 def delete_book_view(request, book_id):
     book = get_object_or_404(Book, id=book_id)
+    active_borrowings = Borrowing.objects.filter(book=book, status='approved', actual_return_date__isnull=True).exists()
+    if active_borrowings:
+        messages.error(request, f"Cannot delete '{book.title}' as it is currently borrowed.")
+        return redirect(f"{reverse('librarian_dashboard')}?tab=books")
     book.delete()
     messages.success(request, "Book deleted successfully.")
-    return redirect('/dashboard/?tab=books')
+    return redirect(f"{reverse('librarian_dashboard')}?tab=books")
