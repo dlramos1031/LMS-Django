@@ -57,23 +57,54 @@ class Notification(models.Model):
         ordering = ['-created_at']
 
 class Borrowing(models.Model):
+    """
+    Represents a borrowing record for a book by a user.
+    """
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('approved', 'Approved'),
         ('returned', 'Returned'),
         ('rejected', 'Rejected'),
+        # Optional: ('overdue', 'Overdue') # Could be set by a scheduled task
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    book = models.ForeignKey(Book, on_delete=models.CASCADE)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='borrowings'
+    )
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name='borrowings'
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+
     borrow_date = models.DateTimeField(auto_now_add=True)
-    return_date = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=False)
+    due_date = models.DateTimeField(null=True, blank=True)
+    actual_return_date = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user.username} → {self.book.title} ({self.status})"
-    
+        due_date_str = self.due_date.strftime('%Y-%m-%d') if self.due_date else 'N/A'
+        return f"{self.user.username} → {self.book.title} (Due: {due_date_str}, Status: {self.status})"
+
+    @property
+    def is_overdue(self):
+        """
+        Checks if the borrowing record is currently overdue.
+        Only relevant if the status indicates it's currently borrowed ('approved').
+        """
+        return (
+            self.status == 'approved' and
+            self.due_date and
+            self.actual_return_date is None and
+            timezone.now() > self.due_date
+        )
+
     class Meta:
         ordering = ['-borrow_date']
 

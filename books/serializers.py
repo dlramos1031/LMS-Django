@@ -40,18 +40,36 @@ class BookSerializer(serializers.ModelSerializer):
         return False
 
 class BorrowingSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Borrowing model, reflecting refactored fields.
+    """
     book = BookSerializer(read_only=True)
-    is_overdue = serializers.SerializerMethodField()
+    is_overdue = serializers.ReadOnlyField()
 
     class Meta:
         model = Borrowing
-        fields = ['id', 'book', 'borrow_date', 'return_date', 'status', 'is_overdue', 'is_active']
-        read_only_fields = ['id', 'borrow_date', 'is_overdue', 'is_active', 'book']
-
-    def get_is_overdue(self, obj):
-        return obj.status == 'approved' and obj.is_active and obj.return_date and timezone.now() > obj.return_date  
+        fields = [
+            'id',
+            'book',
+            'borrow_date',
+            'due_date', 
+            'actual_return_date', 
+            'status',
+            'is_overdue', 
+        ]
+        read_only_fields = [
+            'id',
+            'book', 
+            'borrow_date',
+            'actual_return_date',
+            'status', 
+            'is_overdue',
+        ]
 
 class NotificationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Notification model (remains mostly the same).
+    """
     class Meta:
         model = Notification
         fields = ['id', 'title', 'message', 'read', 'created_at']

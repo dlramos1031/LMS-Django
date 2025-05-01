@@ -34,15 +34,15 @@
 </div>
 <table class="table table-sm table-bordered">
   <thead>
-    <tr><th>User</th><th>Book</th><th>Return Date</th><th>Requested</th><th>Actions</th></tr>
+    <tr><th>User</th><th>Book</th><th>Requested</th><th>Due Date</th><th>Actions</th></tr>
   </thead>
   <tbody>
     {% for borrow in pending_page %}
     <tr>
       <td>{{ borrow.user.username }}</td>
       <td>{{ borrow.book.title }}</td>
-      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
       <td>{{ borrow.borrow_date|date:"Y-m-d H:i" }}</td>
+      <td>{{ borrow.due_date|date:"Y-m-d" }}</td>
       <td>
         <form method="post" action="{% url 'approve_borrow' borrow.id %}" class="d-inline">
           {% csrf_token %}
@@ -81,9 +81,9 @@
       <td>{{ borrow.user.username }}</td>
       <td>{{ borrow.book.title }}</td>
       <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
-      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.due_date|date:"Y-m-d" }}</td>
       <td>
-        {% if borrow.return_date < now %}
+        {% if borrow.due_date < now %}
         <span class="badge bg-danger">Overdue</span>
         {% else %}
         <span class="badge bg-success">On time</span>
@@ -116,7 +116,7 @@
 
 <table class="table table-sm table-bordered">
   <thead>
-    <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Returned</th></tr>
+    <tr><th>User</th><th>Book</th><th>Borrowed</th><th>Due Date</th><th>Returned</th></tr>
   </thead>
   <tbody>
     {% for borrow in history_page %}
@@ -124,7 +124,8 @@
       <td>{{ borrow.user.username }}</td>
       <td>{{ borrow.book.title }}</td>
       <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
-      <td>{{ borrow.return_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.due_date|date:"Y-m-d" }}</td>
+      <td>{{ borrow.actual_return_date|date:"Y-m-d" }}</td>
     </tr>
     {% empty %}
     <tr><td colspan="4">No completed borrows.</td></tr>

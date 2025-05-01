@@ -125,93 +125,82 @@ def create_notification(user, title, message):
 class BorrowingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BorrowingSerializer
-
+    
     def list(self, request):
-        borrowings = Borrowing.objects.filter(user=request.user).select_related('book').prefetch_related('book__authors', 'book__genres').order_by('-borrow_date')
+        borrowings = Borrowing.objects.filter(user=request.user)\
+                                      .select_related('book')\
+                                      .prefetch_related('book__authors', 'book__genres')\
+                                      .order_by('-borrow_date')
         serializer = BorrowingSerializer(borrowings, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=['post'])
-    def borrow(self, request):
-        book_id = request.data.get('book')
-        return_date_str = request.data.get('return_date')
+    @action(detail=False, methods=['post'], url_path='request-borrow')
+    def request_borrow(self, request):
+        book_id = request.data.get('book_id')
+        due_date_str = request.data.get('due_date')
 
-        if not book_id or not return_date_str:
-            return Response({"error": "Book ID and return_date (YYYY-MM-DD) are required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not book_id or not due_date_str:
+            return Response({"error": "book_id and due_date (YYYY-MM-DD) are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             book = Book.objects.get(pk=book_id)
         except Book.DoesNotExist:
             return Response({"error": "Book not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        existing_pending_or_active = Borrowing.objects.filter(
+        existing_request = Borrowing.objects.filter(
             user=request.user,
             book=book,
             status__in=['pending', 'approved'],
-            is_active=True
+            actual_return_date__isnull=True
         ).exists()
-        if existing_pending_or_active:
+        if existing_request:
              return Response({"error": "You already have an active or pending borrow request for this book."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if book.quantity <= 0:
-            return Response({"error": "Book is not available."}, status=400)
-
-        borrowing_status = 'pending'
-        is_borrow_active = True
-        book_quantity_change = 0
+        approved_count = Borrowing.objects.filter(book=book, status='approved', actual_return_date__isnull=True).count()
+        if book.quantity <= approved_count:
+            return Response({"error": "Book is currently not available."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Convert string date 'YYYY-MM-DD' to datetime object
-            # DRF serializers normally handle this, but ViewSet action needs manual conversion
-            from datetime import datetime
-            from django.utils.timezone import make_aware
-            parsed_return_date = make_aware(datetime.strptime(return_date_str, '%Y-%m-%d'))
+            # Convert string date 'YYYY-MM-DD' to datetime object, make it timezone-aware
+            parsed_due_date = make_aware(datetime.strptime(due_date_str, '%Y-%m-%d'))
+            if parsed_due_date <= now():
+                 return Response({"error": "Due date must be in the future."}, status=status.HTTP_400_BAD_REQUEST)
         except ValueError:
-             return Response({"error": "Invalid return_date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
+             return Response({"error": "Invalid due_date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
         borrowing = Borrowing.objects.create(
             user=request.user,
             book=book,
-            return_date=parsed_return_date,
-            status=borrowing_status,
-            is_active=is_borrow_active,
+            due_date=parsed_due_date, 
+            status='pending',
         )
-
-        if book_quantity_change != 0:
-            book.quantity += book_quantity_change
-            if borrowing_status == 'approved':
-                book.total_borrows +=1
-            book.save()
-
         serializer = BorrowingSerializer(borrowing, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(detail=False, methods=['post'])
-    def return_book(self, request):
-        borrowing_id = request.data.get('id')
-
-        if not borrowing_id:
-            return Response({"error": "Borrowing record ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-
+    @action(detail=True, methods=['post'], url_path='return')
+    def return_book(self, request, pk=None):
         try:
-            borrowing = Borrowing.objects.get(pk=borrowing_id, user=request.user, status='approved', is_active=True)
+            borrowing = Borrowing.objects.get(
+                pk=pk,
+                user=request.user,
+                status='approved',
+                actual_return_date__isnull=True 
+            )
         except Borrowing.DoesNotExist:
-            return Response({"error": "Active borrowing record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Approved borrowing record not found or not authorized."}, status=status.HTTP_404_NOT_FOUND)
 
         borrowing.status = 'returned'
-        borrowing.is_active = False
-        borrowing.save()
+        borrowing.actual_return_date = now() 
+        borrowing.save(update_fields=['status', 'actual_return_date'])
 
         borrowing.book.quantity += 1
-        borrowing.book.save()
+        borrowing.book.save(update_fields=['quantity'])
 
-        return Response({"detail": "Book returned successfully."})
-    
-    @action(detail=True, methods=['delete']) # Use DELETE method, detail=True means it acts on a specific borrowing ID
+        serializer = BorrowingSerializer(borrowing, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK) 
+
+    @action(detail=True, methods=['delete'], url_path='cancel-request') 
     def cancel_request(self, request, pk=None):
-        """
-        Allows a user to cancel their own 'pending' borrow request.
-        """
         try:
             borrowing = Borrowing.objects.get(pk=pk, user=request.user, status='pending')
         except Borrowing.DoesNotExist:
@@ -244,8 +233,7 @@ def book_detail_view(request, pk):
     has_active_or_pending = Borrowing.objects.filter(
         user=request.user,
         book=book,
-        status__in=['pending', 'approved'],
-        is_active=True
+        status__in=['pending', 'approved']
     ).exists()
 
     return render(request, 'books/book_detail.html', {
@@ -260,8 +248,7 @@ def borrow_book_view(request, pk):
     existing = Borrowing.objects.filter(
         user=request.user,
         book=book,
-        status__in=['pending', 'approved'],
-        is_active=True,
+        status__in=['pending', 'approved']
     ).exists()
 
     if existing:
@@ -269,9 +256,9 @@ def borrow_book_view(request, pk):
         return redirect('book_detail', pk=pk)
 
     if request.method == 'POST':
-        return_date_str = request.POST.get('return_date')
+        due_date_str = request.POST.get('due_date')
         try:
-            return_date = make_aware(datetime.strptime(return_date_str, '%Y-%m-%d'))
+            due_date = make_aware(datetime.strptime(due_date_str, '%Y-%m-%d'))
         except ValueError:
             messages.error(request, "Invalid return date.")
             return redirect('book_detail', pk=pk)
@@ -279,9 +266,8 @@ def borrow_book_view(request, pk):
         Borrowing.objects.create(
             user=request.user,
             book=book,
-            return_date=return_date,
-            status='pending',
-            is_active=True,
+            due_date=due_date,
+            status='pending'
         )
 
         messages.success(request, "Borrow request submitted! Please wait for librarian approval.")
@@ -300,11 +286,11 @@ def librarian_dashboard_view(request):
     ).select_related('book', 'user')
 
     active_qs = Borrowing.objects.filter(
-        status='approved', is_active=True
+        status='approved'
     ).select_related('book', 'user')
 
     history_qs = Borrowing.objects.filter(
-        status='returned', is_active=False
+        status='returned'
     ).select_related('book', 'user')
 
     book_qs = Book.objects.prefetch_related('authors', 'genres')
@@ -331,7 +317,7 @@ def librarian_dashboard_view(request):
             Q(email__icontains=search)
         )
         
-    def paginate(queryset, per_page=6):
+    def paginate(queryset, per_page=10):
         paginator = Paginator(queryset, per_page)
         page = request.GET.get('page')
         return paginator.get_page(page)
@@ -354,10 +340,10 @@ def librarian_dashboard_view(request):
 def approve_borrow_view(request, borrow_id):
     borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending')
     borrowing.status = 'approved'
-    borrowing.is_active = True
+    borrowing.save(update_fields=['status'])
+
     borrowing.book.quantity -= 1
-    borrowing.book.save()
-    borrowing.save()
+    borrowing.book.save(update_fields=['quantity'])
 
     create_notification(
         user=borrowing.user, 
@@ -373,8 +359,7 @@ def approve_borrow_view(request, borrow_id):
 def reject_borrow_view(request, borrow_id):
     borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='pending')
     borrowing.status = 'rejected'
-    borrowing.is_active = False
-    borrowing.save()
+    borrowing.save(update_fields=['status'])
 
     create_notification(
         user=borrowing.user, 
@@ -388,12 +373,19 @@ def reject_borrow_view(request, borrow_id):
 @staff_member_required
 @require_POST
 def mark_returned_view(request, borrow_id):
-    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='approved', is_active=True)
+    borrowing = get_object_or_404(Borrowing, pk=borrow_id, status='approved')
     borrowing.status = 'returned'
-    borrowing.is_active = False
+    borrowing.actual_return_date = now() 
+    borrowing.save(update_fields=['status', 'actual_return_date'])
+
+    create_notification(
+        user=borrowing.user, 
+        title="Book Returned!", 
+        message=f"You have returned the book '{borrowing.book.title}' to the library."
+    )
+
     borrowing.book.quantity += 1
-    borrowing.book.save()
-    borrowing.save()
+    borrowing.book.save(update_fields=['quantity'])
     messages.success(request, "Book marked as returned.")
     return redirect('librarian_dashboard')
 
