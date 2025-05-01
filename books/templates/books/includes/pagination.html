@@ -1,25 +1,50 @@
-{% if page_obj.has_other_pages %}
-<nav>
-  <ul class="pagination justify-content-center">
+{% comment %}
+  Pagination include template.
+  Expects 'page_obj' (the Page object from Django Paginator),
+  'active_tab' (the name of the current dashboard tab),
+  and 'search_term' (the current search query, if any) in the context.
+{% endcomment %}
+
+{% if page_obj and page_obj.has_other_pages %} {# Check if page_obj exists #}
+<nav aria-label="Page navigation">
+  <ul class="pagination pagination-sm justify-content-center mt-4"> {# Added pagination-sm for smaller size #}
+
+    {# Previous Page Link #}
     {% if page_obj.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?tab={{ tab }}&search={{ request.GET.search }}&page={{ page_obj.previous_page_number }}">Previous</a>
+        {# Construct URL preserving tab and search #}
+        <a class="page-link" href="?tab={{ active_tab }}{% if search_term %}&amp;search={{ search_term|urlencode }}{% endif %}&amp;page={{ page_obj.previous_page_number }}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span> Previous
+        </a>
       </li>
     {% else %}
-      <li class="page-item disabled"><span class="page-link">Previous</span></li>
+      {# Disabled Previous Link #}
+      <li class="page-item disabled">
+        <span class="page-link" aria-hidden="true">&laquo;</span> Previous
+      </li>
     {% endif %}
 
-    <li class="page-item disabled">
-      <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {# Current Page Indicator (Optional but helpful) #}
+    {# You can add more complex page number links here if desired #}
+    <li class="page-item active" aria-current="page">
+        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
     </li>
 
+    {# Next Page Link #}
     {% if page_obj.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?tab={{ tab }}&search={{ request.GET.search }}&page={{ page_obj.next_page_number }}">Next</a>
+         {# Construct URL preserving tab and search #}
+        <a class="page-link" href="?tab={{ active_tab }}{% if search_term %}&amp;search={{ search_term|urlencode }}{% endif %}&amp;page={{ page_obj.next_page_number }}" aria-label="Next">
+          Next <span aria-hidden="true">&raquo;</span>
+        </a>
       </li>
     {% else %}
-      <li class="page-item disabled"><span class="page-link">Next</span></li>
+       {# Disabled Next Link #}
+      <li class="page-item disabled">
+        <span class="page-link">Next <span aria-hidden="true">&raquo;</span></span>
+      </li>
     {% endif %}
+
   </ul>
 </nav>
 {% endif %}

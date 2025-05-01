@@ -262,59 +262,92 @@ def borrow_book_view(request, pk):
 
 @admin_only
 def librarian_dashboard_view(request):
-    tab = request.GET.get('tab', 'pending')
+    """
+    Displays the librarian dashboard with different data sections based on the 'tab' query parameter.
+    Handles search and pagination for each tab.
+    Tabs: 'pending', 'active', 'history', 'books', 'users'.
+    """
+    # Determine active tab, default to 'pending'
+    active_tab = request.GET.get('tab', 'pending').lower()
+    valid_tabs = ['pending', 'active', 'history', 'books', 'users']
+    if active_tab not in valid_tabs:
+        active_tab = 'pending'
+
+    # Get search term
     search = request.GET.get('search', '').strip()
     User = get_user_model()
 
-    pending_qs = Borrowing.objects.filter(
-        status='pending'
-    ).select_related('book', 'user')
+    # --- Initial QuerySets ---
+    # Pending: Status is 'pending'
+    pending_qs = Borrowing.objects.filter(status='pending')\
+                                   .select_related('book', 'user')
 
-    active_qs = Borrowing.objects.filter(
-        status='approved'
-    ).select_related('book', 'user')
+    # Active: Status is 'approved' AND actual_return_date is NULL
+    active_qs = Borrowing.objects.filter(status='approved', actual_return_date__isnull=True)\
+                                 .select_related('book', 'user')
 
-    history_qs = Borrowing.objects.filter(
-        status='returned'
-    ).select_related('book', 'user')
+    # History: Status is 'returned' OR 'rejected'
+    history_qs = Borrowing.objects.filter(status__in=['returned', 'rejected'])\
+                                  .select_related('book', 'user')
 
-    book_qs = Book.objects.prefetch_related('authors', 'genres')
+    # Books: All books
+    book_qs = Book.objects.all().prefetch_related('authors', 'genres') # Keep prefetch
+
+    # Users: All users
     user_qs = User.objects.all()
 
-    if tab == 'pending' and search:
-        pending_qs = pending_qs.filter(
-            Q(book__title__icontains=search) | Q(user__username__icontains=search)
-        )
-    if tab == 'active' and search:
-        active_qs = active_qs.filter(
-            Q(book__title__icontains=search) | Q(user__username__icontains=search)
-        )
-    if tab == 'history' and search:
-        history_qs = history_qs.filter(
-            Q(book__title__icontains=search) | Q(user__username__icontains=search)
-        )
-    if tab == 'books' and search:
-        book_qs = book_qs.filter(title__icontains=search)
-    if tab == 'users' and search:
-        user_qs = user_qs.filter(
-            Q(username__icontains=search) |
-            Q(full_name__icontains=search) |
-            Q(email__icontains=search)
-        )
-        
-    def paginate(queryset, per_page=10):
-        paginator = Paginator(queryset, per_page)
-        page = request.GET.get('page')
-        return paginator.get_page(page)
+    # --- Apply Search Filters based on Active Tab ---
+    if search:
+        if active_tab == 'pending':
+            pending_qs = pending_qs.filter(
+                Q(book__title__icontains=search) | Q(user__username__icontains=search)
+            )
+        elif active_tab == 'active':
+            active_qs = active_qs.filter(
+                Q(book__title__icontains=search) | Q(user__username__icontains=search)
+            )
+        elif active_tab == 'history':
+            history_qs = history_qs.filter(
+                Q(book__title__icontains=search) | Q(user__username__icontains=search)
+            )
+        elif active_tab == 'books':
+            # Add search across authors/genres if desired
+            book_qs = book_qs.filter(
+                 Q(title__icontains=search) |
+                 Q(authors__name__icontains=search) |
+                 Q(genres__name__icontains=search)
+            ).distinct() # Use distinct because of M2M joins
+        elif active_tab == 'users':
+            user_qs = user_qs.filter(
+                Q(username__icontains=search) |
+                Q(full_name__icontains=search) | # Assuming you have full_name
+                Q(email__icontains=search)
+            )
 
+    # --- Apply Ordering ---
+    pending_qs = pending_qs.order_by('borrow_date') # Oldest pending first
+    active_qs = active_qs.order_by('due_date') # Order by soonest due date
+    history_qs = history_qs.order_by('-borrow_date') # Most recent history first
+    book_qs = book_qs.order_by('title')
+    user_qs = user_qs.order_by(User.USERNAME_FIELD)
+
+    # --- Pagination Helper ---
+    def paginate(queryset, per_page=10): # Adjust per_page as needed
+        paginator = Paginator(queryset, per_page)
+        page_number = request.GET.get('page')
+        return paginator.get_page(page_number)
+
+    # --- Prepare Context ---
     context = {
-        'tab': tab,
-        'now': now(),
-        'pending_page': paginate(pending_qs) if tab == 'pending' else None,
-        'active_page': paginate(active_qs) if tab == 'active' else None,
-        'history_page': paginate(history_qs) if tab == 'history' else None,
-        'book_page': paginate(book_qs) if tab == 'books' else None,
-        'user_page': paginate(user_qs) if tab == 'users' else None,
+        'active_tab': active_tab, # Pass active tab name to template
+        'search_term': search, # Pass search term back to template
+        'now': now(), # Pass current time if needed in template
+        # Paginate only the relevant queryset for the active tab
+        'pending_page': paginate(pending_qs) if active_tab == 'pending' else None,
+        'active_page': paginate(active_qs) if active_tab == 'active' else None,
+        'history_page': paginate(history_qs) if active_tab == 'history' else None,
+        'book_page': paginate(book_qs) if active_tab == 'books' else None,
+        'user_page': paginate(user_qs) if active_tab == 'users' else None,
     }
     return render(request, 'books/librarian_dashboard.html', context)
 
