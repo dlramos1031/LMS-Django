@@ -576,7 +576,7 @@
               <td>{{ user_obj.role|capfirst|default:"Member" }}</td> {# Assuming role attribute exists #}
               <td class="text-center">
                 {# Logic to determine if actions are allowed #}
-                {% if user != request.user and request.user.role == 'admin' %}
+                {% if user_obj != request.user and request.user.role == 'admin' %}
                   {# Admins can edit anyone, Librarians can edit non-staff #}
                    <button class="btn btn-sm btn-outline-secondary me-1"
                           data-bs-toggle="modal"
