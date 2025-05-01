@@ -91,6 +91,10 @@ REST_FRAMEWORK = {
     ]
 }
 
+BOOTSTRAP5 = {
+    "use_cdn": False,
+}
+
 PUSH_NOTIFICATIONS_SETTINGS = {
     "FCM_API_KEY": "[your_fcm_server_key]",
     # "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
@@ -144,6 +148,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
