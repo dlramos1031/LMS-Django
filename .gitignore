@@ -36,3 +36,6 @@ coverage.xml
 # Other
 .DS_Store
 .idea/
+
+backup/
+staticfiles/
