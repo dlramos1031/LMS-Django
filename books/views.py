@@ -211,7 +211,6 @@ def books_list_view(request):
         "search": search,
     })
 
-@members_only
 def book_detail_view(request, pk):
     book = get_object_or_404(Book, pk=pk)
 

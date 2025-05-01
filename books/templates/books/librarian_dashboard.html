@@ -279,7 +279,7 @@
                   {% else %}
                      <span class="d-inline-block bg-light border me-2" style="width: 30px; height: 45px; vertical-align: middle;"></span>
                   {% endif %}
-                  {{ book.title }}
+                  <a href="{% url 'book_detail' book.id %}">{{ book.title }}</a>
               </td>
               <td>
                 {# Display authors concisely #}
