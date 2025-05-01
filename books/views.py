@@ -26,27 +26,20 @@ from .serializers import (
 )
 
 class BookFilter(dj_filters.FilterSet):
-    # Allows filtering like /api/books/?genre=Fiction
     genre = dj_filters.CharFilter(field_name='genres__name', lookup_expr='icontains')
-    # Allows filtering like /api/books/?is_favorite=true
     is_favorite = dj_filters.BooleanFilter(method='filter_is_favorite')
 
     class Meta:
         model = Book
-        # Add fields you want to filter directly by ID or exact match
-        fields = ['authors'] # Keep existing author ID filter
+        fields = ['authors'] 
 
     def filter_is_favorite(self, queryset, name, value):
         user = self.request.user
         if user.is_authenticated and value is True:
-            # Return only books favorited by the current user
             return queryset.filter(favorited_by=user)
-        # If value is False or user not authenticated, return original queryset
-        # Or implement logic to return non-favorites if needed for `is_favorite=false`
         return queryset
 
 # ================================ View Sets ================================
-
 
 class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
@@ -54,13 +47,9 @@ class AuthorViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
-
-
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-
-
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all().prefetch_related('authors', 'genres', 'favorited_by')
@@ -88,8 +77,6 @@ class BookViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
-
-
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
@@ -119,8 +106,6 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
 def create_notification(user, title, message):
     Notification.objects.create(user=user, title=title, message=message)
-
-
 
 class BorrowingViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -161,7 +146,6 @@ class BorrowingViewSet(viewsets.ViewSet):
             return Response({"error": "Book is currently not available."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Convert string date 'YYYY-MM-DD' to datetime object, make it timezone-aware
             parsed_due_date = make_aware(datetime.strptime(due_date_str, '%Y-%m-%d'))
             if parsed_due_date <= now():
                  return Response({"error": "Due date must be in the future."}, status=status.HTTP_400_BAD_REQUEST)
@@ -377,6 +361,9 @@ def mark_returned_view(request, borrow_id):
     borrowing.status = 'returned'
     borrowing.actual_return_date = now() 
     borrowing.save(update_fields=['status', 'actual_return_date'])
+    
+    borrowing.book.quantity += 1
+    borrowing.book.save(update_fields=['quantity'])
 
     create_notification(
         user=borrowing.user, 
@@ -384,8 +371,6 @@ def mark_returned_view(request, borrow_id):
         message=f"You have returned the book '{borrowing.book.title}' to the library."
     )
 
-    borrowing.book.quantity += 1
-    borrowing.book.save(update_fields=['quantity'])
     messages.success(request, "Book marked as returned.")
     return redirect('librarian_dashboard')
 
