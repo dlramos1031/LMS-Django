@@ -264,14 +264,14 @@
             <tr>
               <th>Title</th>
               <th>Authors</th>
-              <th>ISBN-13</th> {# Added ISBN #}
-              <th>Published</th> {# Added Publish Date #}
+              <th>ISBN-13</th> 
+              <th>Published</th> 
               <th>Quantity</th>
               <th class="text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {% for book in book_page %} {# Use book_page from context #}
+            {% for book in book_page %} 
             <tr>
               <td>
                   {% if book.cover_image %}
@@ -570,7 +570,9 @@
           <tbody>
             {% for user_obj in user_page %} {# Use user_page from context, renamed to avoid conflict #}
             <tr>
-              <td>{{ user_obj.username }}</td>
+              <td>
+                <a href="{% url 'user_profile' user_obj.id %}">{{ user_obj.username }}</a>
+              </td>
               <td>{{ user_obj.full_name|default:"-" }}</td> {# Assuming full_name exists #}
               <td>{{ user_obj.email|default:"-" }}</td>
               <td>{{ user_obj.role|capfirst|default:"Member" }}</td> {# Assuming role attribute exists #}
