@@ -59,8 +59,12 @@
           <tbody>
             {% for borrow in pending_page %} {# Use pending_page from context #}
             <tr>
-              <td>{{ borrow.user.username }}</td>
-              <td>{{ borrow.book.title }}</td>
+              <td>
+                <a href="{% url 'user_profile' borrow.user.id %}">{{ borrow.user.username }}</a>
+              </td>
+              <td>{{ borrow.book.title }}
+                <a href="{% url 'user_profile' borrow.book.id %}">{{ borrow.book.title }}</a>
+              </td>
               <td>{{ borrow.borrow_date|date:"Y-m-d H:i" }}</td>
               <td>{{ borrow.due_date|date:"Y-m-d" }}</td>
               <td class="text-center">
@@ -204,8 +208,12 @@
           <tbody>
             {% for borrow in history_page %} {# Use history_page from context #}
             <tr>
-              <td>{{ borrow.user.username }}</td>
-              <td>{{ borrow.book.title }}</td>
+              <td>
+                <a href="{% url 'user_profile' borrow.user.id %}">{{ borrow.user.username }}</a>
+              </td>
+              <td>
+                <a href="{% url 'book_detail' borrow.book.id %}">{{ borrow.book.title }}</a>
+              </td>
               <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
               <td>{{ borrow.due_date|date:"Y-m-d"|default:"N/A" }}</td> {# Due date might be null for rejected #}
               <td>
