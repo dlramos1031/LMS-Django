@@ -259,97 +259,120 @@ def borrow_book_view(request, pk):
 
 # =========================== Librarian Dashboard ===========================
 
+# --- Helper Function for Dashboard Views ---
+def _get_dashboard_context(request, active_tab_name, queryset, search_fields=None):
+    """Helper to handle search and pagination for dashboard views."""
+    search = request.GET.get('search', '').strip()
+    User = get_user_model() # Get user model if needed
+
+    if search and search_fields:
+        query = Q()
+        for field in search_fields:
+            query |= Q(**{f'{field}__icontains': search})
+        # Special handling for User relation in Borrowing
+        if 'user__username' in search_fields and queryset.model == Borrowing:
+             query |= Q(user__username__icontains=search)
+             query |= Q(user__full_name__icontains=search) # Also search user full name if needed
+        # Special handling for Book relation in Borrowing
+        if 'book__title' in search_fields and queryset.model == Borrowing:
+            query |= Q(book__title__icontains=search)
+        # Special handling for Authors/Genres in Book
+        if queryset.model == Book:
+            if 'authors__name' in search_fields:
+                query |= Q(authors__name__icontains=search)
+            if 'genres__name' in search_fields:
+                query |= Q(genres__name__icontains=search)
+
+        # Apply distinct if joining M2M fields
+        if queryset.model == Book and ('authors__name' in search_fields or 'genres__name' in search_fields):
+             queryset = queryset.filter(query).distinct()
+        elif queryset.model == User and ('full_name' in search_fields or 'email' in search_fields):
+             queryset = queryset.filter(query).distinct() # User model has direct fields
+        else:
+             queryset = queryset.filter(query)
+
+
+    # --- Apply Ordering (Customize per view if needed) ---
+    if queryset.model == Borrowing:
+        if active_tab_name == 'pending':
+            queryset = queryset.order_by('borrow_date') # Oldest pending first
+        elif active_tab_name == 'active':
+            queryset = queryset.order_by('due_date') # Soonest due
+        elif active_tab_name == 'history':
+             queryset = queryset.order_by('-borrow_date') # Most recent first
+    elif queryset.model == Book:
+        queryset = queryset.order_by('title')
+    elif queryset.model == User:
+         queryset = queryset.order_by(User.USERNAME_FIELD)
+
+
+    # --- Pagination ---
+    paginator = Paginator(queryset, 10) # Adjust per_page as needed
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'active_dashboard_tab': active_tab_name,
+        'page_obj': page_obj, # Use a consistent name like 'page_obj'
+        'search_term': search,
+        'now': now(),
+    }
+    return context
+
 @admin_only
 def librarian_dashboard_view(request):
-    """
-    Displays the librarian dashboard with different data sections based on the 'tab' query parameter.
-    Handles search and pagination for each tab.
-    Tabs: 'pending', 'active', 'history', 'books', 'users'.
-    """
-    # Determine active tab, default to 'pending'
-    active_tab = request.GET.get('tab', 'pending').lower()
-    valid_tabs = ['pending', 'active', 'history', 'books', 'users']
-    if active_tab not in valid_tabs:
-        active_tab = 'pending'
+    # Redirect to the default dashboard section (e.g., pending requests)
+    return redirect('dashboard_pending') # Use the new URL name
 
-    # Get search term
-    search = request.GET.get('search', '').strip()
-    User = get_user_model()
+@admin_only
+def dashboard_pending_view(request):
+    active_tab_name = 'pending'
+    pending_qs = Borrowing.objects.filter(status='pending').select_related('book', 'user')
+    context = _get_dashboard_context(
+        request,
+        active_tab_name,
+        pending_qs,
+        search_fields=['book__title', 'user__username']
+    )
+    return render(request, 'dashboard/pending_section.html', context) # Use a specific template
 
-    # --- Initial QuerySets ---
-    # Pending: Status is 'pending'
-    pending_qs = Borrowing.objects.filter(status='pending')\
-                                   .select_related('book', 'user')
+@admin_only
+def dashboard_active_view(request):
+    active_tab_name = 'active'
+    active_qs = Borrowing.objects.filter(status='approved', actual_return_date__isnull=True).select_related('book', 'user')
+    context = _get_dashboard_context(
+        request,
+        active_tab_name,
+        active_qs,
+        search_fields=['book__title', 'user__username']
+    )
+    return render(request, 'dashboard/active_section.html', context) # Use a specific template
 
-    # Active: Status is 'approved' AND actual_return_date is NULL
-    active_qs = Borrowing.objects.filter(status='approved', actual_return_date__isnull=True)\
-                                 .select_related('book', 'user')
+@admin_only
+def dashboard_history_view(request):
+    active_tab_name = 'history'
+    history_qs = Borrowing.objects.filter(status__in=['returned', 'rejected']).select_related('book', 'user')
+    context = _get_dashboard_context(
+        request,
+        active_tab_name,
+        history_qs,
+        search_fields=['book__title', 'user__username']
+    )
+    return render(request, 'dashboard/history_section.html', context) # Use a specific template
 
-    # History: Status is 'returned' OR 'rejected'
-    history_qs = Borrowing.objects.filter(status__in=['returned', 'rejected'])\
-                                  .select_related('book', 'user')
-
-    # Books: All books
-    book_qs = Book.objects.all().prefetch_related('authors', 'genres') # Keep prefetch
-
-    # Users: All users
-    user_qs = User.objects.all()
-
-    # --- Apply Search Filters based on Active Tab ---
-    if search:
-        if active_tab == 'pending':
-            pending_qs = pending_qs.filter(
-                Q(book__title__icontains=search) | Q(user__username__icontains=search)
-            )
-        elif active_tab == 'active':
-            active_qs = active_qs.filter(
-                Q(book__title__icontains=search) | Q(user__username__icontains=search)
-            )
-        elif active_tab == 'history':
-            history_qs = history_qs.filter(
-                Q(book__title__icontains=search) | Q(user__username__icontains=search)
-            )
-        elif active_tab == 'books':
-            # Add search across authors/genres if desired
-            book_qs = book_qs.filter(
-                 Q(title__icontains=search) |
-                 Q(authors__name__icontains=search) |
-                 Q(genres__name__icontains=search)
-            ).distinct() # Use distinct because of M2M joins
-        elif active_tab == 'users':
-            user_qs = user_qs.filter(
-                Q(username__icontains=search) |
-                Q(full_name__icontains=search) | # Assuming you have full_name
-                Q(email__icontains=search)
-            )
-
-    # --- Apply Ordering ---
-    pending_qs = pending_qs.order_by('borrow_date') # Oldest pending first
-    active_qs = active_qs.order_by('due_date') # Order by soonest due date
-    history_qs = history_qs.order_by('-borrow_date') # Most recent history first
-    book_qs = book_qs.order_by('title')
-    user_qs = user_qs.order_by(User.USERNAME_FIELD)
-
-    # --- Pagination Helper ---
-    def paginate(queryset, per_page=10): # Adjust per_page as needed
-        paginator = Paginator(queryset, per_page)
-        page_number = request.GET.get('page')
-        return paginator.get_page(page_number)
-
-    # --- Prepare Context ---
-    context = {
-        'active_dashboard_tab': active_tab,
-        'active_tab': active_tab, # Pass active tab name to template
-        'search_term': search, # Pass search term back to template
-        'now': now(), # Pass current time if needed in template
-        # Paginate only the relevant queryset for the active tab
-        'pending_page': paginate(pending_qs) if active_tab == 'pending' else None,
-        'active_page': paginate(active_qs) if active_tab == 'active' else None,
-        'history_page': paginate(history_qs) if active_tab == 'history' else None,
-        'book_page': paginate(book_qs) if active_tab == 'books' else None,
-        'user_page': paginate(user_qs) if active_tab == 'users' else None,
-    }
-    return render(request, 'books/librarian_dashboard.html', context)
+@admin_only
+def dashboard_books_view(request):
+    active_tab_name = 'books'
+    book_qs = Book.objects.all().prefetch_related('authors', 'genres')
+    context = _get_dashboard_context(
+        request,
+        active_tab_name,
+        book_qs,
+        search_fields=['title', 'authors__name', 'genres__name', 'isbn_13'] # Add more fields if needed
+    )
+    # Pass all books to the template for modals, even if paginated
+    context['all_books'] = Book.objects.all().prefetch_related('authors', 'genres')
+    return render(request, 'dashboard/books_section.html', context) # Use a specific template
 
 # ========================= Librarian Borrowing Views =========================
 
@@ -370,7 +393,7 @@ def approve_borrow_view(request, borrow_id):
     )
 
     messages.success(request, "Borrow request approved.")
-    return redirect('librarian_dashboard')
+    return redirect('dashboard_pending')
 
 @staff_member_required
 @require_POST
@@ -386,7 +409,7 @@ def reject_borrow_view(request, borrow_id):
     )
 
     messages.warning(request, "Borrow request rejected.")
-    return redirect('librarian_dashboard')
+    return redirect('dashboard_pending')
 
 @staff_member_required
 @require_POST
@@ -406,7 +429,7 @@ def mark_returned_view(request, borrow_id):
     )
 
     messages.success(request, "Book marked as returned.")
-    return redirect('librarian_dashboard')
+    return redirect('dashboard_active')
 
 # =========================== Librarian Book Views ===========================
 
@@ -429,13 +452,13 @@ def add_book_view(request):
 
         if not title:
             messages.error(request, "Book title is required.")
-            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+            return redirect('dashboard_books')
         try:
             quantity = int(quantity_str)
             if quantity < 0: raise ValueError("Quantity cannot be negative.")
         except (ValueError, TypeError):
             messages.error(request, "Invalid quantity provided.")
-            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+            return redirect('dashboard_books')
 
         page_count = None
         if page_count_str:
@@ -444,7 +467,7 @@ def add_book_view(request):
                 if page_count <= 0: raise ValueError("Page count must be positive.")
             except (ValueError, TypeError):
                 messages.error(request, "Invalid page count provided.")
-                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+                return redirect('dashboard_books')
 
         publish_date = None
         if publish_date_str:
@@ -452,7 +475,7 @@ def add_book_view(request):
                 publish_date = datetime.strptime(publish_date_str, '%Y-%m-%d').date()
             except ValueError:
                 messages.error(request, "Invalid publish date format. Use YYYY-MM-DD.")
-                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+                return redirect('dashboard_books')
 
         book = Book.objects.create(
             title=title,
@@ -491,7 +514,7 @@ def add_book_view(request):
     except Exception as e:
          messages.error(request, f"Error adding book: {e}")
 
-    return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+    return redirect('dashboard_books')
 
 @staff_member_required
 @require_POST
@@ -513,13 +536,13 @@ def edit_book_view(request, book_id):
 
         if not book.title:
             messages.error(request, "Book title cannot be empty.")
-            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+            return redirect('dashboard_books')
         try:
             book.quantity = int(quantity_str)
             if book.quantity < 0: raise ValueError("Quantity cannot be negative.")
         except (ValueError, TypeError):
             messages.error(request, "Invalid quantity provided.")
-            return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+            return redirect('dashboard_books')
 
         if page_count_str:
             try:
@@ -527,7 +550,7 @@ def edit_book_view(request, book_id):
                 if book.page_count <= 0: raise ValueError("Page count must be positive.")
             except (ValueError, TypeError):
                 messages.error(request, "Invalid page count provided.")
-                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+                return redirect('dashboard_books')
         else:
              book.page_count = None 
 
@@ -536,7 +559,7 @@ def edit_book_view(request, book_id):
                 book.publish_date = datetime.strptime(publish_date_str, '%Y-%m-%d').date()
             except ValueError:
                 messages.error(request, "Invalid publish date format. Use YYYY-MM-DD.")
-                return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+                return redirect('dashboard_books')
         else:
              book.publish_date = None 
 
@@ -562,7 +585,7 @@ def edit_book_view(request, book_id):
     except Exception as e:
          messages.error(request, f"Error updating book: {e}")
 
-    return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+    return redirect('dashboard_books')
 
 @staff_member_required
 @require_POST
@@ -571,7 +594,7 @@ def delete_book_view(request, book_id):
     active_borrowings = Borrowing.objects.filter(book=book, status='approved', actual_return_date__isnull=True).exists()
     if active_borrowings:
         messages.error(request, f"Cannot delete '{book.title}' as it is currently borrowed.")
-        return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+        return redirect('dashboard_books')
     book.delete()
     messages.success(request, "Book deleted successfully.")
-    return redirect(f"{reverse('librarian_dashboard')}?tab=books")
+    return redirect('dashboard_books')

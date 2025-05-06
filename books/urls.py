@@ -10,6 +10,10 @@ from .views import (
     add_book_view,
     edit_book_view,
     delete_book_view,
+    dashboard_pending_view,
+    dashboard_active_view,
+    dashboard_history_view,
+    dashboard_books_view,
 )
 
 urlpatterns = [
@@ -20,6 +24,11 @@ urlpatterns = [
 
     # Librarian dashboard & Borrowing Management
     path('dashboard/', librarian_dashboard_view, name='librarian_dashboard'),
+    path('dashboard/pending/', dashboard_pending_view, name='dashboard_pending'),
+    path('dashboard/active/', dashboard_active_view, name='dashboard_active'),
+    path('dashboard/history/', dashboard_history_view, name='dashboard_history'),
+    path('dashboard/books/', dashboard_books_view, name='dashboard_books'),
+
     path('dashboard/approve/<int:borrow_id>/', approve_borrow_view, name='approve_borrow'),
     path('dashboard/reject/<int:borrow_id>/', reject_borrow_view, name='reject_borrow'),
     path('dashboard/return/<int:borrow_id>/', mark_returned_view, name='mark_returned'),
