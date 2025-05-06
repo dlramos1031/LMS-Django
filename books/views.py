@@ -338,6 +338,7 @@ def librarian_dashboard_view(request):
 
     # --- Prepare Context ---
     context = {
+        'active_dashboard_tab': active_tab,
         'active_tab': active_tab, # Pass active tab name to template
         'search_term': search, # Pass search term back to template
         'now': now(), # Pass current time if needed in template
