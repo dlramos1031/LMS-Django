@@ -7,25 +7,26 @@
 
 {% if page_obj and page_obj.has_other_pages %} {# Check if page_obj exists #}
 <nav aria-label="Page navigation">
-  <ul class="pagination pagination-sm justify-content-center mt-4"> {# Added pagination-sm for smaller size #}
+  <ul class="pagination justify-content-center mt-4">
 
     {# Previous Page Link #}
     {% if page_obj.has_previous %}
       <li class="page-item">
         {# Construct URL preserving tab and search #}
         <a class="page-link" href="?tab={{ active_tab }}{% if search_term %}&amp;search={{ search_term|urlencode }}{% endif %}&amp;page={{ page_obj.previous_page_number }}" aria-label="Previous">
-          <span aria-hidden="true">&laquo;</span> Previous
+          <span aria-hidden="true">&laquo;</span> Prev
         </a>
       </li>
     {% else %}
-      {# Disabled Previous Link #}
       <li class="page-item disabled">
-        <span class="page-link" aria-hidden="true">&laquo;</span> Previous
+        {# Disabled Previous Link #}
+        <a class="page-link">
+          <span aria-hidden="true">&laquo;</span> Prev
+        </a>
       </li>
     {% endif %}
 
-    {# Current Page Indicator (Optional but helpful) #}
-    {# You can add more complex page number links here if desired #}
+    {# Current Page Indicator #}
     <li class="page-item active" aria-current="page">
         <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
     </li>
@@ -33,15 +34,17 @@
     {# Next Page Link #}
     {% if page_obj.has_next %}
       <li class="page-item">
-         {# Construct URL preserving tab and search #}
+        {# Construct URL preserving tab and search #}
         <a class="page-link" href="?tab={{ active_tab }}{% if search_term %}&amp;search={{ search_term|urlencode }}{% endif %}&amp;page={{ page_obj.next_page_number }}" aria-label="Next">
           Next <span aria-hidden="true">&raquo;</span>
         </a>
       </li>
     {% else %}
-       {# Disabled Next Link #}
       <li class="page-item disabled">
-        <span class="page-link">Next <span aria-hidden="true">&raquo;</span></span>
+        {# Disabled Next Link #}
+        <a class="page-link">
+          <span>Next <span aria-hidden="true">&raquo;</span></span>
+        </a>
       </li>
     {% endif %}
 

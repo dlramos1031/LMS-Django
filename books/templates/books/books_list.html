@@ -1,60 +1,65 @@
 {% extends "base.html" %}
-{% block title %}All Books{% endblock %}
 {% block content %}
+{% block title %}All Books{% endblock %}
 
-<h2 class="mb-3">All Books</h2>
+<div class="container mt-4">
 
-<form method="get" class="mb-4">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control form-control-sm" placeholder="Search books..." value="{{ request.GET.search }}">
-        <button class="btn btn-primary btn-sm" type="submit">Search</button>
-    </div>
-</form>
+  <h2 class="mb-3">All Books</h2>
 
-<div class="row">
-    {% for book in books %}
-    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
-        <div class="card h-100 shadow-sm">
-            {% if book.cover_image %}
-            <img src="{{ book.cover_image.url }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ book.title }} cover">
-            {% endif %}
-            <div class="card-body p-2">
-                <h6 class="card-title mb-1">{{ book.title }}</h6>
-                <div class="mb-2">
-                    {% for author in book.authors.all %}
-                        <span class="badge bg-secondary">{{ author.name }}</span>
-                    {% endfor %}
-                </div>
-                <a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-primary w-100">Details</a>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <p>No books found.</p>
-    {% endfor %}
+  <form method="get" class="mb-4">
+      <div class="input-group">
+          <input type="text" name="search" class="form-control form-control-sm" placeholder="Search books..." value="{{ request.GET.search }}">
+          <button class="btn btn-primary btn-sm" type="submit">Search</button>
+      </div>
+  </form>
+  
+  <div class="row">
+      {% for book in books %}
+      <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+          <div class="card h-100 shadow-sm">
+              {% if book.cover_image %}
+              <img src="{{ book.cover_image.url }}" class="card-img-top" style="height: 180px; object-fit: cover;" alt="{{ book.title }} cover">
+              {% endif %}
+              <div class="card-body p-2">
+                  <h6 class="card-title mb-1">{{ book.title }}</h6>
+                  <div class="mb-2">
+                      {% for author in book.authors.all %}
+                          <span class="badge bg-secondary">{{ author.name }}</span>
+                      {% endfor %}
+                  </div>
+                  <a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-primary w-100">Details</a>
+              </div>
+          </div>
+      </div>
+      {% empty %}
+      <p>No books found.</p>
+      {% endfor %}
+  </div>
+  
+  <!-- Pagination -->
+  <nav aria-label="Book navigation">
+    <ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?{% if search %}search={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+      {% endif %}
+  
+      <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+  
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?{% if search %}search={{ search }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">Next</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
 </div>
 
-<!-- Pagination -->
-<nav aria-label="Book navigation">
-  <ul class="pagination justify-content-center">
-    {% if page_obj.has_previous %}
-      <li class="page-item">
-        <a class="page-link" href="?{% if search %}search={{ search }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
-      </li>
-    {% else %}
-      <li class="page-item disabled"><span class="page-link">Previous</span></li>
-    {% endif %}
-
-    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
-
-    {% if page_obj.has_next %}
-      <li class="page-item">
-        <a class="page-link" href="?{% if search %}search={{ search }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
-      </li>
-    {% else %}
-      <li class="page-item disabled"><span class="page-link">Next</span></li>
-    {% endif %}
-  </ul>
-</nav>
 
 {% endblock %}
