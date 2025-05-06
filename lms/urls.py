@@ -7,12 +7,15 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # API routes
-    path('api/auth/', include('users.api_urls')), 
     path('api/', include('books.api_urls')), 
+    path('api/auth/', include('users.api_urls')), 
+    path('api/auth/password_reset/', include('django_rest_passwordreset.urls', namespace='password_reset')), 
 
     # Web routes
     path('', include('books.urls')), 
     path('', include('users.urls')), 
 ]
 
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files when in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

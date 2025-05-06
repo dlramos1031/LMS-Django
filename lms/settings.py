@@ -26,8 +26,11 @@ SECRET_KEY = 'django-insecure-y-cp0uq&+&yeh6mfe^q17()t7qp^8-06aoy-9%1#2=1d9tu52c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+# Allowed IP Addresses:
+# 10.0.2.2 = Android Emulator
+# 127.0.0.1 = Website (e.g. https://127.0.0.1:8000/login/)
+# 192.168.197.211 = Actual Phone (Wireless LAN Adapter Wi-Fi) 
+ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1', '192.168.197.211', '192.168.137.76']
 
 # Application definition
 
@@ -42,6 +45,8 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_rest_passwordreset',
+    'push_notifications',
     'bootstrap5',
     'users',
     'books',
@@ -77,10 +82,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'lms.wsgi.application'
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.SearchFilter',
     ]
+}
+
+BOOTSTRAP5 = {
+    "use_cdn": False,
+}
+
+PUSH_NOTIFICATIONS_SETTINGS = {
+    "FCM_API_KEY": "[your_fcm_server_key]",
+    # "APNS_CERTIFICATE": "/path/to/your/certificate.pem",
+    # "APNS_PRIVATE_KEY": "/path/to/your/private_key.pem",
+    # ... other settings like APNS_TOPIC, etc.
 }
 
 # Database
@@ -130,6 +149,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -144,3 +169,5 @@ MEDIA_URL = '/media/'
 LOGIN_URL = '/login/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

@@ -1,101 +1,169 @@
 {% extends "base.html" %}
-{% block title %}{{ book.title }}{% endblock %}
+{% load static %}
 {% block content %}
+{% block title %}{{ book.title }}{% endblock %}
 
-<div class="row">
-    <div class="col-md-4">
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-4 mb-3 mb-md-0">
         {% if book.cover_image %}
-            <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow" alt="{{ book.title }} cover">
+            <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow-sm" alt="{{ book.title }} cover" style="max-height: 450px; object-fit: cover;">
         {% else %}
-            <div class="bg-light border d-flex align-items-center justify-content-center" style="height: 300px;">
-                <span>No Cover Available</span>
+            <div class="bg-light border rounded d-flex align-items-center justify-content-center text-muted" style="height: 300px; border-style: dashed!important;">
+                <small>No Cover Available</small>
             </div>
         {% endif %}
     </div>
     <div class="col-md-8">
         <h2>{{ book.title }}</h2>
-        <p>
-            <strong>Authors:</strong>
+        <hr>
+
+        {% if book.authors.all %}
+        <p class="mb-2">
+            <strong>Author{{ book.authors.all|pluralize }}:</strong>
             {% for author in book.authors.all %}
-                <span class="badge bg-secondary">{{ author.name }}</span>
+                <span class="badge bg-secondary me-1">{{ author.name }}</span>
+            {% empty %}
+                <span class="text-muted fst-italic">Unknown</span>
             {% endfor %}
         </p>
-        <p>
-            <strong>Genres:</strong>
-            {% for genre in book.genres.all %}
-                <span class="badge bg-info text-dark">{{ genre.name }}</span>
-            {% endfor %}
-        </p>
-        {% if book.open_library_id %}
-            <p><strong>Open Library ID:</strong> {{ book.open_library_id }}</p>
         {% endif %}
-        <p><strong>Summary:</strong><br>{{ book.summary|default:"No summary available." }}</p>
-        <p>
-            <strong>Availability:</strong>
-            {% if book.is_available %}
-                <span class="badge bg-success">Available</span>
-            {% else %}
-                <span class="badge bg-danger">Unavailable</span>
+
+        {% if book.genres.all %}
+        <p class="mb-2">
+            <strong>Genre{{ book.genres.all|pluralize }}:</strong>
+            {% for genre in book.genres.all %}
+                <span class="badge bg-info text-dark me-1">{{ genre.name }}</span>
+            {% empty %}
+                 <span class="text-muted fst-italic">Not specified</span>
+            {% endfor %}
+        </p>
+        {% endif %}
+
+        <p class="mb-2">
+            {% if book.publisher %}
+                <strong>Publisher:</strong> {{ book.publisher }}
+                {% if book.publish_date %} | {% endif %}
+            {% endif %}
+            {% if book.publish_date %}
+                <strong>Published:</strong> {{ book.publish_date|date:"F j, Y" }} 
             {% endif %}
         </p>
 
-        <div class="mt-3">
+        <p class="mb-2">
+            {% if book.isbn_13 %}
+                <strong>ISBN-13:</strong> {{ book.isbn_13 }}
+                 {% if book.isbn_10 %} | {% endif %}
+            {% endif %}
+            {% if book.isbn_10 %}
+                <strong>ISBN-10:</strong> {{ book.isbn_10 }}
+            {% endif %}
+        </p>
+
+         <p class="mb-2">
+            {% if book.language %}
+                <strong>Language:</strong> {{ book.language }}
+                 {% if book.page_count %} | {% endif %}
+            {% endif %}
+            {% if book.page_count %}
+                <strong>Pages:</strong> {{ book.page_count }}
+            {% endif %}
+        </p>
+
+        {% if book.open_library_id %}
+            <p class="mb-2"><strong>Open Library ID:</strong> {{ book.open_library_id }}</p>
+        {% endif %}
+
+        <p class="mb-2">
+            <strong>Summary:</strong><br>
+            <span class="text-muted">{{ book.summary|default:"No summary available."|linebreaksbr }}</span>
+        </p>
+
+        <p class="mb-3">
+            <strong>Availability:</strong>
+            {% if book.is_available %}
+                <span class="badge bg-success">Available</span>
+                <small class="text-muted ms-1">({{ book.quantity }} total copies)</small>
+            {% else %}
+                <span class="badge bg-danger">Unavailable</span>
+                 <small class="text-muted ms-1">({{ book.quantity }} total copies)</small>
+            {% endif %}
+        </p>
+
+        <div class="mt-3 d-flex gap-2">
             {% if book.is_available %}
               {% if user.is_authenticated %}
                 {% if has_active_or_pending %}
-                  <button class="btn btn-secondary" disabled>
-                    Borrow request already pending or active
+                  <button class="btn btn-secondary btn-sm" disabled>
+                    Request Pending/Active
                   </button>
                 {% else %}
-                  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#borrowModal">
-                    Borrow this Book
+                  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#borrowModal">
+                    <i class="bi bi-book-half me-1"></i> Borrow this Book
                   </button>
                 {% endif %}
               {% else %}
-                <a href="{% url 'login' %}" class="btn btn-outline-primary">Login to Borrow</a>
+                <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm">Login to Borrow</a>
               {% endif %}
-            {% endif %}        
-            <a href="#" class="btn btn-warning">Add to Favorites</a>
+            {% else %}
+                 <button class="btn btn-secondary btn-sm" disabled>
+                    Currently Unavailable
+                  </button>
+            {% endif %}
+            {% if user.is_authenticated %}
+            <button id="favorite-btn" class="btn btn-outline-warning btn-sm" data-book-id="{{ book.id }}">
+                 <i class="bi bi-star me-1"></i> Add to Favorites
+            </button>
+            {% endif %}
         </div>
     </div>
-</div>
+  </div>
 
-<div class="modal fade" id="borrowModal" tabindex="-1" aria-labelledby="borrowModalLabel" aria-hidden="true">
+  {% if user.is_authenticated and book.is_available and not has_active_or_pending %}
+  <div class="modal fade" id="borrowModal" tabindex="-1" aria-labelledby="borrowModalLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <form method="post" action="{% url 'borrow_book' book.id %}">
           {% csrf_token %}
           <div class="modal-header">
-            <h5 class="modal-title" id="borrowModalLabel">Select Return Date</h5>
+            <h5 class="modal-title" id="borrowModalLabel">Select Due Date</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="mb-3">
-              <label class="form-label">Return Date:</label>
-              <input type="date" name="return_date" class="form-control" required>
-              <small class="form-text text-muted">Or choose a duration below</small>
-            </div>
-  
-            <div class="btn-group w-100" role="group">
-              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(1)">1 Day</button>
-              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(3)">3 Days</button>
-              <button type="button" class="btn btn-outline-secondary" onclick="setReturnDate(7)">1 Week</button>
+              <label for="id_due_date" class="form-label">Due Date:</label>
+              <input type="date" name="due_date" id="id_due_date" class="form-control" required>
+              <small class="form-text text-muted">Select the date you plan to return the book.</small>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="submit" class="btn btn-primary w-100">Confirm Borrow</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Confirm Borrow Request</button>
           </div>
         </form>
       </div>
     </div>
-  </div>  
-
+  </div>
+  
   <script>
     function setReturnDate(days) {
       const today = new Date();
-      today.setDate(today.getDate() + days);
-      document.querySelector('input[name="return_date"]').value = today.toISOString().split('T')[0];
+      const futureDate = new Date(today.setDate(today.getDate() + days));
+      document.querySelector('input[name="due_date"]').value = futureDate.toISOString().split('T')[0];
     }
-  </script>  
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.querySelector('input[name="due_date"]');
+        if (dateInput) {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            dateInput.setAttribute('min', tomorrow.toISOString().split('T')[0]);
+            // Optionally set default value
+            // dateInput.value = tomorrow.toISOString().split('T')[0];
+        }
+    });
+  </script>
+  {% endif %}
 
+</div>
 {% endblock %}

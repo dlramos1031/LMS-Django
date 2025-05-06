@@ -9,7 +9,7 @@ from django.contrib.auth.views import LoginView, PasswordChangeView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -18,8 +18,9 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .decorators import redirect_authenticated_user
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, UserProfileSerializer, UserDeviceSerializer
 from .forms import UserRegistrationForm
+from .models import UserDevice
 from books.models import Borrowing
 
 User = get_user_model()
@@ -63,12 +64,79 @@ class CustomLoginView(ObtainAuthToken):
         })
 
 class LogoutView(APIView):
-    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         request.user.auth_token.delete()
         return Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
+
+# ============================================
+# 📱 MOBILE VIEWS
+# ============================================
+
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+class RegisterDeviceView(generics.GenericAPIView): # Changed from CreateAPIView
+    """
+    Registers or updates a device token for the authenticated user.
+    Uses update_or_create to handle both new and existing tokens idempotently.
+    """
+    serializer_class = UserDeviceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handles POST requests to register/update the device token.
+        """
+        # Validate the incoming data (expects 'device_token')
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True) # Raise validation error if token is missing/invalid
+
+        device_token = serializer.validated_data['device_token']
+        user = request.user
+
+        # Use update_or_create to handle existing tokens gracefully
+        # It finds a UserDevice by device_token.
+        # If found, it updates the 'user' field to the current user.
+        # If not found, it creates a new UserDevice with the token and user.
+        try:
+            device, created = UserDevice.objects.update_or_create(
+                device_token=device_token,
+                defaults={'user': user}
+                # Note: Consider if you want to allow a token to be reassigned
+                # from one user to another. This logic currently allows it.
+                # If a token should ONLY belong to the first user who registered it,
+                # you might need different logic (e.g., check if device exists
+                # and belongs to a *different* user, then return 409 Conflict).
+            )
+
+            # Determine the appropriate response status code
+            if created:
+                status_code = status.HTTP_201_CREATED
+                response_data = serializer.data # Return the data for the new device
+                print(f"Device token CREATED for user {user.username}: {device_token}")
+            else:
+                # If the device was updated (or already existed with the correct user)
+                status_code = status.HTTP_200_OK
+                # Re-serialize the existing/updated device data to ensure consistency
+                response_data = UserDeviceSerializer(instance=device).data
+                print(f"Device token UPDATED/EXISTED for user {user.username}: {device_token}")
+
+            # Return a success response with appropriate status and data
+            return Response(response_data, status=status_code)
+
+        except Exception as e:
+            # Catch potential database errors or other issues
+            print(f"Error during device registration for user {user.username}: {e}")
+            return Response(
+                {"error": "An internal error occurred during device registration."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 # ============================================
 # 🌐 TEMPLATE-BASED VIEWS
