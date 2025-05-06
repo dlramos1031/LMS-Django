@@ -67,8 +67,6 @@
             <span>Borrow Management</span>
           </li>
           <li class="nav-item">
-            {# Use the existing URL name for now, pass tab param #}
-            {# Assumes 'active_dashboard_tab' context variable will be passed from view #}
             <a class="nav-link {% if active_dashboard_tab == 'pending' %}active{% endif %}" aria-current="page" href="{% url 'dashboard_pending' %}">
               <i class="bi bi-clock-history"></i>
               Pending Requests

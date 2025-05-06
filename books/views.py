@@ -313,7 +313,7 @@ def _get_dashboard_context(request, active_tab_name, queryset, search_fields=Non
 
     context = {
         'active_dashboard_tab': active_tab_name,
-        'page_obj': page_obj, # Use a consistent name like 'page_obj'
+        'page_obj': page_obj,
         'search_term': search,
         'now': now(),
     }
