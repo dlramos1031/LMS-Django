@@ -1,5 +1,5 @@
-<div class="modal fade" id="editBookModal-{{ book.id }}" tabindex="-1" aria-labelledby="editBookModalLabel-{{ book.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable"> {# Added scrollable #}
+<div class="modal fade modal-dialog-scrollable" id="editBookModal-{{ book.id }}" tabindex="-1" aria-labelledby="editBookModalLabel-{{ book.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-lg"> {# Added scrollable #}
     <div class="modal-content">
       <form method="post" action="{% url 'edit_book' book.id %}" enctype="multipart/form-data">
         {% csrf_token %}
@@ -10,77 +10,75 @@
         <div class="modal-body">
           <div class="row g-3">
             {# Row 1 #}
-            <div class="col-md-8">
+            <div class="col-md-6">
               <label for="edit-title-{{ book.id }}" class="form-label">Title</label>
               <input type="text" name="title" id="edit-title-{{ book.id }}" class="form-control form-control-sm" value="{{ book.title }}" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-2">
               <label for="edit-quantity-{{ book.id }}" class="form-label">Quantity</label>
               <input type="number" name="quantity" id="edit-quantity-{{ book.id }}" class="form-control form-control-sm" value="{{ book.quantity }}" min="0" required>
             </div>
-
-            {# Row 2 #}
-            <div class="col-md-6">
-              <label for="edit-authors-{{ book.id }}" class="form-label">Authors (comma-separated)</label>
-              <input type="text" name="authors" id="edit-authors-{{ book.id }}" class="form-control form-control-sm" value="{{ book.authors.all|join:", " }}">
-            </div>
-            <div class="col-md-6">
-              <label for="edit-genres-{{ book.id }}" class="form-label">Genres (comma-separated)</label>
-              <input type="text" name="genres" id="edit-genres-{{ book.id }}" class="form-control form-control-sm" value="{{ book.genres.all|join:", " }}">
-            </div>
-
-            {# Row 3 - New Fields #}
-             <div class="col-md-6">
-              <label for="edit-publisher-{{ book.id }}" class="form-label">Publisher</label>
-              <input type="text" name="publisher" id="edit-publisher-{{ book.id }}" class="form-control form-control-sm" value="{{ book.publisher|default_if_none:'' }}">
-            </div>
-             <div class="col-md-6">
-              <label for="edit-publish_date-{{ book.id }}" class="form-label">Publish Date</label>
-              <input type="date" name="publish_date" id="edit-publish_date-{{ book.id }}" class="form-control form-control-sm" value="{{ book.publish_date|date:'Y-m-d'|default:'' }}">
-            </div>
-
-            {# Row 4 - New Fields #}
-            <div class="col-md-6">
-              <label for="edit-isbn_13-{{ book.id }}" class="form-label">ISBN-13</label>
-              <input type="text" name="isbn_13" id="edit-isbn_13-{{ book.id }}" class="form-control form-control-sm" value="{{ book.isbn_13|default_if_none:'' }}">
-            </div>
-            <div class="col-md-6">
-              <label for="edit-isbn_10-{{ book.id }}" class="form-label">ISBN-10</label>
-              <input type="text" name="isbn_10" id="edit-isbn_10-{{ book.id }}" class="form-control form-control-sm" value="{{ book.isbn_10|default_if_none:'' }}">
-            </div>
-
-            {# Row 5 - New Fields #}
-             <div class="col-md-6">
-              <label for="edit-language-{{ book.id }}" class="form-label">Language</label>
-              <input type="text" name="language" id="edit-language-{{ book.id }}" class="form-control form-control-sm" value="{{ book.language|default_if_none:'' }}">
-            </div>
-             <div class="col-md-6">
+            <div class="col-md-2">
               <label for="edit-page_count-{{ book.id }}" class="form-label">Page Count</label>
               <input type="number" name="page_count" id="edit-page_count-{{ book.id }}" class="form-control form-control-sm" value="{{ book.page_count|default_if_none:'' }}" min="1">
             </div>
+            <div class="col-md-2">
+              <label for="edit-language-{{ book.id }}" class="form-label">Language</label>
+              <input type="text" name="language" id="edit-language-{{ book.id }}" class="form-control form-control-sm" value="{{ book.language|default_if_none:'' }}">
+           </div>
 
-             {# Row 6 - Existing Fields #}
-             <div class="col-md-6">
+            {# Row 2 #}
+            <div class="col-md-4">
+              <label for="edit-authors-{{ book.id }}" class="form-label">Authors (comma-separated)</label>
+              <input type="text" name="authors" id="edit-authors-{{ book.id }}" class="form-control form-control-sm" value="{{ book.authors.all|join:", " }}">
+            </div>
+            <div class="col-md-4">
+              <label for="edit-genres-{{ book.id }}" class="form-label">Genres (comma-separated)</label>
+              <input type="text" name="genres" id="edit-genres-{{ book.id }}" class="form-control form-control-sm" value="{{ book.genres.all|join:", " }}">
+            </div>
+            <div class="col-md-4">
+              <label for="edit-publisher-{{ book.id }}" class="form-label">Publisher</label>
+              <input type="text" name="publisher" id="edit-publisher-{{ book.id }}" class="form-control form-control-sm" value="{{ book.publisher|default_if_none:'' }}">
+            </div>
+
+            {# Row 3 #}
+            <div class="col-md-3">
+              <label for="edit-publish_date-{{ book.id }}" class="form-label">Publish Date</label>
+              <input type="date" name="publish_date" id="edit-publish_date-{{ book.id }}" class="form-control form-control-sm" value="{{ book.publish_date|date:'Y-m-d'|default:'' }}">
+            </div>
+            <div class="col-md-3">
+              <label for="edit-isbn_13-{{ book.id }}" class="form-label">ISBN-13</label>
+              <input type="text" name="isbn_13" id="edit-isbn_13-{{ book.id }}" class="form-control form-control-sm" value="{{ book.isbn_13|default_if_none:'' }}">
+            </div>
+            <div class="col-md-3">
+              <label for="edit-isbn_10-{{ book.id }}" class="form-label">ISBN-10</label>
+              <input type="text" name="isbn_10" id="edit-isbn_10-{{ book.id }}" class="form-control form-control-sm" value="{{ book.isbn_10|default_if_none:'' }}">
+            </div>
+            <div class="col-md-3">
               <label for="edit-open_library_id-{{ book.id }}" class="form-label">Open Library ID</label>
               <input type="text" name="open_library_id" id="edit-open_library_id-{{ book.id }}" class="form-control form-control-sm" value="{{ book.open_library_id|default_if_none:'' }}">
             </div>
-             <div class="col-md-6">
-                <label for="edit-cover_image-{{ book.id }}" class="form-label">Cover Image</label>
-                {% if book.cover_image %}
-                  <div class="mb-1">
-                    <img src="{{ book.cover_image.url }}" class="img-thumbnail" style="max-height: 60px;" alt="Current Cover">
-                    <div class="form-check form-check-inline ms-2">
-                        {# Add a way to clear the image if needed by the view #}
-                        {# <input class="form-check-input" type="checkbox" name="clear_cover_image" id="clear_cover_image-{{ book.id }}">
-                        <label class="form-check-label" for="clear_cover_image-{{ book.id }}">Remove</label> #}
-                    </div>
-                  </div>
-                {% endif %}
-                <input type="file" name="cover_image" id="edit-cover_image-{{ book.id }}" class="form-control form-control-sm">
-                <small class="form-text text-muted">Upload new image to replace current one.</small>
-             </div>
 
-            {# Row 7 - Summary #}
+            {# Row 4 #}
+            <div class="col-md-8">
+              <label for="edit-cover_image-{{ book.id }}" class="form-label">Cover Image</label>
+              <input type="file" name="cover_image" id="edit-cover_image-{{ book.id }}" class="form-control form-control-sm">
+              <small class="form-text text-muted">Upload new image to replace current one.</small>
+            </div>
+            <div class="col-md-4">
+              {% if book.cover_image %}
+                <div class="mb-1">
+                  <img src="{{ book.cover_image.url }}" class="img-thumbnail" style="max-height: 60px;" alt="Current Cover">
+                  <div class="form-check form-check-inline ms-2">
+                      {# Add a way to clear the image if needed by the view #}
+                      <input class="form-check-input" type="checkbox" name="clear_cover_image" id="clear_cover_image-{{ book.id }}">
+                      <label class="form-check-label" for="clear_cover_image-{{ book.id }}">Remove</label>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+            {# Row 5 #}
             <div class="col-12">
               <label for="edit-summary-{{ book.id }}" class="form-label">Summary</label>
               <textarea name="summary" id="edit-summary-{{ book.id }}" class="form-control form-control-sm" rows="4">{{ book.summary|default_if_none:'' }}</textarea>

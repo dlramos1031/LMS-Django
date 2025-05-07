@@ -2,102 +2,102 @@
 {% block content %}
 {% block title %}{{ profile_user.username }}'s Profile{% endblock %}
 
+<div class="container mt-4">
 <h2>{{ profile_user.username }}'s Profile</h2>
-
-<div class="row mb-4">
-  <div class="col-md-3">
-    {% if profile_user.profile_picture %}
-      <img src="{{ profile_user.profile_picture.url }}" class="img-thumbnail" alt="Profile Picture">
-    {% else %}
-      <div class="bg-secondary text-white text-center p-5 rounded">No Image</div>
-    {% endif %}
-  </div>
-  <div class="col-md-9">
-    <ul class="list-group">
-      <li class="list-group-item"><strong>Full Name:</strong> {{ profile_user.full_name }}</li>
-      <li class="list-group-item"><strong>Email:</strong> {{ profile_user.email }}</li>
-      <li class="list-group-item"><strong>Role:</strong> {{ profile_user.role|capfirst }}</li>
-    </ul>
-  </div>
-</div>
-
-<!-- Edit Profile Button -->
-{% if profile_user == request.user %}
-  <div class="text-end mb-3">
-    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
-      Edit Profile
-    </button>
-  </div>
-{% endif %}
-
-<!-- Edit Profile Modal -->
-<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="post" action="{% url 'edit_profile' profile_user.id %}" enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Your Profile</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-2">
-            <label class="form-label">Username</label>
-            <input name="username" class="form-control" value="{{ profile_user.username }}" required>
-          </div>
-          <div class="mb-2">
-            <label class="form-label">Full Name</label>
-            <input name="full_name" class="form-control" value="{{ profile_user.full_name }}">
-          </div>
-          <div class="mb-2">
-            <label class="form-label">Email</label>
-            <input type="email" name="email" class="form-control" value="{{ profile_user.email }}">
-          </div>
-          <div class="mb-2">
-            <label class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
-            <input type="password" name="password" class="form-control">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-primary">Save Changes</button>
-        </div>
-      </form>
+  <div class="row mb-4">
+    <div class="col-md-3">
+      {% if profile_user.profile_picture %}
+        <img src="{{ profile_user.profile_picture.url }}" class="img-thumbnail" alt="Profile Picture">
+      {% else %}
+        <div class="bg-secondary text-white text-center p-5 rounded">No Image</div>
+      {% endif %}
+    </div>
+    <div class="col-md-9">
+      <ul class="list-group">
+        <li class="list-group-item"><strong>Full Name:</strong> {{ profile_user.full_name }}</li>
+        <li class="list-group-item"><strong>Email:</strong> {{ profile_user.email }}</li>
+        <li class="list-group-item"><strong>Role:</strong> {{ profile_user.role|capfirst }}</li>
+      </ul>
     </div>
   </div>
+
+  <!-- Edit Profile Button -->
+  {% if profile_user == request.user %}
+    <div class="text-end mb-3">
+      <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+        Edit Profile
+      </button>
+    </div>
+  {% endif %}
+
+  <!-- Edit Profile Modal -->
+  <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="{% url 'edit_profile' profile_user.id %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Your Profile</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2">
+              <label class="form-label">Username</label>
+              <input name="username" class="form-control" value="{{ profile_user.username }}" required>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Full Name</label>
+              <input name="full_name" class="form-control" value="{{ profile_user.full_name }}">
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Email</label>
+              <input type="email" name="email" class="form-control" value="{{ profile_user.email }}">
+            </div>
+            <div class="mb-2">
+              <label class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
+              <input type="password" name="password" class="form-control">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <h4>Borrow History</h4>
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th>Book</th>
+        <th>Borrowed</th>
+        <th>Return Date</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in borrowings %}
+      <tr>
+        <td><a href="{% url 'book_detail' b.book.id %}">{{ b.book.title }}</a></td>
+        <td>{{ b.borrow_date|date:"Y-m-d H:i" }}</td>
+        <td>{{ b.return_date|date:"Y-m-d" }}</td>
+        <td>
+          {% if b.status == 'pending' %}
+            <span class="badge bg-success">Pending</span>
+          {% elif b.status == 'returned' %}
+            <span class="badge bg-secondary">Returned</span>
+          {% elif b.return_date < now and b.status == 'borrowed' %}
+            <span class="badge bg-danger">Overdue</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Borrowed</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">No borrowings found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
-
-<h4>Borrow History</h4>
-<table class="table table-sm table-striped">
-  <thead>
-    <tr>
-      <th>Book</th>
-      <th>Borrowed</th>
-      <th>Return Date</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for b in borrowings %}
-    <tr>
-      <td><a href="{% url 'book_detail' b.book.id %}">{{ b.book.title }}</a></td>
-      <td>{{ b.borrow_date|date:"Y-m-d H:i" }}</td>
-      <td>{{ b.return_date|date:"Y-m-d" }}</td>
-      <td>
-        {% if b.status == 'pending' %}
-          <span class="badge bg-success">Pending</span>
-        {% elif b.status == 'returned' %}
-          <span class="badge bg-secondary">Returned</span>
-        {% elif b.return_date < now and b.status == 'borrowed' %}
-          <span class="badge bg-danger">Overdue</span>
-        {% else %}
-          <span class="badge bg-warning text-dark">Borrowed</span>
-        {% endif %}
-      </td>
-    </tr>
-    {% empty %}
-    <tr><td colspan="4">No borrowings found.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-
 {% endblock %}

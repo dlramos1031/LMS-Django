@@ -6,17 +6,16 @@
 
 {% block content %}
 <style>
-  /* Basic sidebar styling */
   .sidebar {
     position: fixed;
-    top: 56px; /* Height of the navbar from base.html */
+    top: 56px; 
     bottom: 0;
     left: 0;
-    z-index: 100; /* Behind the navbar */
-    padding: 48px 0 0; /* Top padding for content below navbar */
+    z-index: 100; 
+    padding: 48px 0 0; 
     box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-    background-color: #f8f9fa; /* Light background */
-    overflow-y: auto; /* Enable scrolling if content overflows */
+    background-color: #f8f9fa; 
+    overflow-y: auto; 
   }
 
   .sidebar .nav-link {
@@ -27,13 +26,13 @@
 
   .sidebar .nav-link .bi {
     margin-right: 8px;
-    width: 16px; /* Ensure icons align */
+    width: 16px; 
     text-align: center;
   }
 
   .sidebar .nav-link.active {
-    color: #0d6efd; /* Bootstrap primary color */
-    background-color: #e9ecef; /* Slightly darker background for active */
+    color: #0d6efd; 
+    background-color: #e9ecef; 
   }
 
   .sidebar .nav-link:hover:not(.active) {
@@ -49,9 +48,8 @@
   }
 
   .main-content {
-    margin-top: 56px; /* Height of the navbar */
+    margin-top: 56px; 
     padding: 1.5rem;
-    min-height: calc(100vh - 56px); /* Full height minus navbar */
   }
 </style>
 

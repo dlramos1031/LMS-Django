@@ -307,7 +307,7 @@ def _get_dashboard_context(request, active_tab_name, queryset, search_fields=Non
 
 
     # --- Pagination ---
-    paginator = Paginator(queryset, 10) # Adjust per_page as needed
+    paginator = Paginator(queryset, 6) # Adjust per_page as needed
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -384,6 +384,7 @@ def approve_borrow_view(request, borrow_id):
     borrowing.save(update_fields=['status'])
 
     borrowing.book.quantity -= 1
+    borrowing.book.total_borrows += 1
     borrowing.book.save(update_fields=['quantity'])
 
     create_notification(

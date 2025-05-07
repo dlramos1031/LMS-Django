@@ -26,10 +26,10 @@
       <tr>
         <th>User</th>
         <th>Book</th>
-        <th>Requested On</th> {# Changed label #}
+        <th>Requested On</th>
         <th>Due Date</th>
+        <th>Returned/Closed On</th>
         <th>Status</th>
-        <th>Returned/Closed On</th> {# Changed label #}
       </tr>
     </thead>
     <tbody>
@@ -44,14 +44,14 @@
         <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
         <td>{{ borrow.due_date|date:"Y-m-d"|default:"N/A" }}</td> {# Due date might be null for rejected #}
         <td>
-            {# Display final status #}
-            <span class="badge {% if borrow.status == 'returned' %}bg-secondary{% elif borrow.status == 'rejected' %}bg-warning text-dark{% else %}bg-light text-dark{% endif %}">
-                {{ borrow.get_status_display }} {# Use display value #}
-            </span>
-        </td>
-        <td>
             {# Show actual return date if returned, otherwise maybe rejection date if available #}
             {{ borrow.actual_return_date|date:"Y-m-d H:i"|default:"-" }}
+        </td>
+        <td>
+          {# Display final status #}
+          <span class="badge {% if borrow.status == 'returned' %}bg-secondary{% elif borrow.status == 'rejected' %}bg-warning text-dark{% else %}bg-light text-dark{% endif %}">
+              {{ borrow.get_status_display }} {# Use display value #}
+          </span>
         </td>
       </tr>
       {% empty %}
