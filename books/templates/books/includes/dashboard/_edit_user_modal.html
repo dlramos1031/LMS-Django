@@ -1,0 +1,52 @@
+<div class="modal fade" id="editUserModal-{{ user_obj.id }}" tabindex="-1" aria-labelledby="editUserModalLabel-{{ user_obj.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      {# Ensure URL name 'edit_user' exists and takes user_id #}
+      <form method="post" action="{% url 'edit_user' user_obj.id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="editUserModalLabel-{{ user_obj.id }}">Edit User: {{ user_obj.username }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {# Add form fields for user editing based on your User model and form #}
+          <div class="mb-2">
+            <label for="edit-username-{{ user_obj.id }}" class="form-label">Username</label>
+            <input name="username" id="edit-username-{{ user_obj.id }}" class="form-control form-control-sm" value="{{ user_obj.username }}" required>
+          </div>
+          <div class="mb-2">
+            <label for="edit-fullname-{{ user_obj.id }}" class="form-label">Full Name</label>
+            <input name="full_name" id="edit-fullname-{{ user_obj.id }}" class="form-control form-control-sm" value="{{ user_obj.full_name|default:'' }}">
+          </div>
+          <div class="mb-2">
+            <label for="edit-email-{{ user_obj.id }}" class="form-label">Email</label>
+            <input type="email" name="email" id="edit-email-{{ user_obj.id }}" class="form-control form-control-sm" value="{{ user_obj.email|default:'' }}">
+          </div>
+          <div class="mb-2">
+            <label for="edit-password-{{ user_obj.id }}" class="form-label">New Password</label>
+            <input type="password" name="password" id="edit-password-{{ user_obj.id }}" class="form-control form-control-sm" placeholder="(Leave blank to keep current)">
+            <small class="form-text text-muted">Only enter if changing password.</small>
+          </div>
+          {# Role selection - adapt based on your User model's role field/logic #}
+          {% if request.user.is_superuser %} {# Only superusers can change roles? Adjust logic #}
+          <div class="mb-2">
+            <label for="edit-role-{{ user_obj.id }}" class="form-label">Role</label>
+            <select name="role" id="edit-role-{{ user_obj.id }}" class="form-select form-select-sm">
+              <option value="member" {% if user_obj.role == "member" %}selected{% endif %}>Member</option>
+              <option value="librarian" {% if user_obj.role == "librarian" %}selected{% endif %}>Librarian</option>
+              {# Only show admin if editing another admin or allowed by superuser #}
+              {% if user_obj.is_superuser or request.user.is_superuser %}
+                 <option value="admin" {% if user_obj.role == "admin" or user_obj.is_superuser %}selected{% endif %}>Admin</option>
+              {% endif %}
+            </select>
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -6,6 +6,7 @@ from .views import (
     edit_user_view, 
     delete_user_view, 
     edit_profile_view,
+    dashboard_users_view,
     CustomPasswordChangeView, 
     CustomLoginViewWeb
 )
@@ -23,6 +24,7 @@ urlpatterns = [
     path('profile/<int:user_id>/edit', edit_profile_view, name='edit_profile'),
 
     # Dashboard user management
+    path('dashboard/users/', dashboard_users_view, name='dashboard_users'),
     path('dashboard/users/add/', add_user_view, name='add_user'),
     path('dashboard/users/<int:user_id>/edit/', edit_user_view, name='edit_user'),
     path('dashboard/users/<int:user_id>/delete/', delete_user_view, name='delete_user'),

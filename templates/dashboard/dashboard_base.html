@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block title %}Librarian Dashboard - {% block dashboard_title %}Overview{% endblock %}{% endblock %}
+
+{% block content %}
+<style>
+  .sidebar {
+    position: fixed;
+    top: 56px; 
+    bottom: 0;
+    left: 0;
+    z-index: 100; 
+    padding: 48px 0 0; 
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    background-color: #f8f9fa; 
+    overflow-y: auto; 
+  }
+
+  .sidebar .nav-link {
+    font-weight: 500;
+    color: #333;
+    padding: .6rem 1rem;
+  }
+
+  .sidebar .nav-link .bi {
+    margin-right: 8px;
+    width: 16px; 
+    text-align: center;
+  }
+
+  .sidebar .nav-link.active {
+    color: #0d6efd; 
+    background-color: #e9ecef; 
+  }
+
+  .sidebar .nav-link:hover:not(.active) {
+    background-color: #e9ecef;
+  }
+
+  .sidebar-heading {
+    font-size: .8rem;
+    text-transform: uppercase;
+    padding: .5rem 1rem;
+    margin-top: 1rem;
+    color: #6c757d;
+  }
+
+  .main-content {
+    margin-top: 56px; 
+    padding: 1.5rem;
+  }
+</style>
+
+<div class="container-fluid">
+  <div class="row">
+    {# --- Sidebar Navigation --- #}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+      <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+
+          {# Borrow Management Section #}
+          <li class="nav-item sidebar-heading">
+            <span>Borrow Management</span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if active_dashboard_tab == 'pending' %}active{% endif %}" aria-current="page" href="{% url 'dashboard_pending' %}">
+              <i class="bi bi-clock-history"></i>
+              Pending Requests
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if active_dashboard_tab == 'active' %}active{% endif %}" href="{% url 'dashboard_active' %}">
+              <i class="bi bi-journals"></i>
+              Currently Borrowed
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if active_dashboard_tab == 'history' %}active{% endif %}" href="{% url 'dashboard_history' %}">
+              <i class="bi bi-archive"></i>
+              Borrow History
+            </a>
+          </li>
+
+          {# Library Management Section #}
+          <li class="nav-item sidebar-heading">
+            <span>Library Management</span>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if active_dashboard_tab == 'books' %}active{% endif %}" href="{% url 'dashboard_books' %}">
+              <i class="bi bi-book"></i>
+              Manage Books
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if active_dashboard_tab == 'users' %}active{% endif %}" href="{% url 'dashboard_users' %}">
+              <i class="bi bi-people"></i>
+              Manage Users
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    {# --- Main Content Area --- #}
+    <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+      {# Display messages from base.html #}
+      {% bootstrap_messages %}
+
+      {# Content specific to the dashboard section will go here #}
+      {% block dashboard_content %}
+        {# Default content or instructions can go here #}
+        <p>Select an option from the sidebar.</p>
+      {% endblock dashboard_content %}
+
+      {# Include Modals Here (or conditionally in dashboard_content) #}
+      {% block modals %}{% endblock modals %}
+    </main>
+  </div>
+</div>
+{% endblock content %}

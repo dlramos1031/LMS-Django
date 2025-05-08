@@ -22,6 +22,8 @@ from .serializers import RegisterSerializer, UserProfileSerializer, UserDeviceSe
 from .forms import UserRegistrationForm
 from .models import UserDevice
 from books.models import Borrowing
+from books.views import _get_dashboard_context
+from .decorators import admin_only
 
 User = get_user_model()
 
@@ -201,6 +203,25 @@ def edit_profile_view(request, user_id):
     messages.success(request, "User updated successfully.")
     return redirect('user_profile', user_id=user.id)
 
+
+@admin_only
+def dashboard_users_view(request):
+    active_tab_name = 'users'
+    User = get_user_model()
+    user_qs = User.objects.all() # Add filtering if needed (e.g., exclude superusers for non-superusers)
+    context = _get_dashboard_context( # Use the same helper function
+        request,
+        active_tab_name,
+        user_qs,
+        search_fields=['username', 'full_name', 'email']
+    )
+    # Pass all users for modals if needed (similar to books)
+    context['all_users'] = User.objects.all() # Adjust filter as needed
+    return render(request, 'dashboard/users_section.html', context) # Use a specific template for users
+
+
+
+
 @staff_member_required
 @require_POST
 def add_user_view(request):
@@ -219,7 +240,7 @@ def add_user_view(request):
     )
 
     messages.success(request, "User added successfully.")
-    return redirect('/dashboard/?tab=users')
+    return redirect('dashboard_users')
 
 @staff_member_required
 @require_POST
@@ -237,7 +258,7 @@ def edit_user_view(request, user_id):
 
     user.save()
     messages.success(request, "User updated successfully.")
-    return redirect('/dashboard/?tab=users')
+    return redirect('dashboard_users')
 
 @staff_member_required
 @require_POST
@@ -245,7 +266,7 @@ def delete_user_view(request, user_id):
     user = get_object_or_404(User, id=user_id)
     user.delete()
     messages.success(request, "User deleted successfully.")
-    return redirect('/dashboard/?tab=users')
+    return redirect('dashboard_users')
 
 @require_GET
 def check_username(request):
