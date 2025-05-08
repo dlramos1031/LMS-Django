@@ -35,7 +35,6 @@
     <tbody>
       {% for borrow in page_obj %}
       <tr>
-        {{ borrow }}
         <td>{{ borrow.user.username }}</td>
         <td>{{ borrow.book.title }}</td>
         <td>{{ borrow.borrow_date|date:"Y-m-d" }}</td>
