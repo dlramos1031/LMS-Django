@@ -22,11 +22,14 @@ pip install -r requirements.txt
 python manage.py makemigrations
 python manage.py migrate
 
+# Collecting static resources like Bootstrap Icons
+python manage.py collectstatic
+
 # Create your admin account (type y if password is too common)
 python manage.py createsuperuser
 
 # Run the development server
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8000
 
 ```
 
