@@ -1,0 +1,110 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Dashboard Overview{% endblock %}
+
+{% block dashboard_page_title_main %}Dashboard Overview{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">{{ book_title_count|default:"0" }}</h5>
+                        <p class="card-text">Total Book Titles</p>
+                    </div>
+                    <i class="bi bi-book h1 opacity-75"></i>
+                </div>
+                <a href="{% url 'books:dashboard_book_list' %}" class="text-white stretched-link">View Books &raquo;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">{{ book_copy_count|default:"0" }}</h5>
+                        <p class="card-text">Total Physical Copies</p>
+                    </div>
+                    <i class="bi bi-collection-fill h1 opacity-75"></i>
+                </div>
+                 <a href="{% url 'books:dashboard_book_list' %}" class="text-white stretched-link">Manage Copies &raquo;</a> {# Or a dedicated copies page #}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">{{ total_borrowers_count|default:"0" }}</h5>
+                        <p class="card-text">Registered Borrowers</p>
+                    </div>
+                    <i class="bi bi-people-fill h1 opacity-75"></i>
+                </div>
+                <a href="{% url 'users:dashboard_user_list' %}" class="text-white stretched-link">Manage Users &raquo;</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-4 mb-3">
+        <div class="card text-dark bg-warning">
+            <div class="card-body">
+                 <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">{{ pending_requests_count|default:"0" }}</h5>
+                        <p class="card-text">Pending Borrow Requests</p>
+                    </div>
+                    <i class="bi bi-hourglass-split h1 opacity-75"></i>
+                </div>
+                <a href="{% url 'books:dashboard_pending_requests' %}" class="text-dark stretched-link">View Requests &raquo;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                 <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">{{ active_loans_count|default:"0" }}</h5>
+                        <p class="card-text">Active Loans</p>
+                    </div>
+                    <i class="bi bi-journal-arrow-up h1 opacity-75"></i>
+                </div>
+                <a href="{% url 'books:dashboard_active_loans' %}" class="text-white stretched-link">View Active Loans &raquo;</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                 <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title mb-0">{{ overdue_loans_count|default:"0" }}</h5>
+                        <p class="card-text">Overdue Loans</p>
+                    </div>
+                     <i class="bi bi-exclamation-triangle-fill h1 opacity-75"></i>
+                </div>
+                <a href="{% url 'books:dashboard_active_loans' %}" class="text-white stretched-link">View Overdue Loans &raquo;</a> {# Link to active loans, can filter there #}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h4>Quick Actions</h4>
+    <p>
+        <a href="{% url 'books:dashboard_book_add' %}" class="btn btn-outline-primary me-2"><i class="bi bi-plus-circle"></i> Add New Book Title</a>
+        <a href="{% url 'users:dashboard_user_add' %}" class="btn btn-outline-info me-2"><i class="bi bi-person-plus"></i> Add New User</a>
+        <a href="{% url 'books:dashboard_circulation_issue' %}" class="btn btn-outline-success"><i class="bi bi-book-half"></i> Issue a Book</a>
+        {# Add more quick actions as needed #}
+    </p>
+</div>
+
+{% endblock dashboard_content_main %}

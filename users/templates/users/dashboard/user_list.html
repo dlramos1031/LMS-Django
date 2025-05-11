@@ -1,0 +1,98 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Manage Users{% endblock %}
+
+{% block dashboard_page_title_main %}Manage Users{% endblock %}
+
+{% block dashboard_page_actions %}
+    {% if perms.users.add_customuser %} {# Or a custom permission check for adding users #}
+    <a href="{% url 'users:dashboard_user_add' %}" class="btn btn-success">
+        <i class="bi bi-person-plus-fill"></i> Add New User
+    </a>
+    {% endif %}
+{% endblock %}
+
+{% block dashboard_content_main %}
+    <form method="get" class="row g-3 align-items-center mb-3 p-3 bg-light border rounded">
+        <div class="col-md-6">
+            <label for="userSearchInput" class="visually-hidden">Search Users</label>
+            <input type="text" name="search" class="form-control form-control-sm" id="userSearchInput" placeholder="Search username, name, email..." value="{{ current_search|default:'' }}">
+        </div>
+        <div class="col-md-4">
+            <label for="roleFilterInput" class="visually-hidden">Filter by Role</label>
+            <select name="role" class="form-select form-select-sm" id="roleFilterInput">
+                <option value="">All Roles</option>
+                {% for role_value, role_display in role_choices %}
+                    <option value="{{ role_value }}" {% if role_value == current_role_filter %}selected{% endif %}>{{ role_display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel"></i> Filter/Search</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_item in users_list %} {# Or page_obj.object_list #}
+                <tr>
+                    <td>
+                        <a href="{% url 'users:dashboard_user_edit' pk=user_item.pk %}">{{ user_item.username }}</a>
+                        {% if user_item.is_staff or user_item.is_superuser %}<i class="bi bi-shield-lock-fill text-primary ms-1" title="Staff/Superuser"></i>{% endif %}
+                    </td>
+                    <td>{{ user_item.get_full_name|default:"N/A" }}</td>
+                    <td>{{ user_item.email|default:"N/A" }}</td>
+                    <td><span class="badge bg-info text-dark">{{ user_item.get_role_display }}</span></td>
+                    <td class="text-center">
+                        {% if user_item.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'users:dashboard_user_edit' pk=user_item.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit User">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        {# Prevent deleting oneself or superusers unless current user is superuser #}
+                        {% if request.user.is_superuser and request.user.pk != user_item.pk %}
+                            <a href="{% url 'users:dashboard_user_delete' pk=user_item.pk %}" class="btn btn-sm btn-outline-danger" title="Delete User">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        {% elif request.user.pk == user_item.pk %}
+                            <span class="text-muted small">(Your Account)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No users found.
+                        {% if not current_search and not current_role_filter %}
+                            <a href="{% url 'users:dashboard_user_add' %}">Add the first user!</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj %}
+        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj %}
+    {% endif %}
+
+{% endblock dashboard_content_main %}

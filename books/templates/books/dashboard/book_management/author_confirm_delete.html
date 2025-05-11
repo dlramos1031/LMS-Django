@@ -1,0 +1,29 @@
+{% extends "dashboard/base.html" %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Confirm Delete Author{% endblock %}
+
+{% block dashboard_page_title_main %}Confirm Delete: {{ author_to_delete.name }}{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Warning!</h4>
+    <p>Are you sure you want to permanently delete the author "<strong>{{ author_to_delete.name }}</strong>"?</p>
+    {% if author_to_delete.books.count > 0 %}
+        <p class="fw-bold">This author is associated with {{ author_to_delete.books.count }} book{{ author_to_delete.books.count|pluralize }}. Deleting them might affect these books' author listings.</p>
+        {# Note: Book.authors is ManyToMany. Deleting an author removes them from books, but doesn't delete the books. #}
+    {% endif %}
+    <hr>
+    <p class="mb-0">This action cannot be undone.</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <a href="{% url 'books:dashboard_author_list' %}" class="btn btn-secondary">
+        <i class="bi bi-x-circle"></i> Cancel
+    </a>
+    <button type="submit" class="btn btn-danger">
+        <i class="bi bi-trash-fill"></i> Yes, Delete This Author
+    </button>
+</form>
+{% endblock dashboard_content_main %}

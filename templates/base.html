@@ -18,11 +18,11 @@
     </a>
     <div class="ms-3">
       {% if user.is_authenticated %}
-        <a href="{% url 'user_profile' user.id %}" class="btn btn-outline-light btn-sm">My Profile</a>
-        <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Logout</a>
+        <a href="{% url 'users:my_profile' %}" class="btn btn-outline-light btn-sm">My Profile</a>
+        <a href="{% url 'users:logout' %}" class="btn btn-outline-danger btn-sm">Logout</a>
       {% else %}
-        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm">Login</a>
-        <a href="{% url 'register' %}" class="btn btn-outline-primary btn-sm">Register</a>
+        <a href="{% url 'users:login' %}" class="btn btn-outline-light btn-sm">Login</a>
+        <a href="{% url 'users:register' %}" class="btn btn-outline-primary btn-sm">Register</a>
       {% endif %}
     </div>
   </div>

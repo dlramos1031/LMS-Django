@@ -16,14 +16,14 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta(UserCreationForm.Meta):
         model = CustomUser
-        fields = UserCreationForm.Meta.fields + (
-            'first_name', 
-            'last_name', 
-            'middle_initial', 
-            'suffix', 
+        fields = UserCreationForm.Meta.fields + ( # username is in UserCreationForm.Meta.fields
+            'first_name',
+            'last_name',
+            'middle_initial',
+            'suffix',
             'email'
+            # password and password2 are implicitly inherited from UserCreationForm's structure
         )
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'role' in self.fields and not self.initial.get('role'):

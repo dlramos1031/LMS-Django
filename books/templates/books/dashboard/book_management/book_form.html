@@ -1,0 +1,99 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}
+    {% if form_mode == 'create' %}Add New Book Title{% else %}Edit Book: {{ form.instance.title }}{% endif %}
+{% endblock %}
+
+{% block dashboard_page_title_main %}
+    {% if form_mode == 'create' %}Add New Book Title{% else %}Edit: <span class="text-muted">{{ form.instance.title }}</span>{% endif %}
+{% endblock %}
+
+{% block dashboard_page_actions %}
+    <a href="{% url 'books:dashboard_book_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to Book List
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+<form method="post" enctype="multipart/form-data"> {# Add enctype if you plan to handle actual image uploads later #}
+    {% csrf_token %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Book Title Information</h5>
+        </div>
+        <div class="card-body">
+            {% bootstrap_form form layout='horizontal' %}
+        </div>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi {% if form_mode == 'create' %}bi-plus-lg{% else %}bi-check-lg{% endif %}"></i>
+                {% if form_mode == 'create' %}Save New Book{% else %}Save Changes{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+
+{% if form.instance.pk %} {# Only show Book Copies section if we are editing an existing book #}
+<div class="card shadow-sm mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Manage Physical Copies for "{{ form.instance.title }}"</h5>
+        <a href="{% url 'books:dashboard_bookcopy_add' book_isbn=form.instance.isbn %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus-circle"></i> Add New Copy
+        </a>
+    </div>
+    <div class="card-body">
+        {% if book_copies %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Copy ID</th>
+                            <th>Status</th>
+                            <th>Date Acquired</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for copy in book_copies %}
+                        <tr>
+                            <td>{{ copy.copy_id }}</td>
+                            <td><span class="badge bg-{% if copy.status == 'Available' %}success{% elif copy.status == 'On Loan'%}warning text-dark{% else %}secondary{% endif %}">{{ copy.get_status_display }}</span></td>
+                            <td>{{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }}</td>
+                            <td>
+                                <a href="{% url 'books:dashboard_bookcopy_edit' pk=copy.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Copy">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'books:dashboard_bookcopy_delete_confirm' pk=copy.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Copy">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No physical copies have been added for this book title yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock dashboard_content_main %}
+
+{% block modals %}{% endblock modals %}
+
+{% block javascript %}
+{{ block.super }}
+{# Add any specific JS for this page, e.g., for Select2 if you use it for authors/categories #}
+<script>
+    // Example for initializing Select2 if you were to use it (requires including Select2 JS/CSS)
+    // $(document).ready(function() {
+    //     $('.select2-multiple').select2({
+    //         theme: "bootstrap-5"
+    //     });
+    // });
+</script>
+{% endblock javascript %}

@@ -1,0 +1,73 @@
+{% load static %}
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_home' %}active{% endif %}" href="{% url 'books:dashboard_home' %}">
+            <i class="bi bi-house-door-fill"></i> Overview
+        </a>
+    </li>
+
+    <li class="nav-item sidebar-heading"><span>Borrow Management</span></li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_pending_requests' %}active{% endif %}" href="{% url 'books:dashboard_pending_requests' %}">
+            <i class="bi bi-clock-history"></i> Pending Requests
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_active_loans' %}active{% endif %}" href="{% url 'books:dashboard_active_loans' %}">
+            <i class="bi bi-journals"></i> Active Loans
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_borrowing_history' %}active{% endif %}" href="{% url 'books:dashboard_borrowing_history' %}">
+            <i class="bi bi-archive"></i> Borrowing History
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_reservations' %}active{% endif %}" href="{% url 'books:dashboard_reservations' %}">
+            <i class="bi bi-bookmark-star"></i> Reservations
+        </a>
+    </li>
+
+    <li class="nav-item sidebar-heading"><span>Library Management</span></li>
+    <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_book' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'books:dashboard_book_list' %}">
+            <i class="bi bi-book"></i> Manage Books
+        </a>
+    </li>
+     <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_bookcopy' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'books:dashboard_book_list' %}"> {# Or a dedicated book copy list page #}
+            <i class="bi bi-collection-fill"></i> Manage Book Copies
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_category' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'books:dashboard_category_list' %}">
+            <i class="bi bi-tags"></i> Manage Categories
+        </a>
+    </li>
+    <li class="nav-item">
+         <a class="nav-link {% if 'dashboard_author' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'books:dashboard_author_list' %}">
+            <i class="bi bi-person-lines-fill"></i> Manage Authors
+        </a>
+    </li>
+
+    <li class="nav-item sidebar-heading"><span>User Management</span></li>
+    <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_user' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'users:dashboard_user_list' %}">
+            <i class="bi bi-people"></i> Manage Users
+        </a>
+    </li>
+
+    {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
+    <li class="nav-item sidebar-heading"><span>Administration</span></li>
+    <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_system_config' in request.resolver_match.view_name %}active{% endif %}" href="#"> {# TODO: Link to system config page #}
+            <i class="bi bi-gear"></i> System Configuration
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav_link {% if 'dashboard_reports' in request.resolver_match.view_name %}active{% endif %}" href="#"> {# TODO: Link to reports page #}
+            <i class="bi bi-file-earmark-bar-graph"></i> Reports
+        </a>
+    </li>
+    {% endif %}
+</ul>

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load bootstrap5 %} {# Assuming you are using django-bootstrap5 for form rendering or messages #}
+
+{% block title %}Login - LMS{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title text-center mb-4">Login to Your Account</h3>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% bootstrap_messages %} {# Display general messages #}
+
+
+                    <form method="post" action="{% url 'users:login' %}" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label|default:"Username" }}</label>
+                            {% bootstrap_field form.username show_label=False placeholder="Enter your username" %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label|default:"Password" }}</label>
+                            <div class="input-group">
+                                {% bootstrap_field form.password show_label=False placeholder="Enter your password" wrapper_class="" %}
+                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility('{{ form.password.id_for_label }}', 'eye-icon-login')">
+                                    <i id="eye-icon-login" class="bi bi-eye-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-block">Login</button>
+                        </div>
+
+                        <div class="text-center">
+                            <a href="{% url 'users:password_change' %}" class="text-decoration-none">Forgot Password?</a>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <small class="text-muted">
+                        Don't have an account? <a href="{% url 'users:register' %}" class="text-decoration-none">Register here</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePasswordVisibility(passwordFieldId, iconId) {
+  const passwordInput = document.getElementById(passwordFieldId);
+  const icon = document.getElementById(iconId);
+  if (passwordInput && icon) {
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      icon.classList.remove("bi-eye-slash");
+      icon.classList.add("bi-eye");
+    } else {
+      passwordInput.type = "password";
+      icon.classList.remove("bi-eye");
+      icon.classList.add("bi-eye-slash");
+    }
+  }
+}
+</script>
+{% endblock %}

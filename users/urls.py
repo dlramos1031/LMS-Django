@@ -1,31 +1,26 @@
 from django.urls import path
-from .views import (
-    register_view, 
-    user_profile_view, 
-    add_user_view, 
-    edit_user_view, 
-    delete_user_view, 
-    edit_profile_view,
-    dashboard_users_view,
-    CustomPasswordChangeView, 
-    CustomLoginViewWeb
-)
-from django.contrib.auth.views import LogoutView as DjangoLogoutView
+from . import views
+# from django.contrib.auth import views as auth_views # If using built-in views for password reset
+
+app_name = 'users'
 
 urlpatterns = [
-    # Web auth
-    path('register/', register_view, name='register'),
-    path('login/', CustomLoginViewWeb.as_view(), name='login'),
-    path('logout/', DjangoLogoutView.as_view(next_page='login'), name='logout'),
-    path('change-password/', CustomPasswordChangeView.as_view(), name='change_password'),
+    # Borrower Web Portal & General Auth
+    path('register/', views.user_register_view, name='register'),
+    path('login/', views.user_login_view, name='login'),
+    path('logout/', views.user_logout_view, name='logout'),
+    path('password_change/', views.change_password_view, name='password_change'),
+    # path('password_reset/', auth_views.PasswordResetView.as_view(template_name='users/registration/password_reset_form.html'), name='password_reset'),
+    # ... other password reset views from django.contrib.auth.urls ...
 
-    # Profile
-    path('profile/<int:user_id>/', user_profile_view, name='user_profile'),
-    path('profile/<int:user_id>/edit', edit_profile_view, name='edit_profile'),
+    path('profile/', views.user_profile_view, name='my_profile'),
+    path('profile/edit/', views.user_profile_edit_view, name='edit_my_profile'),
+    path('my-borrowings/', views.my_borrowings_view, name='my_borrowings'),
+    path('my-reservations/', views.my_reservations_view, name='my_reservations'),
 
-    # Dashboard user management
-    path('dashboard/users/', dashboard_users_view, name='dashboard_users'),
-    path('dashboard/users/add/', add_user_view, name='add_user'),
-    path('dashboard/users/<int:user_id>/edit/', edit_user_view, name='edit_user'),
-    path('dashboard/users/<int:user_id>/delete/', delete_user_view, name='delete_user'),
+    # Staff Dashboard User Management
+    path('dashboard/users/', views.StaffUserListView.as_view(), name='dashboard_user_list'),
+    path('dashboard/users/add/', views.StaffUserCreateView.as_view(), name='dashboard_user_add'),
+    path('dashboard/users/edit/<int:pk>/', views.StaffUserUpdateView.as_view(), name='dashboard_user_edit'),
+    path('dashboard/users/delete/<int:pk>/', views.StaffUserDeleteView.as_view(), name='dashboard_user_delete'),
 ]

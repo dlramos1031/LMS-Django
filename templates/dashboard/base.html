@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block title %}LMS Dashboard - {% block dashboard_page_title %}Overview{% endblock %}{% endblock %}
+
+{% block content %}
+<style>
+  body {
+    /* Optional: A slightly different background for the dashboard area if desired */
+    background-color: #f4f7f6;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0; /* Adjust if your main navbar is fixed and has height */
+    bottom: 0;
+    left: 0;
+    z-index: 100; /* Behind normal navbar but above content */
+    padding: 70px 0 0; /* Adjust top padding based on your main navbar's height */
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    background-color: #f8f9fa; /* Light grey for sidebar */
+    overflow-y: auto; /* Scrollable sidebar */
+  }
+
+  @media (max-width: 767.98px) {
+    .sidebar {
+      top: 56px; /* Adjust for smaller screens if navbar height changes */
+      padding-top: 1rem;
+      /* You might want to make the sidebar toggleable on small screens */
+    }
+  }
+
+  .sidebar .nav-link {
+    font-weight: 500;
+    color: #333;
+    padding: .75rem 1.25rem; /* Slightly more padding */
+  }
+
+  .sidebar .nav-link .bi { /* Bootstrap Icons */
+    margin-right: 10px;
+    width: 18px;
+    text-align: center;
+    font-size: 1.1rem; /* Slightly larger icons */
+    vertical-align: text-bottom;
+  }
+
+  .sidebar .nav-link.active {
+    color: #0d6efd; /* Bootstrap primary blue */
+    background-color: #e9ecef; /* Light background for active item */
+    border-left: 3px solid #0d6efd; /* Active indicator */
+    padding-left: calc(1.25rem - 3px);
+  }
+
+  .sidebar .nav-link:hover:not(.active) {
+    background-color: #e9ecef;
+    color: #0d6efd;
+  }
+
+  .sidebar-heading {
+    font-size: .85rem;
+    text-transform: uppercase;
+    padding: .75rem 1.25rem;
+    margin-top: 1rem;
+    color: #6c757d; /* Muted text for headings */
+    font-weight: 600;
+  }
+  .sidebar-heading:first-child {
+    margin-top: 0;
+  }
+
+  .main-content-dashboard { /* Renamed to avoid conflict with potential .main-content in base.html */
+    margin-top: 56px; /* Height of your fixed top navbar from base.html */
+    padding: 1.5rem;
+    margin-left: 240px; /* Width of your sidebar (adjust as needed) */
+    transition: margin-left .3s;
+  }
+
+  @media (max-width: 767.98px) {
+    .main-content-dashboard {
+      margin-left: 0; /* Full width on small screens if sidebar is hidden/overlayed */
+    }
+  }
+  /* Optional: Styling for a top navigation bar within the dashboard main content area */
+  .dashboard-top-nav {
+    padding: 0.75rem 1.5rem;
+    background-color: #fff;
+    border-bottom: 1px solid #dee2e6;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+  }
+</style>
+
+{# This nav from base.html is the main site navbar, dashboard has its own structure below #}
+{{ block.super }}
+
+<div class="container-fluid">
+  <div class="row">
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-none d-md-block sidebar"> {# d-none d-md-block makes it hidden on small screens, visible on medium+ #}
+      <div class="position-sticky"> {# pt-3 removed, padding handled by .sidebar #}
+        {% include "dashboard/_includes/sidebar.html" %}
+      </div>
+    </nav>
+
+    <main class="col-md-9 ms-sm-auto col-lg-10 main-content-dashboard">
+      {# Optional: A secondary top-bar for dashboard context, breadcrumbs, user actions #}
+      {# {% include "dashboard/_includes/top_nav.html" %} #}
+
+      {# Page Title Block - Specific to dashboard pages #}
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{% block dashboard_page_title_main %}{% endblock %}</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+          {% block dashboard_page_actions %}{% endblock %}
+        </div>
+      </div>
+
+      {% bootstrap_messages %}
+
+      {% block dashboard_content_main %}
+        {# Content specific to the dashboard section will go here #}
+      {% endblock dashboard_content_main %}
+
+      {% block modals %}{% endblock modals %}
+    </main>
+  </div>
+</div>
+{% endblock content %}
