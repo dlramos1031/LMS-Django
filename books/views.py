@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
@@ -14,7 +13,7 @@ from django.urls import reverse_lazy
 from datetime import datetime, timedelta
 
 # DRF Imports
-from rest_framework import viewsets, permissions, status, generics, serializers
+from rest_framework import viewsets, permissions, status, generics, serializers, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
@@ -63,7 +62,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all().order_by('name')
     serializer_class = AuthorSerializer
     permission_classes = [IsAdminOrReadOnly] 
-    filter_backends = [DjangoFilterBackend, permissions.SearchFilter, permissions.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'biography']
     ordering_fields = ['name', 'date_of_birth']
     filterset_fields = ['name']
@@ -73,7 +72,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
-    filter_backends = [DjangoFilterBackend, permissions.SearchFilter, permissions.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name']
     filterset_fields = ['name']
@@ -84,7 +83,7 @@ class BookViewSet(viewsets.ModelViewSet):
     serializer_class = BookSerializer
     permission_classes = [IsAdminOrReadOnly]
     lookup_field = 'isbn'
-    filter_backends = [DjangoFilterBackend, permissions.SearchFilter, permissions.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = BookFilter
     search_fields = ['title', 'isbn', 'authors__name', 'categories__name', 'description', 'publisher']
     ordering_fields = ['title', 'publication_date', 'total_borrows', 'date_added_to_system']
@@ -100,7 +99,7 @@ class BookViewSet(viewsets.ModelViewSet):
 class BookCopyViewSet(viewsets.ModelViewSet):
     queryset = BookCopy.objects.all().select_related('book').order_by('book__title', 'copy_id')
     permission_classes = [IsLibrarianOrAdminPermission]
-    filter_backends = [DjangoFilterBackend, permissions.SearchFilter, permissions.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['copy_id', 'book__title', 'book__isbn', 'condition_notes']
     ordering_fields = ['date_acquired', 'status', 'book__title', 'copy_id']
     filterset_fields = ['status', 'book__isbn', 'book__categories__name']
@@ -120,7 +119,7 @@ class BookCopyViewSet(viewsets.ModelViewSet):
 class BorrowingViewSet(viewsets.ModelViewSet):
     serializer_class = BorrowingSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, permissions.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = {
         'status': ['exact', 'in'],
         'borrower__username': ['exact', 'icontains'],
@@ -204,7 +203,7 @@ class BorrowingViewSet(viewsets.ModelViewSet):
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, permissions.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['notification_type', 'is_read']
     ordering_fields = ['timestamp', 'notification_type']
     ordering = ['-timestamp']
@@ -289,34 +288,6 @@ class BookPortalDetailView(DetailView):
         return context
 
 
-def books_by_category_portal_view(request, category_id=None, category_slug=None):
-    selected_category = None
-    if category_id:
-        selected_category = get_object_or_404(Category, id=category_id)
-    elif category_slug:
-        category_name_from_slug = category_slug.replace('-', ' ').title()
-        selected_category = get_object_or_404(Category, name__iexact=category_name_from_slug)
-    else:
-        return redirect('books:portal_book_list')
-
-    books_in_category = Book.objects.filter(categories=selected_category)\
-                            .prefetch_related('authors', 'copies')\
-                            .order_by('title')
-    
-    paginator = Paginator(books_in_category, 12)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'category': selected_category,
-        'books': page_obj,
-        'page_obj': page_obj,
-        'page_title': _(f"Books in {selected_category.name}"),
-        'all_categories': Category.objects.all().order_by('name'),
-    }
-    return render(request, 'portal/books_by_category_list.html', context)
-
-
 @login_required
 @user_passes_test(is_librarian_or_admin_user, login_url=reverse_lazy('users:login'))
 def staff_dashboard_home(request):
@@ -398,7 +369,7 @@ def _get_dashboard_context(request, active_tab_name, queryset, search_fields=Non
 
 @admin_only
 def librarian_dashboard_view(request):
-    return redirect('books:dashboard_pending_v1')
+    return redirect('books:staff_dashboard_home')
 
 @admin_only
 def dashboard_pending_view(request):
@@ -459,18 +430,18 @@ def add_book_view(request):
 
         if not title or not isbn_val:
             messages.error(request, _("Book title and ISBN are required."))
-            return redirect('books:dashboard_books_v1')
+            return redirect('books:staff_dashboard_home')
         
         if Book.objects.filter(isbn=isbn_val).exists():
             messages.error(request, _(f"A book with ISBN {isbn_val} already exists."))
-            return redirect('books:dashboard_books_v1')
+            return redirect('books:staff_dashboard_home')
 
         try:
             initial_copies = int(initial_copies_str)
             if initial_copies < 0: raise ValueError(_("Number of copies cannot be negative."))
         except (ValueError, TypeError):
             messages.error(request, _("Invalid number of initial copies provided."))
-            return redirect('books:dashboard_books_v1')
+            return redirect('books:staff_dashboard_home')
         
         page_count = None
         if page_count_str:
@@ -479,7 +450,7 @@ def add_book_view(request):
                 if page_count <= 0: raise ValueError(_("Page count must be positive."))
             except (ValueError, TypeError):
                 messages.error(request, _("Invalid page count provided. Must be a number."))
-                return redirect('books:dashboard_books_v1')
+                return redirect('books:staff_dashboard_home')
 
         publish_date = None
         if publish_date_str:
@@ -487,7 +458,7 @@ def add_book_view(request):
                 publish_date = datetime.strptime(publish_date_str, '%Y-%m-%d').date()
             except ValueError:
                 messages.error(request, _("Invalid publish date format. Use YYYY-MM-DD."))
-                return redirect('books:dashboard_books_v1')
+                return redirect('books:staff_dashboard_home')
 
         book = Book.objects.create(
             isbn=isbn_val, title=title, description=summary or None,
@@ -514,7 +485,7 @@ def add_book_view(request):
         messages.success(request, _(f"Book '{book.title}' and {initial_copies} cop(y/ies) added successfully."))
     except Exception as e:
          messages.error(request, _(f"Error adding book: {e}"))
-    return redirect('books:dashboard_books_v1')
+    return redirect('books:staff_dashboard_home')
 
 
 @staff_member_required
@@ -534,7 +505,7 @@ def edit_book_view(request, book_isbn):
 
         if not book.title:
             messages.error(request, _("Book title cannot be empty."))
-            return redirect('books:dashboard_books_v1')
+            return redirect('books:staff_dashboard_home')
 
         if page_count_str:
             try:
@@ -542,7 +513,7 @@ def edit_book_view(request, book_isbn):
                 if book.page_count <= 0: raise ValueError(_("Page count must be positive."))
             except (ValueError, TypeError):
                 messages.error(request, _("Invalid page count provided."))
-                return redirect('books:dashboard_books_v1')
+                return redirect('books:staff_dashboard_home')
         else:
              book.page_count = None 
 
@@ -551,7 +522,7 @@ def edit_book_view(request, book_isbn):
                 book.publication_date = datetime.strptime(publish_date_str, '%Y-%m-%d').date()
             except ValueError:
                 messages.error(request, _("Invalid publish date format. Use YYYY-MM-DD."))
-                return redirect('books:dashboard_books_v1')
+                return redirect('books:staff_dashboard_home')
         else:
              book.publication_date = None
 
@@ -571,7 +542,7 @@ def edit_book_view(request, book_isbn):
         messages.success(request, _(f"Book '{book.title}' updated successfully."))
     except Exception as e:
          messages.error(request, _(f"Error updating book: {e}"))
-    return redirect('books:dashboard_books_v1')
+    return redirect('books:staff_dashboard_home')
 
 
 @staff_member_required
@@ -580,9 +551,9 @@ def delete_book_view(request, book_isbn):
     book = get_object_or_404(Book, isbn=book_isbn)
     if Borrowing.objects.filter(book_copy__book=book, status__in=['ACTIVE', 'OVERDUE', 'REQUESTED']).exists():
         messages.error(request, _(f"Cannot delete '{book.title}' as one or more of its copies are currently involved in active or pending loans."))
-        return redirect('books:dashboard_books_v1')
+        return redirect('books:staff_dashboard_home')
     
     book_title_for_message = book.title
     book.delete()
     messages.success(request, _(f"Book '{book_title_for_message}' and all its copies deleted successfully."))
-    return redirect('books:dashboard_books_v1')
+    return redirect('books:staff_dashboard_home')

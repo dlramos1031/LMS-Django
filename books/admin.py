@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Author, Book, Category, BookCopy, Borrowing, Notification
+from django.utils.translation import gettext_lazy as _
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
@@ -10,7 +11,6 @@ class AuthorAdmin(admin.ModelAdmin):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
     search_fields = ('name',)
-    prepopulated_fields = {'name': ('name',)}
 
 class BookCopyInline(admin.TabularInline):
     model = BookCopy

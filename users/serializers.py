@@ -1,60 +1,100 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from .models import UserDevice
 
-User = get_user_model()
+CustomUser = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the CustomUser model (general purpose, e.g., for profile).
+    """
+    full_name = serializers.CharField(source='get_full_name', read_only=True)
+
+    class Meta:
+        model = CustomUser
+        fields = (
+            'id', 'username', 'email', 
+            'first_name', 'last_name', 'middle_initial', 'suffix', 'full_name',
+            'role', 'borrower_id_label', 'borrower_id_value', 
+            'physical_address', 'birth_date', 'phone_number', 'borrower_type', 
+            'date_joined', 'last_login', 'is_active'
+        )
+        read_only_fields = ('role', 'date_joined', 'last_login', 'is_active')
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    confirm_password = serializers.CharField(write_only=True)
+    """
+    Serializer specifically for user registration via API.
+    Handles password confirmation and creation of a new CustomUser.
+    """
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'}, label=_("Password"))
+    password2 = serializers.CharField(write_only=True, required=True, label=_("Confirm password"), style={'input_type': 'password'})
+    
+    first_name = serializers.CharField(required=True, max_length=150)
+    last_name = serializers.CharField(required=True, max_length=150)
+    email = serializers.EmailField(required=True)
 
     class Meta:
-        model = User
-        fields = ['username', 'full_name', 'email', 'password', 'confirm_password']
+        model = CustomUser
+        fields = (
+            'username', 'password', 'password2', 'email', 
+            'first_name', 'last_name', 'middle_initial', 'suffix',
+        )
+        extra_kwargs = {
+            'middle_initial': {'required': False, 'allow_blank': True, 'max_length': 10},
+            'suffix': {'required': False, 'allow_blank': True, 'max_length': 10},
+        }
 
-    def validate(self, data):
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError("Passwords do not match.")
-        return data
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(_("This email address is already in use."))
+        return value
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password2": _("Password fields didn't match.")})
+        return attrs
 
     def create(self, validated_data):
-        validated_data.pop('confirm_password')
-        user = User.objects.create_user(
+        validated_data.pop('password2')
+        user = CustomUser.objects.create_user(
             username=validated_data['username'],
-            full_name=validated_data.get('full_name', ''),
-            email=validated_data.get('email', ''),
             password=validated_data['password'],
+            email=validated_data.get('email', ''),
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            middle_initial=validated_data.get('middle_initial'),
+            suffix=validated_data.get('suffix'),
+            role='BORROWER' 
         )
-        user.role = 'member'
-        user.save()
         return user
 
-class UserProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'full_name', 'email', 'role']
-        read_only_fields = ['username', 'email', 'role', 'id']
-        
+class ChangePasswordSerializer(serializers.Serializer):
+    """
+    Serializer for password change endpoint. Requires old password and new password confirmation.
+    """
+    old_password = serializers.CharField(required=True, style={'input_type': 'password'})
+    new_password = serializers.CharField(required=True, style={'input_type': 'password'})
+    confirm_new_password = serializers.CharField(required=True, label=_("Confirm new password"), style={'input_type': 'password'})
+
+    def validate_new_password(self, value):
+        # from django.contrib.auth.password_validation import validate_password
+        # try:
+        #     validate_password(value)
+        # except forms.ValidationError as e: 
+        #     raise serializers.ValidationError(e.messages)
+        return value
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_new_password']:
+            raise serializers.ValidationError({"new_password": _("New password fields didn't match.")})
+        return attrs
+
 class UserDeviceSerializer(serializers.ModelSerializer):
     """
-    Serializer for the UserDevice model.
-    Disables default uniqueness validation for device_token,
-    as uniqueness is handled in the RegisterDeviceView using update_or_create.
+    Serializer for UserDevice model.
     """
     class Meta:
         model = UserDevice
-        fields = [
-            'device_token',
-            # Include 'user' if you want it in the response, mark as read-only
-            # 'user',
-            # Include 'id' if you want it in the response
-            # 'id',
-        ]
-        extra_kwargs = {
-            'device_token': {
-                # Override default validators, removing the UniqueValidator
-                'validators': [],
-            },
-            # If including user in fields, make it read-only in requests
-            # 'user': {'read_only': True},
-        }
+        fields = ['id', 'registration_id', 'is_active', 'date_created', 'user']
+        read_only_fields = ('user', 'date_created')
