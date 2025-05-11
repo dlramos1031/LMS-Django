@@ -1,35 +1,84 @@
 from django.contrib import admin
-from django.utils.html import format_html
-from .models import Book, Author, Genre
+from .models import Author, Book, Category, BookCopy, Borrowing, Notification
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    list_display = ['name']
-    search_fields = ['name']
+    list_display = ('name', 'date_of_birth')
+    search_fields = ('name',)
 
-@admin.register(Genre)
-class GenreAdmin(admin.ModelAdmin):
-    list_display = ['name']
-    search_fields = ['name']
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+    prepopulated_fields = {'name': ('name',)}
+
+class BookCopyInline(admin.TabularInline):
+    model = BookCopy
+    extra = 1
+    readonly_fields = ('copy_id',)
+    fields = ('copy_id', 'status', 'date_acquired', 'condition_notes')
+
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ['title', 'get_authors', 'get_genres', 'quantity']
-    search_fields = ['title', 'summary']
-    list_filter = ['genres', 'authors']
-    filter_horizontal = ['authors', 'genres']  # adds dual list selector
+    list_display = ('title', 'isbn', 'display_authors', 'display_categories', 'publication_date', 'total_borrows', 'available_copies_count')
+    list_filter = ('categories', 'authors', 'publication_date')
+    search_fields = ('title', 'isbn', 'authors__name', 'categories__name')
+    filter_horizontal = ('authors', 'categories',)
+    readonly_fields = ('date_added_to_system', 'last_updated', 'total_borrows')
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'isbn', 'authors', 'categories', 'description', 'cover_image_url')
+        }),
+        (_('Publication Info'), {
+            'fields': ('publisher', 'publication_date', 'edition', 'page_count'),
+            'classes': ('collapse',)
+        }),
+        (_('System Info'), {
+            'fields': ('total_borrows', 'date_added_to_system', 'last_updated'),
+            'classes': ('collapse',)
+        }),
+    )
+    inlines = [BookCopyInline]
 
-    def get_authors(self, obj):
-        return ", ".join([a.name for a in obj.authors.all()])
-    get_authors.short_description = 'Authors'
 
-    def get_genres(self, obj):
-        return ", ".join([g.name for g in obj.genres.all()])
-    get_genres.short_description = 'Genres'
+@admin.register(BookCopy)
+class BookCopyAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'book', 'copy_id', 'status', 'date_acquired')
+    list_filter = ('status', 'book__categories', 'date_acquired')
+    search_fields = ('copy_id', 'book__title', 'book__isbn')
+    autocomplete_fields = ['book']
 
-    readonly_fields = ['cover_preview']
+@admin.register(Borrowing)
+class BorrowingAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'borrower', 'book_copy', 'issue_date', 'due_date', 'actual_return_date', 'status', 'fine_amount')
+    list_filter = ('status', 'issue_date', 'due_date', 'borrower')
+    search_fields = ('borrower__username', 'book_copy__copy_id', 'book_copy__book__title')
+    autocomplete_fields = ['borrower', 'book_copy']
+    readonly_fields = ('issue_date',)
+    fieldsets = (
+        (None, {
+            'fields': ('borrower', 'book_copy', 'due_date', 'status')
+        }),
+        (_('Return and Fine Details'), {
+            'fields': ('actual_return_date', 'fine_amount', 'notes_by_librarian'),
+            'classes': ('collapse',)
+        }),
+        (_('System Info (Read-Only)'), {
+            'fields': ('issue_date',),
+            'classes': ('collapse',)
+        })
+    )
 
-    def cover_preview(self, obj):
-        if obj.cover_image:
-            return format_html('<img src="{}" width="100" />', obj.cover_image.url)
-        return "No cover"
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('recipient', 'notification_type', 'message_summary', 'timestamp', 'is_read')
+    list_filter = ('notification_type', 'is_read', 'timestamp', 'recipient')
+    search_fields = ('recipient__username', 'message')
+    readonly_fields = ('timestamp',)
+
+    def message_summary(self, obj):
+        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
+    message_summary.short_description = _('Message Summary')
+
