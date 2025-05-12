@@ -120,11 +120,12 @@ class Book(models.Model):
         null=True,
         help_text=_("A brief description or summary of the book (optional)")
     )
-    cover_image_url = models.URLField(
-        max_length=500,
-        blank=True, 
+    cover_image = models.ImageField(
+        _("Cover Image"),
+        upload_to='book_covers/',
+        blank=True,
         null=True,
-        help_text=_("URL to the book's cover image (optional)")
+        help_text=_("Upload the book's cover image (optional).")
     )
     categories = models.ManyToManyField(
         Category,

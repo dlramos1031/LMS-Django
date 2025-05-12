@@ -12,7 +12,7 @@ class BookForm(forms.ModelForm):
         fields = [
             'isbn', 'title', 'authors', 'categories', 'publisher',
             'publication_date', 'edition', 'page_count', 'description',
-            'cover_image_url'
+            'cover_image'
         ]
         widgets = {
             'authors': forms.SelectMultiple(attrs={'class': 'form-select select2-multiple', 'data-placeholder': _('Select Authors')}),
@@ -24,7 +24,7 @@ class BookForm(forms.ModelForm):
             'publisher': forms.TextInput(attrs={'class': 'form-control'}),
             'edition': forms.TextInput(attrs={'class': 'form-control'}),
             'page_count': forms.NumberInput(attrs={'class': 'form-control'}),
-            'cover_image_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'cover_image': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
         help_texts = {
             'authors': _('Hold down "Control", or "Command" on a Mac, to select more than one.'),

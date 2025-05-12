@@ -76,6 +76,13 @@ class CustomUser(AbstractUser):
         null=True,
         help_text=_("Borrower's contact phone number (optional)")
     )
+    profile_picture = models.ImageField(
+        _("Profile Picture"),
+        upload_to='profile_pics/',
+        blank=True,
+        null=True,
+        help_text=_("Upload a profile picture (optional).")
+    )
 
     BORROWER_TYPE_CHOICES = (
         ('STUDENT', _('Student')),                  # Full-time students

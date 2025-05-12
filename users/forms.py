@@ -52,10 +52,23 @@ class BorrowerProfileUpdateForm(forms.ModelForm):
             'physical_address',
             'birth_date',
             'phone_number',
+            'profile_picture'
         ]
         widgets = {
             'birth_date': forms.DateInput(attrs={'type': 'date'}),
             'physical_address': forms.Textarea(attrs={'rows': 3}),
+            'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'middle_initial': forms.TextInput(attrs={'class': 'form-control'}),
+            'suffix': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'borrower_id_value': forms.TextInput(attrs={'class': 'form-control'}),
+            'borrower_type': forms.Select(attrs={'class': 'form-select'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        help_texts = {
+            'profile_picture': _('Upload a new profile picture. Clear to remove existing picture.'),
         }
     
     def __init__(self, *args, **kwargs):
@@ -232,20 +245,32 @@ class AdminStaffCreateForm(UserCreationForm):
 
 class AdminStaffChangeForm(StaffBaseUserForm):
     """Form for ADMINS ONLY to edit existing STAFF accounts."""
-    role = forms.ChoiceField(choices=[ # Restricted choices
+    role = forms.ChoiceField(choices=[ 
         ('LIBRARIAN', _('Librarian')),
         ('ADMIN', _('Administrator')),
     ], required=True)
-    # Admin can also manage these flags for staff members
     is_staff = forms.BooleanField(required=False)
     is_superuser = forms.BooleanField(required=False)
+    profile_picture = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
 
-    class Meta(StaffBaseUserForm.Meta):
-        fields = StaffBaseUserForm.Meta.fields + ['role', 'is_staff', 'is_superuser']
-        # Remove borrower-specific fields if they are in StaffBaseUserForm and not relevant for staff
-        # Or, ensure StaffBaseUserForm is truly base and doesn't include them.
-        # For now, assuming StaffBaseUserForm is generic enough.
+    class Meta:
+        model = CustomUser
+        fields = [
+            'username', 'first_name', 'last_name', 'middle_initial', 'suffix',
+            'email', 'is_active',
+            'role', 'is_staff', 'is_superuser',
+            'profile_picture'
+        ]
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'middle_initial': forms.TextInput(attrs={'class': 'form-control'}),
+            'suffix': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

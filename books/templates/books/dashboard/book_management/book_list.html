@@ -33,6 +33,11 @@
                 {% for book_item in books %} {# Or page_obj.object_list if using page_obj directly #}
                 <tr>
                     <td>
+                        {% if book_item.cover_image %}
+                        <img src="{{ book_item.cover_image.url }}" alt="{{ book_item.title }}" width="40" height="60" class="me-2 rounded object-fit-cover img-thumbnail">
+                        {% else %}
+                        <span class="d-inline-block bg-light border me-2 align-middle" style="width: 40px; height: 60px; line-height: 60px; text-align: center;"><i class="bi bi-image-alt text-muted"></i></span>
+                        {% endif %}
                         <a href="{% url 'books:dashboard_book_edit' isbn=book_item.isbn %}">{{ book_item.title|truncatechars:60 }}</a>
                     </td>
                     <td>{{ book_item.isbn }}</td>

@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block dashboard_content_main %}
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="card shadow-sm">
         <div class="card-header">

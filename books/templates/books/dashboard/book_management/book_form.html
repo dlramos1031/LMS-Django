@@ -24,6 +24,14 @@
             <h5 class="mb-0">Book Title Information</h5>
         </div>
         <div class="card-body">
+            {% if form.instance.pk and form.instance.cover_image %}
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label">Current Cover:</label>
+                <div class="col-sm-9">
+                    <img src="{{ form.instance.cover_image.url }}" alt="Current cover for {{ form.instance.title }}" style="max-height: 150px; border-radius: var(--bs-border-radius);">
+                </div>
+            </div>
+            {% endif %}
             {% bootstrap_form form layout='horizontal' %}
         </div>
         <div class="card-footer text-end">
