@@ -335,7 +335,9 @@ def staff_dashboard_home_view(request):
     }
     return render(request, 'dashboard/home.html', context)
 
+
 # --- Book & Collection Management (Staff) ---
+
 class StaffBookListView(StaffRequiredMixin, ListView):
     """View for staff to list and manage book titles."""
     model = Book
@@ -416,7 +418,23 @@ class StaffBookDeleteView(StaffRequiredMixin, DeleteView):
         messages.success(self.request, _(f"Book '{self.object.title}' and all its copies deleted successfully."))
         return super().form_valid(form)
 
+
 # BookCopy Management Views
+
+class StaffBookCopiesManageView(StaffRequiredMixin, DetailView):
+    model = Book
+    template_name = 'books/dashboard/book_management/bookcopy_list.html'
+    context_object_name = 'book'
+    slug_field = 'isbn'
+    slug_url_kwarg = 'isbn'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        book_instance = self.get_object()
+        context['page_title'] = _(f"Manage Copies for: {book_instance.title}")
+        context['book_copies'] = book_instance.copies.all().order_by('copy_id')
+        return context
+
 class StaffBookCopyCreateView(StaffRequiredMixin, CreateView):
     """View for staff to add a new copy of a book."""
     model = BookCopy
@@ -433,7 +451,7 @@ class StaffBookCopyCreateView(StaffRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('books:dashboard_book_edit', kwargs={'isbn': self.book.isbn})
+        return reverse_lazy('books:dashboard_bookcopy_list', kwargs={'isbn': self.book.isbn})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -459,7 +477,7 @@ class StaffBookCopyUpdateView(StaffRequiredMixin, UpdateView):
     template_name = 'books/dashboard/book_management/bookcopy_form.html'
 
     def get_success_url(self):
-        return reverse_lazy('books:dashboard_book_edit', kwargs={'isbn': self.object.book.isbn})
+        return reverse_lazy('books:dashboard_bookcopy_list', kwargs={'isbn': self.object.book.isbn})
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

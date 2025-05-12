@@ -16,7 +16,7 @@
 
 <form method="post">
     {% csrf_token %}
-    <a href="{% url 'books:dashboard_book_edit' isbn=book_to_delete.isbn %}" class="btn btn-secondary">
+    <a href="{% url 'books:dashboard_book_list' %}" class="btn btn-secondary">
         <i class="bi bi-x-circle"></i> Cancel
     </a>
     <button type="submit" class="btn btn-danger">

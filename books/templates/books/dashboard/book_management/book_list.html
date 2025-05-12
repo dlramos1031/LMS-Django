@@ -38,7 +38,7 @@
                         {% else %}
                         <span class="d-inline-block bg-light border me-2 align-middle" style="width: 40px; height: 60px; line-height: 60px; text-align: center;"><i class="bi bi-image-alt text-muted"></i></span>
                         {% endif %}
-                        <a href="{% url 'books:dashboard_book_edit' isbn=book_item.isbn %}">{{ book_item.title|truncatechars:60 }}</a>
+                        <a href="{% url 'books:dashboard_bookcopy_list' isbn=book_item.isbn %}">{{ book_item.title|truncatechars:60 }}</a>
                     </td>
                     <td>{{ book_item.isbn }}</td>
                     <td>
@@ -60,10 +60,13 @@
                         </span>
                     </td>
                     <td class="text-center">
-                        <a href="{% url 'books:dashboard_book_edit' isbn=book_item.isbn %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Book & Manage Copies">
-                            <i class="bi bi-pencil-square"></i> Edit/Copies
+                        <a href="{% url 'books:dashboard_bookcopy_list' isbn=book_item.isbn %}" class="btn btn-sm btn-outline-primary me-1" title="Manage Copies">
+                            <i class="bi bi-collection-fill"></i>
                         </a>
-                        <a href="{% url 'books:dashboard_book_delete_confirm' isbn=book_item.isbn %}" class="btn btn-sm btn-outline-danger" title="Delete Book Title">
+                        <a href="{% url 'books:dashboard_book_edit' isbn=book_item.isbn %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Book">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="{% url 'books:dashboard_book_delete_confirm' isbn=book_item.isbn %}" class="btn btn-sm btn-outline-danger" title="Delete Book">
                             <i class="bi bi-trash"></i>
                         </a>
                     </td>

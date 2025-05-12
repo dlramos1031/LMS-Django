@@ -17,9 +17,10 @@ urlpatterns = [
     path('dashboard/books/', views.StaffBookListView.as_view(), name='dashboard_book_list'),
     path('dashboard/books/add/', views.StaffBookCreateView.as_view(), name='dashboard_book_add'),
     path('dashboard/books/edit/<slug:isbn>/', views.StaffBookUpdateView.as_view(), name='dashboard_book_edit'),
-    path('dashboard/books/delete/<slug:isbn>/confirm/', views.StaffBookDeleteView.as_view(), name='dashboard_book_delete_confirm'), # Added confirm for DeleteView
+    path('dashboard/books/delete/<slug:isbn>/confirm/', views.StaffBookDeleteView.as_view(), name='dashboard_book_delete_confirm'),
 
-    path('dashboard/book/<slug:book_isbn>/copies/add/', views.StaffBookCopyCreateView.as_view(), name='dashboard_bookcopy_add'),
+    path('dashboard/book-copies/<slug:isbn>/', views.StaffBookCopiesManageView.as_view(), name='dashboard_bookcopy_list'),
+    path('dashboard/book-copies/add/<slug:book_isbn>/', views.StaffBookCopyCreateView.as_view(), name='dashboard_bookcopy_add'),
     path('dashboard/book-copies/edit/<int:pk>/', views.StaffBookCopyUpdateView.as_view(), name='dashboard_bookcopy_edit'),
     path('dashboard/book-copies/delete/<int:pk>/confirm/', views.StaffBookCopyDeleteView.as_view(), name='dashboard_bookcopy_delete_confirm'),
 
