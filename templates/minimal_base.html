@@ -1,0 +1,31 @@
+{% load static %}
+{% load bootstrap5 %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LMS{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
+    {% bootstrap_css %}
+    <style>
+        body {
+        background-color: #f8f9fa; /* Or a specific login page background */
+        }
+        .auth-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+    {% block auth_content %}
+    {% endblock auth_content %}
+    </div>
+    {% bootstrap_javascript %}
+    {% block page_specific_scripts %}{% endblock %}
+</body>
+</html>

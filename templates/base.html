@@ -10,37 +10,74 @@
     {% bootstrap_javascript %}
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-  <div class="container-fluid">
-    <a class="navbar-brand"
-      href="{% if user.is_authenticated and user.role in 'librarian admin' %}/dashboard/{% elif user.is_authenticated %}/books/{% else %}/login/{% endif %}">
-      Library
-    </a>
-    <div class="ms-3">
-      {% if user.is_authenticated %}
-        <a href="{% url 'users:my_profile' %}" class="btn btn-outline-light btn-sm">My Profile</a>
-        <a href="{% url 'users:logout' %}" class="btn btn-outline-danger btn-sm">Logout</a>
-      {% else %}
-        <a href="{% url 'users:login' %}" class="btn btn-outline-light btn-sm">Login</a>
-        <a href="{% url 'users:register' %}" class="btn btn-outline-primary btn-sm">Register</a>
-      {% endif %}
-    </div>
-  </div>
-</nav>
-
-<main class="container mt-4">
-  {% block content %}
-  {% if messages %}
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold"
+        href="{% if user.is_authenticated %}{% if user.role == 'LIBRARIAN' or user.role == 'ADMIN' or user.is_staff %}{% url 'books:dashboard_home' %}{% else %}{% url 'books:portal_catalog' %}{% endif %}{% else %}{% url 'users:login' %}{% endif %}">
+        <i class="bi bi-book-half me-2"></i>LMS
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbarContent" aria-controls="mainNavbarContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+      </button>
+  
+      <div class="collapse navbar-collapse" id="mainNavbarContent">
+          {% block site_nav_items %}
+              {# This block will be overridden by portal_base.html and dashboard_base.html if needed #}
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                  {# Default public navigation items if any, e.g., a link to catalog for guests #}
+                  {% if not user.is_authenticated %}
+                      <li class="nav-item">
+                          <a class="nav-link" href="{% url 'books:portal_catalog' %}">View Catalog</a>
+                      </li>
+                  {% endif %}
+              </ul>
+              <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                  {% if user.is_authenticated %}
+                      <li class="nav-item dropdown">
+                          <a class="nav-link dropdown-toggle" href="#" id="userProfileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              {% if user.profile_picture %}
+                                  <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="rounded-circle me-1" style="width: 24px; height: 24px; object-fit: cover;">
+                              {% else %}
+                                  <i class="bi bi-person-circle me-1"></i>
+                              {% endif %}
+                              {{ user.first_name|default:user.username }}
+                          </a>
+                          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdown">
+                              <li><a class="dropdown-item" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>My Profile</a></li>
+                              <li><a class="dropdown-item" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
+                              {% if user.role == 'LIBRARIAN' or user.role == 'ADMIN' or user.is_staff %}
+                                  <li><hr class="dropdown-divider"></li>
+                                  <li><a class="dropdown-item" href="{% url 'books:dashboard_home' %}"><i class="bi bi-speedometer2 me-2"></i>Staff Dashboard</a></li>
+                              {% endif %}
+                              <li><hr class="dropdown-divider"></li>
+                              <li>
+                                  <form action="{% url 'users:logout' %}" method="post" class="d-inline">
+                                      {% csrf_token %}
+                                      <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+                                  </form>
+                              </li>
+                          </ul>
+                      </li>
+                  {% else %}
+                      <li class="nav-item">
+                          <a class="nav-link" href="{% url 'users:login' %}?next={{ request.get_full_path|urlencode }}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+                      </li>
+                      <li class="nav-item">
+                          <a class="nav-link" href="{% url 'users:register' %}"><i class="bi bi-person-plus me-1"></i>Register</a>
+                      </li>
+                  {% endif %}
+              </ul>
+          {% endblock site_nav_items %}
       </div>
-    {% endfor %}
-  {% endif %}
-
-  {% endblock %}
-</main>
+    </div>
+  </nav>
+  
+  <main class="{% block main_container_class %}container mt-4 pt-5{% endblock %}"> {# Added pt-5 for fixed-top navbar #}
+      {% block content_body %} {# Renamed from 'content' to avoid clash with portal_base's block #}
+          {% bootstrap_messages %}
+          {# Content from child templates will go here #}
+      {% endblock content_body %}
+  </main>
 
 </body>
 </html>

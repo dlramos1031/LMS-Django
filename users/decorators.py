@@ -44,7 +44,7 @@ def is_staff_user(user):
 
 class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     """Mixin to require staff privileges for accessing a view."""
-    login_url = reverse_lazy('users:login')
+    login_url = reverse_lazy('users:staff_login')
 
     def test_func(self):
         return is_staff_user(self.request.user)
@@ -56,7 +56,7 @@ class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return super().handle_no_permission()
 
 class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    login_url = reverse_lazy('users:login') # Or your staff login if different
+    login_url = reverse_lazy('users:staff_login') # Or your staff login if different
 
     def test_func(self):
         return self.request.user.is_authenticated and \

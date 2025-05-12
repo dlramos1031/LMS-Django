@@ -11,6 +11,8 @@ urlpatterns = [
     path('logout/', views.user_logout_view, name='logout'),
     path('password_change/', views.change_password_view, name='password_change'),
 
+    path('staff_login/', views.staff_login_view, name='staff_login'),
+    
     # --- Borrower Profile and Borrowing URLs ---
     path('profile/', views.user_profile_view, name='my_profile'),
     path('profile/edit/', views.user_profile_edit_view, name='edit_my_profile'),

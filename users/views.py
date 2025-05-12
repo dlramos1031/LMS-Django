@@ -174,6 +174,35 @@ def my_reservations_view(request):
     }
     return render(request, 'users/portal/my_reservations.html', context)
 
+def staff_login_view(request):
+    if request.user.is_authenticated and is_staff_user(request.user):
+        return redirect('books:dashboard_home')
+    elif request.user.is_authenticated: # A logged-in borrower trying to access staff login
+        logout(request) # Log them out first or redirect them to portal
+        messages.info(request, "You have been logged out. Please log in with staff credentials.")
+        return redirect('users:staff_login')
+
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            if user is not None and is_staff_user(user): # Crucial check
+                login(request, user)
+                messages.success(request, _('Staff login successful.'))
+                return redirect(request.GET.get('next', 'books:dashboard_home'))
+            else:
+                messages.error(request, _('Invalid staff credentials or not a staff account.'))
+        # else: form errors will be shown
+    else:
+        form = AuthenticationForm()
+    
+    context = {
+        'form': form,
+        'page_title': _('Staff Login'),
+        'site_header': "LMS Staff Portal" # For Django admin's context
+    }
+    return render(request, 'users/registration/staff_login.html', context)
 
 # --- Staff Dashboard Borrower Management Views ---
 
