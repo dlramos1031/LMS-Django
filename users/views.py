@@ -299,14 +299,30 @@ class AdminStaffListView(AdminRequiredMixin, ListView):
     paginate_by = 15
 
     def get_queryset(self):
-        # Admins see Librarians and other Admins
         queryset = CustomUser.objects.filter(role__in=['LIBRARIAN', 'ADMIN']).order_by('role', 'last_name', 'first_name')
-        # Add search if needed
+        search_term = self.request.GET.get('search', '').strip()
+        staff_role_filter = self.request.GET.get('staff_role', '').strip()
+        if search_term:
+            queryset = queryset.filter(
+                Q(username__icontains=search_term) |
+                Q(first_name__icontains=search_term) |
+                Q(last_name__icontains=search_term) |
+                Q(email__icontains=search_term)
+            )
+        if staff_role_filter:
+            queryset = queryset.filter(role=staff_role_filter)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Manage Staff Accounts')
+        context['current_search'] = self.request.GET.get('search', '')
+        context['current_staff_role_filter'] = self.request.GET.get('staff_role', '')
+        context['staff_role_choices'] = [('LIBRARIAN', _('Librarian')), ('ADMIN', _('Administrator'))]
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params'] = query_params.urlencode()
+
         return context
 
 class AdminStaffCreateView(AdminRequiredMixin, CreateView):
