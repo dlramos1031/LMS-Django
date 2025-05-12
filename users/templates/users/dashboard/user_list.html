@@ -7,7 +7,7 @@
 {% block dashboard_page_title_main %}Manage Users{% endblock %}
 
 {% block dashboard_page_actions %}
-    {% if perms.users.add_customuser %} {# Or a custom permission check for adding users #}
+    {% if perms.users.add_customuser or request.user.is_superuser %} {# Check permissions #}
     <a href="{% url 'users:dashboard_user_add' %}" class="btn btn-success">
         <i class="bi bi-person-plus-fill"></i> Add New User
     </a>
@@ -15,8 +15,8 @@
 {% endblock %}
 
 {% block dashboard_content_main %}
-    <form method="get" class="row g-3 align-items-center mb-3 p-3 bg-light border rounded">
-        <div class="col-md-6">
+    <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light border rounded shadow-sm">
+        <div class="col-md-5">
             <label for="userSearchInput" class="visually-hidden">Search Users</label>
             <input type="text" name="search" class="form-control form-control-sm" id="userSearchInput" placeholder="Search username, name, email..." value="{{ current_search|default:'' }}">
         </div>
@@ -29,8 +29,8 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel"></i> Filter/Search</button>
+        <div class="col-md-3">
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Filter/Search</button>
         </div>
     </form>
 
@@ -51,11 +51,11 @@
                 <tr>
                     <td>
                         <a href="{% url 'users:dashboard_user_edit' pk=user_item.pk %}">{{ user_item.username }}</a>
-                        {% if user_item.is_staff or user_item.is_superuser %}<i class="bi bi-shield-lock-fill text-primary ms-1" title="Staff/Superuser"></i>{% endif %}
+                        {% if user_item.is_superuser %}<span class="badge bg-danger ms-1">Superuser</span>{% elif user_item.is_staff %}<span class="badge bg-info text-dark ms-1">Staff</span>{% endif %}
                     </td>
                     <td>{{ user_item.get_full_name|default:"N/A" }}</td>
                     <td>{{ user_item.email|default:"N/A" }}</td>
-                    <td><span class="badge bg-info text-dark">{{ user_item.get_role_display }}</span></td>
+                    <td><span class="badge bg-secondary">{{ user_item.get_role_display }}</span></td>
                     <td class="text-center">
                         {% if user_item.is_active %}
                             <span class="badge bg-success">Active</span>
@@ -64,23 +64,28 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <a href="{% url 'users:dashboard_user_edit' pk=user_item.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit User">
+                        <a href="{% url 'users:dashboard_user_edit' pk=user_item.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit {{ user_item.username }}">
                             <i class="bi bi-pencil-square"></i>
                         </a>
-                        {# Prevent deleting oneself or superusers unless current user is superuser #}
+                        {# Prevent deleting oneself or superusers unless current user is also a superuser and not deleting self #}
                         {% if request.user.is_superuser and request.user.pk != user_item.pk %}
-                            <a href="{% url 'users:dashboard_user_delete' pk=user_item.pk %}" class="btn btn-sm btn-outline-danger" title="Delete User">
+                            <a href="{% url 'users:dashboard_user_delete' pk=user_item.pk %}" class="btn btn-sm btn-outline-danger" title="Delete {{ user_item.username }}">
                                 <i class="bi bi-trash"></i>
                             </a>
-                        {% elif request.user.pk == user_item.pk %}
-                            <span class="text-muted small">(Your Account)</span>
+                        {% elif user_item.pk == request.user.pk %}
+                             <span class="text-muted small fst-italic">(Your Account)</span>
+                        {% elif not user_item.is_superuser %}  {# Allow staff to delete non-superusers, if you have more granular permissions #}
+                             {# Add permission check here if non-superusers can delete some users #}
+                             {# <a href="{% url 'users:dashboard_user_delete' pk=user_item.pk %}" class="btn btn-sm btn-outline-danger" title="Delete {{ user_item.username }}"> #}
+                             {# <i class="bi bi-trash"></i> #}
+                             {# </a> #}
                         {% endif %}
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="6" class="text-center text-muted py-4">
-                        No users found.
+                        No users found matching your criteria.
                         {% if not current_search and not current_role_filter %}
                             <a href="{% url 'users:dashboard_user_add' %}">Add the first user!</a>
                         {% endif %}

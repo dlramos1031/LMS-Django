@@ -1,0 +1,42 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}
+    {% if form_mode == 'create' %}Add New User{% else %}Edit User: {{ form.instance.username }}{% endif %}
+{% endblock %}
+
+{% block dashboard_page_title_main %}
+    {% if form_mode == 'create' %}Add New User{% else %}Edit User: <span class="text-muted">{{ form.instance.username }}</span>{% endif %}
+{% endblock %}
+
+{% block dashboard_page_actions %}
+    <a href="{% url 'users:dashboard_user_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to User List
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+<form method="post">
+    {% csrf_token %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">User Account Information</h5>
+        </div>
+        <div class="card-body">
+            {% bootstrap_form form layout='horizontal' %}
+            
+            {% if form_mode == 'edit' %}
+                <hr>
+                <p class="text-muted small">To change the password for this user, please use the Django admin interface or a dedicated password reset flow for security reasons. This form does not handle direct password changes for existing users by staff.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi {% if form_mode == 'create' %}bi-plus-lg{% else %}bi-check-lg{% endif %}"></i>
+                {% if form_mode == 'create' %}Create User{% else %}Save Changes{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock dashboard_content_main %}
