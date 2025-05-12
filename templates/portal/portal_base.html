@@ -1,0 +1,85 @@
+{% extends "base.html" %} {# It extends your main site-wide base.html #}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block title %}LMS Portal - {% block portal_title %}{% endblock %}{% endblock %}
+
+{% block content %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 sticky-top shadow-sm"> {# Added sticky-top and shadow #}
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{% url 'books:portal_catalog' %}">
+            <i class="bi bi-book-half me-2"></i>LMS Portal
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#portalNav" aria-controls="portalNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="portalNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.view_name == 'books:portal_catalog' %}active fw-semibold{% endif %}" href="{% url 'books:portal_catalog' %}">
+                       <i class="bi bi-search me-1"></i>Catalog
+                    </a>
+                </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.view_name == 'users:my_borrowings' %}active fw-semibold{% endif %}" href="{% url 'users:my_borrowings' %}">
+                        <i class="bi bi-journal-check me-1"></i>My Borrowings
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.view_name == 'users:my_reservations' %}active fw-semibold{% endif %}" href="{% url 'users:my_reservations' %}">
+                        <i class="bi bi-bookmark-star me-1"></i>My Reservations
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'my_profile' in request.resolver_match.view_name or 'edit_my_profile' in request.resolver_match.view_name or 'password_change' in request.resolver_match.view_name %}active fw-semibold{% endif %}" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="rounded-circle me-1" style="width: 24px; height: 24px; object-fit: cover;">
+                            {% else %}
+                                <i class="bi bi-person-circle me-1"></i>
+                            {% endif %}
+                            {{ user.first_name|default:user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                            <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:my_profile' %}active{% endif %}" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>View Profile</a></li>
+                            <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:edit_my_profile' %}active{% endif %}" href="{% url 'users:edit_my_profile' %}"><i class="bi bi-pencil-square me-2"></i>Edit Profile</a></li>
+                            <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:password_change' %}active{% endif %}" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'users:logout' %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="btn btn-sm btn-outline-primary me-2" href="{% url 'users:login' %}?next={{ request.path }}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-sm btn-primary" href="{% url 'users:register' %}"><i class="bi bi-person-plus me-1"></i>Register</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container portal-main-content py-3"> {# Added class for potential specific styling #}
+    {% bootstrap_messages %}
+    {% block portal_content %}
+        {# Specific portal page content will go here #}
+    {% endblock portal_content %}
+</div>
+
+<footer class="py-4 mt-auto bg-light border-top">
+    <div class="container text-center text-muted">
+        <small>&copy; {% now "Y" %} Library Management System. All Rights Reserved.</small>
+    </div>
+</footer>
+{% endblock content %}

@@ -3,8 +3,8 @@
 
 <div class="card h-100 shadow-sm book-card">
     <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="text-decoration-none text-dark">
-        {% if book.cover_image_url %}
-            <img src="{{ book.cover_image_url }}" class="card-img-top" alt="{{ book.title }} cover" style="height: 200px; object-fit: cover; border-top-left-radius: var(--bs-card-inner-border-radius); border-top-right-radius: var(--bs-card-inner-border-radius);">
+        {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" class="card-img-top" alt="{{ book.title }} cover" style="height: 200px; object-fit: cover; border-top-left-radius: var(--bs-card-inner-border-radius); border-top-right-radius: var(--bs-card-inner-border-radius);">
         {% else %}
             <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; border-top-left-radius: var(--bs-card-inner-border-radius); border-top-right-radius: var(--bs-card-inner-border-radius);">
                 <i class="bi bi-book h1 text-muted"></i>
@@ -28,7 +28,7 @@
         {% endif %}
         <div class="mt-auto pt-2">
             {% if book.available_copies_count > 0 %}
-                <span class="badge bg-success">Available ({{ book.available_copies_count }})</span>
+                <span class="badge bg-success">Available ({{ book.num_available_copies }})</span>
             {% else %}
                 <span class="badge bg-danger">Unavailable</span>
             {% endif %}

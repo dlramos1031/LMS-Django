@@ -247,7 +247,7 @@ class BookPortalCatalogView(ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('authors', 'categories').annotate(
-            available_copies_count=Count('copies', filter=Q(copies__status='Available'))
+            num_available_copies=Count('copies', filter=Q(copies__status='Available'))
         )
         query = self.request.GET.get('q')
         category_id = self.request.GET.get('category')

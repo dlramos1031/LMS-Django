@@ -1,0 +1,111 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block portal_title %}{{ profile_user.username }}'s Profile{% endblock %}
+
+{% block portal_content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    {% if profile_user.profile_picture %}
+                        <img src="{{ profile_user.profile_picture.url }}" alt="{{ profile_user.username }}"
+                             class="rounded-circle img-fluid mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="d-flex justify-content-center align-items-center rounded-circle bg-secondary text-light mb-3"
+                             style="width: 150px; height: 150px;">
+                            <i class="bi bi-person-fill" style="font-size: 5rem;"></i>
+                        </div>
+                    {% endif %}
+                    <h4 class="card-title mb-1">{{ profile_user.get_full_name|default:profile_user.username }}</h4>
+                    <p class="text-muted mb-2">@{{ profile_user.username }}</p>
+                    <span class="badge bg-info text-dark mb-3">{{ profile_user.get_role_display }}</span>
+                    <div>
+                        <a href="{% url 'users:edit_my_profile' %}" class="btn btn-primary btn-sm mb-2 w-100">
+                            <i class="bi bi-pencil-square"></i> Edit Profile
+                        </a>
+                        <a href="{% url 'users:password_change' %}" class="btn btn-outline-secondary btn-sm w-100">
+                           <i class="bi bi-key"></i> Change Password
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Contact & Library Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Full Name:</dt>
+                        <dd class="col-sm-8">{{ profile_user.get_full_name|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-4">Email:</dt>
+                        <dd class="col-sm-8">{{ profile_user.email|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-4">Phone Number:</dt>
+                        <dd class="col-sm-8">{{ profile_user.phone_number|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-4">{{ profile_user.borrower_id_label|default:"Library ID" }}:</dt>
+                        <dd class="col-sm-8">{{ profile_user.borrower_id_value|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-4">Borrower Type:</dt>
+                        <dd class="col-sm-8">{{ profile_user.get_borrower_type_display|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-4">Date Joined:</dt>
+                        <dd class="col-sm-8">{{ profile_user.date_joined|date:"F j, Y" }}</dd>
+
+                        <dt class="col-sm-4">Physical Address:</dt>
+                        <dd class="col-sm-8">{{ profile_user.physical_address|linebreaksbr|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-4">Birth Date:</dt>
+                        <dd class="col-sm-8">{{ profile_user.birth_date|date:"F j, Y"|default:"N/A" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Borrowing Activity</h5>
+                    <a href="{% url 'users:my_borrowings' %}" class="btn btn-sm btn-outline-primary">View All History</a>
+                </div>
+                <div class="card-body">
+                    {% if borrowings %}
+                        <ul class="list-group list-group-flush">
+                            {% for borrowing in borrowings|slice:":5" %} {# Show up to 5 recent items #}
+                                <li class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
+                                                {{ borrowing.book_copy.book.title }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted">{{ borrowing.issue_date|timesince }} ago</small>
+                                    </div>
+                                    <p class="mb-1">
+                                        Status: <span class="fw-bold 
+                                            {% if borrowing.status == 'ACTIVE' %}text-success{% elif borrowing.status == 'OVERDUE'%}text-danger{% elif borrowing.status == 'REQUESTED'%}text-warning{% else %}text-secondary{% endif %}">
+                                            {{ borrowing.get_status_display }}
+                                        </span>
+                                        {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
+                                            - Due: {{ borrowing.due_date|date:"F j, Y" }}
+                                        {% elif borrowing.status == 'RETURNED' or borrowing.status == 'RETURNED_LATE' %}
+                                            - Returned: {{ borrowing.actual_return_date|date:"F j, Y" }}
+                                        {% endif %}
+                                    </p>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No recent borrowing activity.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock portal_content %}
