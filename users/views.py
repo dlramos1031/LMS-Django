@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import views as auth_views # For built-in auth views if you use them for password reset
 from django.contrib.auth import login, get_user_model, authenticate, logout, update_session_auth_hash
@@ -104,14 +105,17 @@ def user_logout_view(request):
 
 @login_required
 def user_profile_view(request):
-    user = get_object_or_404(CustomUser, pk=request.user.pk)
-    user_borrowings = Borrowing.objects.filter(borrower=user).select_related('book_copy__book').order_by('-issue_date')[:10]
+    profile_user = get_object_or_404(CustomUser, pk=request.user.pk)
+    user_borrowings = Borrowing.objects.filter(borrower=profile_user).select_related('book_copy__book').order_by('-issue_date')[:5]
     context = {
-        'profile_user': user,
+        'profile_user': profile_user,
         'borrowings': user_borrowings,
-        'page_title': _(f"{user.username}'s Profile")
+        'page_title': _(f"My Profile: {profile_user.username}"),
+        'view_context': 'portal',
+        'is_own_profile': True,
+        'back_url': reverse_lazy('books:portal_catalog') # Or None if no explicit back button needed
     }
-    return render(request, 'users/portal/profile.html', context)
+    return render(request, 'users/portal/profile.html', context) # Point to the wrapper
 
 @login_required
 def user_profile_edit_view(request):
@@ -200,9 +204,49 @@ def staff_login_view(request):
     context = {
         'form': form,
         'page_title': _('Staff Login'),
-        'site_header': "LMS Staff Portal" # For Django admin's context
+        'site_header': "LMS Staff Portal"
     }
     return render(request, 'users/registration/staff_login.html', context)
+
+
+class StaffUserDetailView(StaffRequiredMixin, DetailView):
+    model = CustomUser
+    template_name = 'users/dashboard/user_detail.html'
+    context_object_name = 'profile_user'
+    pk_url_kwarg = 'pk'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        target_user = self.get_object()
+        context['page_title'] = _(f"User Profile: {target_user.username}")
+        context['view_context'] = 'dashboard'
+        context['is_own_profile'] = (self.request.user.pk == target_user.pk)
+
+        can_edit = False
+        if self.request.user.is_superuser:
+            can_edit = True
+            if self.request.user.pk == target_user.pk:
+                pass
+        elif self.request.user.role == 'LIBRARIAN':
+            if target_user.role == 'BORROWER' and not target_user.is_staff:
+                can_edit = True
+        context['can_edit_this_profile'] = can_edit
+
+        all_borrowings = Borrowing.objects.filter(borrower=target_user).select_related('book_copy__book').order_by('-issue_date')
+        paginator = Paginator(all_borrowings, 10)
+        page_number = self.request.GET.get('page')
+        context['borrowings'] = paginator.get_page(page_number)
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params_borrowings'] = query_params.urlencode()
+
+
+        if target_user.role == 'BORROWER' and not target_user.is_staff:
+            context['back_url'] = reverse_lazy('users:dashboard_borrower_list')
+        elif target_user.is_staff or target_user.is_superuser:
+            context['back_url'] = reverse_lazy('users:dashboard_staff_list')
+        return context
+
 
 # --- Staff Dashboard Borrower Management Views ---
 

@@ -1,0 +1,59 @@
+{% load static %}
+{% load bootstrap5 %}
+
+{# Expects: category, view_context, can_edit_this_object, books_in_category, back_url #}
+
+<div class="container py-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="card-title h2">{{ category.name }}</h1>
+                </div>
+            </div>
+            <hr>
+            <h6>Description:</h6>
+            {% if category.description %}
+                <div class="text-muted" style="white-space: pre-wrap;">{{ category.description|linebreaksbr }}</div>
+            {% else %}
+                <p class="text-muted fst-italic">No description available for this category.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-bookshelf me-2"></i>Books in {{ category.name }} ({{ books_in_category.count }})</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if books_in_category %}
+            <ul class="list-group list-group-flush">
+                {% for book_item in books_in_category %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        {# Link to the context-aware book detail page #}
+                        <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_book_detail' isbn=book_item.isbn %}{% else %}{% url 'books:portal_book_detail' isbn=book_item.isbn %}{% endif %}" class="text-decoration-none fw-medium">
+                            {{ book_item.title }}
+                        </a>
+                        <small class="d-block text-muted">
+                            ISBN: {{ book_item.isbn }} | By: 
+                            {% for author in book_item.authors.all|slice:":2" %}
+                                {{ author.name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                            {% if book_item.authors.all|length > 2 %}...{% endif %}
+                        </small>
+                    </div>
+                    {% if book_item.num_available_copies > 0 %}
+                        <span class="badge bg-success">Available</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Unavailable</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="p-3 text-muted mb-0">No books currently listed in this category.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

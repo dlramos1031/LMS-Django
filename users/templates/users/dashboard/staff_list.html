@@ -44,8 +44,6 @@
                     <th>Full Name</th>
                     <th>Email</th>
                     <th>Role</th>
-                    <th class="text-center">Staff?</th>
-                    <th class="text-center">Superuser?</th>
                     <th class="text-center">Status</th>
                     <th class="text-center">Actions</th>
                 </tr>
@@ -54,7 +52,7 @@
                 {% for staff_member in staff_members %} {# Or page_obj.object_list #}
                 <tr>
                     <td>
-                        <a href="{% url 'users:dashboard_staff_edit' pk=staff_member.pk %}">{{ staff_member.username }}</a>
+                        <a href="{% url 'users:dashboard_borrower_detail' pk=staff_member.pk %}">{{ staff_member.username }}</a>
                     </td>
                     <td>{{ staff_member.get_full_name|default:"N/A" }}</td>
                     <td>{{ staff_member.email|default:"N/A" }}</td>
@@ -62,8 +60,6 @@
                         {% if staff_member.role == 'ADMIN' %}bg-danger{% elif staff_member.role == 'LIBRARIAN' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
                         {{ staff_member.get_role_display }}
                     </span></td>
-                    <td class="text-center">{% if staff_member.is_staff %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}</td>
-                    <td class="text-center">{% if staff_member.is_superuser %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-muted"></i>{% endif %}</td>
                     <td class="text-center">
                         {% if staff_member.is_active %}
                             <span class="badge bg-success">Active</span>

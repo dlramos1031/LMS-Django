@@ -38,7 +38,7 @@
                         {% else %}
                         <span class="d-inline-block bg-light border me-2 align-middle" style="width: 40px; height: 60px; line-height: 60px; text-align: center;"><i class="bi bi-image-alt text-muted"></i></span>
                         {% endif %}
-                        <a href="{% url 'books:dashboard_bookcopy_list' isbn=book_item.isbn %}">{{ book_item.title|truncatechars:60 }}</a>
+                        <a href="{% url 'books:dashboard_book_detail' isbn=book_item.isbn %}">{{ book_item.title|truncatechars:60 }}</a>
                     </td>
                     <td>{{ book_item.isbn }}</td>
                     <td>

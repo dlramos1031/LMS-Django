@@ -50,7 +50,7 @@
                 {% for user_item in borrowers %}
                 <tr>
                     <td>
-                        <a href="{% url 'users:dashboard_borrower_edit' pk=user_item.pk %}">{{ user_item.username }}</a>
+                        <a href="{% url 'users:dashboard_borrower_detail' pk=user_item.pk %}">{{ user_item.username }}</a>
                     </td>
                     <td>{{ user_item.get_full_name|default:"N/A" }}</td>
                     <td>{{ user_item.email|default:"N/A" }}</td>

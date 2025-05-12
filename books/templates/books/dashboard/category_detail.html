@@ -1,0 +1,26 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{# Expects: category, view_context='dashboard', can_edit_this_object=True, books_in_category, back_url from StaffCategoryDetailView #}
+
+{% block dashboard_page_title %}Category Details: {{ category.name }}{% endblock %}
+
+{% block dashboard_page_title_main %}Category Details: <span class="text-muted">{{ category.name }}</span>{% endblock %}
+
+{% block dashboard_page_actions %}
+    {% if can_edit_this_object %}
+    <a href="{% url 'books:dashboard_category_edit' pk=category.pk %}" class="btn btn-primary me-2">
+        <i class="bi bi-pencil-square"></i> Edit Category
+    </a>
+    {% endif %}
+    {% if back_url %}
+        <a href="{{ back_url }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left-circle"></i> Back to Categories List
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block dashboard_content_main %}
+    {% include "books/_category_detail_content.html" %}
+{% endblock dashboard_content_main %}

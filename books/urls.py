@@ -5,10 +5,13 @@ app_name = 'books'
 
 urlpatterns = [
     # Borrower Web Portal
-    path('', views.BookPortalCatalogView.as_view(), name='portal_catalog'), # Assuming root of books app is catalog
+    path('', views.BookPortalCatalogView.as_view(), name='portal_catalog'),
     path('book/<slug:isbn>/', views.BookPortalDetailView.as_view(), name='portal_book_detail'),
     path('book/<slug:isbn>/reserve/', views.reserve_book_view, name='portal_book_reserve'),
     path('borrowing/<int:borrowing_id>/renew/', views.renew_book_view, name='portal_borrowing_renew'),
+    
+    path('author/<int:pk>/', views.PortalAuthorDetailView.as_view(), name='portal_author_detail'),
+    path('category/<int:pk>/', views.PortalCategoryDetailView.as_view(), name='portal_category_detail'),
 
     # Staff Dashboard
     path('dashboard/', views.staff_dashboard_home_view, name='dashboard_home'),
@@ -16,6 +19,7 @@ urlpatterns = [
     # Book & Collection Management (Staff)
     path('dashboard/books/', views.StaffBookListView.as_view(), name='dashboard_book_list'),
     path('dashboard/books/add/', views.StaffBookCreateView.as_view(), name='dashboard_book_add'),
+    path('dashboard/books/view/<slug:isbn>/', views.StaffBookDetailView.as_view(), name='dashboard_book_detail'),
     path('dashboard/books/edit/<slug:isbn>/', views.StaffBookUpdateView.as_view(), name='dashboard_book_edit'),
     path('dashboard/books/delete/<slug:isbn>/confirm/', views.StaffBookDeleteView.as_view(), name='dashboard_book_delete_confirm'),
 
@@ -26,11 +30,13 @@ urlpatterns = [
 
     path('dashboard/categories/', views.StaffCategoryListView.as_view(), name='dashboard_category_list'),
     path('dashboard/categories/add/', views.StaffCategoryCreateView.as_view(), name='dashboard_category_add'),
+    path('dashboard/categories/view/<int:pk>/', views.StaffCategoryDetailView.as_view(), name='dashboard_category_detail'),
     path('dashboard/categories/edit/<int:pk>/', views.StaffCategoryUpdateView.as_view(), name='dashboard_category_edit'),
     path('dashboard/categories/delete/<int:pk>/confirm/', views.StaffCategoryDeleteView.as_view(), name='dashboard_category_delete_confirm'),
 
     path('dashboard/authors/', views.StaffAuthorListView.as_view(), name='dashboard_author_list'),
     path('dashboard/authors/add/', views.StaffAuthorCreateView.as_view(), name='dashboard_author_add'),
+    path('dashboard/authors/view/<int:pk>/', views.StaffAuthorDetailView.as_view(), name='dashboard_author_detail'),
     path('dashboard/authors/edit/<int:pk>/', views.StaffAuthorUpdateView.as_view(), name='dashboard_author_edit'),
     path('dashboard/authors/delete/<int:pk>/confirm/', views.StaffAuthorDeleteView.as_view(), name='dashboard_author_delete_confirm'),
 

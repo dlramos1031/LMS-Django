@@ -29,7 +29,7 @@
                 {% for category_item in categories %} {# Or page_obj.object_list #}
                 <tr>
                     <td>
-                        <a href="{% url 'books:dashboard_category_edit' pk=category_item.pk %}">{{ category_item.name }}</a>
+                        <a href="{% url 'books:dashboard_category_detail' pk=category_item.pk %}">{{ category_item.name }}</a>
                     </td>
                     <td>{{ category_item.description|truncatechars:100|default:"N/A" }}</td>
                     <td class="text-center">{{ category_item.books.count }}</td>

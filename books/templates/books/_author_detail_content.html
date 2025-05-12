@@ -1,0 +1,55 @@
+{# LMS/Backend/books/templates/books/_author_detail_content.html #}
+{% load static %}
+{% load bootstrap5 %}
+
+{# Expects: author, view_context, can_edit_this_object, books_by_author, back_url #}
+
+<div class="container py-4">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="card-title h2">{{ author.name }}</h1>
+                    <p class="card-text text-muted">
+                        <strong>Date of Birth:</strong> {{ author.date_of_birth|date:"F d, Y"|default:"N/A" }}
+                    </p>
+                </div>
+            </div>
+            <hr>
+            <h6>Biography:</h6>
+            {% if author.biography %}
+                <div class="text-muted" style="white-space: pre-wrap;">{{ author.biography|linebreaksbr }}</div>
+            {% else %}
+                <p class="text-muted fst-italic">No biography available.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-book-fill me-2"></i>Books by {{ author.name }} ({{ books_by_author.count }})</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if books_by_author %}
+            <ul class="list-group list-group-flush">
+                {% for book_item in books_by_author %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        {# Link to the context-aware book detail page #}
+                        <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_book_detail' isbn=book_item.isbn %}{% else %}{% url 'books:portal_book_detail' isbn=book_item.isbn %}{% endif %}" class="text-decoration-none fw-medium">
+                            {{ book_item.title }}
+                        </a>
+                        <small class="d-block text-muted">ISBN: {{ book_item.isbn }}</small>
+                    </div>
+                    <span class="badge bg-light text-dark border">
+                        {{ book_item.categories.first.name|default:"" }}{% if book_item.categories.count > 1 %} & more{% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="p-3 text-muted mb-0">No books found for this author in the system.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -69,7 +69,6 @@
   }
 
   .main-content-dashboard { /* Renamed to avoid conflict with potential .main-content in base.html */
-    margin-top: 56px; /* Height of your fixed top navbar from base.html */
     padding: 1.5rem;
     margin-left: 240px; /* Width of your sidebar (adjust as needed) */
     transition: margin-left .3s;
@@ -106,7 +105,7 @@
       {# {% include "dashboard/_includes/top_nav.html" %} #}
 
       {# Page Title Block - Specific to dashboard pages #}
-      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+      <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
         <h1 class="h2">{% block dashboard_page_title_main %}{% endblock %}</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
           {% block dashboard_page_actions %}{% endblock %}

@@ -29,7 +29,7 @@
                 {% for author_item in authors %} {# Or page_obj.object_list #}
                 <tr>
                     <td>
-                        <a href="{% url 'books:dashboard_author_edit' pk=author_item.pk %}">{{ author_item.name }}</a>
+                        <a href="{% url 'books:dashboard_author_detail' pk=author_item.pk %}">{{ author_item.name }}</a>
                     </td>
                     <td>{{ author_item.date_of_birth|date:"Y-m-d"|default:"N/A" }}</td>
                     <td class="text-center">{{ author_item.books.count }}</td>

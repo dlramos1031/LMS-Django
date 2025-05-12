@@ -29,6 +29,7 @@ urlpatterns = [
     # --- Staff Dashboard: Borrower Management URLs ---
     path('dashboard/borrowers/', views.StaffBorrowerListView.as_view(), name='dashboard_borrower_list'),
     path('dashboard/borrowers/add/', views.StaffBorrowerCreateView.as_view(), name='dashboard_borrower_add'),
+    path('dashboard/borrowers/view/<int:pk>/', views.StaffUserDetailView.as_view(), name='dashboard_borrower_detail'),
     path('dashboard/borrowers/edit/<int:pk>/', views.StaffBorrowerUpdateView.as_view(), name='dashboard_borrower_edit'),
     path('dashboard/borrowers/delete/<int:pk>/confirm/', views.StaffBorrowerDeleteView.as_view(), name='dashboard_borrower_delete_confirm'),
 

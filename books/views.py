@@ -272,7 +272,6 @@ class BookPortalCatalogView(ListView):
         return context
 
 class BookPortalDetailView(DetailView):
-    """Displays details for a single book for borrowers."""
     model = Book
     template_name = 'books/portal/book_detail.html'
     context_object_name = 'book'
@@ -281,17 +280,116 @@ class BookPortalDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        book = self.get_object()
-        context['page_title'] = book.title
-        context['available_book_copies'] = book.copies.filter(status='Available')
-        if self.request.user.is_authenticated:
-            context['has_active_or_pending_request'] = Borrowing.objects.filter(
+        book_instance = self.get_object()
+
+        context['page_title'] = book_instance.title
+        context['view_context'] = 'portal' # Critical for template logic
+
+        # Borrower-specific flags and data
+        if self.request.user.is_authenticated and not self.request.user.is_staff:
+            has_request = Borrowing.objects.filter(
                 borrower=self.request.user,
-                book_copy__book=book, # Check against the book title
+                book_copy__book=book_instance,
                 status__in=['REQUESTED', 'ACTIVE']
             ).exists()
-        # Consider adding related books logic here if needed
+            context['has_active_or_pending_request'] = has_request
+            
+            can_borrow = book_instance.available_copies_count > 0 and not has_request
+            context['can_borrow_this_book'] = can_borrow
+            context['can_reserve_this_book'] = book_instance.available_copies_count == 0 and not has_request
+            
+            # TODO: Implement favorite logic if desired
+            # context['is_favorite_book'] = Favorite.objects.filter(user=self.request.user, book=book_instance).exists()
+            context['is_favorite_book'] = False # Placeholder
+        else: # For guests or staff viewing portal page (staff won't typically use portal actions)
+            context['has_active_or_pending_request'] = False
+            context['can_borrow_this_book'] = book_instance.available_copies_count > 0
+            context['can_reserve_this_book'] = book_instance.available_copies_count == 0
+            context['is_favorite_book'] = False
+
+        context['back_url'] = reverse_lazy('books:portal_catalog')
+        
+        # Common details needed by the template
+        # context['available_book_copies'] is used by the borrow modal in the template currently
+        context['available_book_copies'] = book_instance.copies.filter(status='Available')
+
+        first_category = book_instance.categories.first()
+        if first_category:
+            context['related_books'] = Book.objects.filter(categories=first_category)\
+                                           .exclude(isbn=book_instance.isbn)\
+                                           .prefetch_related('authors', 'copies')\
+                                           .annotate(available_copies_count=Count('copies', filter=Q(copies__status='Available')))\
+                                           .distinct()[:4]
         return context
+
+
+class PortalAuthorDetailView(DetailView):
+    model = Author
+    template_name = 'books/portal/author_detail.html'
+    context_object_name = 'author'
+    pk_url_kwarg = 'pk'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        author = self.get_object()
+        context['page_title'] = f"Author: {author.name}"
+        context['view_context'] = 'portal'
+        context['can_edit_this_object'] = False
+        context['books_by_author'] = Book.objects.filter(authors=author).prefetch_related('categories').order_by('title')
+        context['back_url'] = self.request.META.get('HTTP_REFERER', reverse_lazy('books:portal_catalog'))
+        return context
+    
+
+class StaffAuthorDetailView(StaffRequiredMixin, DetailView):
+    model = Author
+    template_name = 'books/dashboard/author_detail.html'
+    context_object_name = 'author'
+    pk_url_kwarg = 'pk'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        author = self.get_object()
+        context['page_title'] = f"Author Details: {author.name}"
+        context['view_context'] = 'dashboard'
+        context['can_edit_this_object'] = self.request.user.is_staff
+        context['books_by_author'] = Book.objects.filter(authors=author).prefetch_related('categories').order_by('title')
+        context['back_url'] = reverse_lazy('books:dashboard_author_list')
+        return context
+
+
+class PortalCategoryDetailView(DetailView):
+    model = Category
+    template_name = 'books/portal/category_detail.html'
+    context_object_name = 'category'
+    pk_url_kwarg = 'pk'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_instance = self.get_object()
+        context['page_title'] = f"Category: {category_instance.name}"
+        context['view_context'] = 'portal'
+        context['can_edit_this_object'] = False
+        context['books_in_category'] = Book.objects.filter(categories=category_instance).prefetch_related('authors').annotate(num_available_copies=Count('copies', filter=Q(copies__status='Available'))).order_by('title')
+        context['back_url'] = self.request.META.get('HTTP_REFERER', reverse_lazy('books:portal_catalog'))
+        return context
+    
+
+class StaffCategoryDetailView(StaffRequiredMixin, DetailView):
+    model = Category
+    template_name = 'books/dashboard/category_detail.html'
+    context_object_name = 'category'
+    pk_url_kwarg = 'pk'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        category_instance = self.get_object()
+        context['page_title'] = f"Category Details: {category_instance.name}"
+        context['view_context'] = 'dashboard'
+        context['can_edit_this_object'] = self.request.user.is_staff
+        context['books_in_category'] = Book.objects.filter(categories=category_instance).prefetch_related('authors').annotate(num_available_copies=Count('copies', filter=Q(copies__status='Available'))).order_by('title')
+        context['back_url'] = reverse_lazy('books:dashboard_category_list')
+        return context
+
 
 @login_required
 def reserve_book_view(request, isbn): # Placeholder
@@ -337,6 +435,49 @@ def staff_dashboard_home_view(request):
 
 
 # --- Book & Collection Management (Staff) ---
+
+class StaffBookDetailView(StaffRequiredMixin, DetailView):
+    """
+    Displays detailed information about a specific book for staff members.
+    This view reuses the main book detail template but provides a 'dashboard' context.
+    """
+    model = Book
+    template_name = 'books/dashboard/book_detail.html'
+    context_object_name = 'book'
+    slug_field = 'isbn' # Assuming 'isbn' is the slug in your Book model and URL
+    slug_url_kwarg = 'isbn' # The name of the slug parameter in your URL pattern
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        book_instance = self.get_object() # The current Book instance
+
+        context['page_title'] = _(f"Book Details: {book_instance.title}")
+        context['view_context'] = 'dashboard' # Critical for template logic
+
+        # Permissions/flags for template (staff context)
+        context['can_edit_this_object'] = self.request.user.is_staff # Staff can generally edit book details
+        context['can_manage_copies'] = True # Staff can manage copies
+
+        # These flags are for borrower actions, so set them to False for staff context
+        context['has_active_or_pending_request'] = False
+        context['can_borrow_this_book'] = False
+        context['can_reserve_this_book'] = False
+        context['is_favorite_book'] = False # Staff don't use 'favorite' in this context
+
+        # Back button URL for dashboard context
+        # Links back to the page where staff manage copies for this specific book
+        context['back_url'] = reverse_lazy('books:dashboard_book_list')
+        # Or, if you want to go back to the main book list:
+        # context['back_url'] = reverse_lazy('books:dashboard_book_list')
+        
+        # Other details staff might want to see
+        context['all_book_copies'] = book_instance.copies.all().order_by('copy_id')
+        context['active_loans_for_this_book'] = Borrowing.objects.filter(
+            book_copy__book=book_instance, 
+            status__in=['ACTIVE', 'OVERDUE']
+        ).select_related('borrower', 'book_copy').order_by('due_date')
+
+        return context
 
 class StaffBookListView(StaffRequiredMixin, ListView):
     """View for staff to list and manage book titles."""

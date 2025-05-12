@@ -1,0 +1,28 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{# profile_user, view_context, is_own_profile, can_edit_this_profile, borrowings, page_title, back_url are passed from StaffUserDetailView #}
+
+{% block dashboard_page_title %}{{ page_title|default:"User Profile" }}{% endblock %}
+
+{% block dashboard_page_title_main %}{{ page_title|default:"User Profile" }}{% endblock %}
+
+{% block dashboard_page_actions %}
+    {% if back_url %}
+        <a href="{{ back_url }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left-circle"></i> 
+            {% if profile_user.role == 'BORROWER' and not profile_user.is_staff %}
+                Back to Borrowers List
+            {% elif profile_user.is_staff or profile_user.is_superuser %}
+                Back to Staff List
+            {% else %}
+                Back
+            {% endif %}
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block dashboard_content_main %}
+    {% include "users/_profile_content.html" %} {# Include the shared content #}
+{% endblock dashboard_content_main %}

@@ -1,0 +1,11 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{# Expects: category, view_context='portal', can_edit_this_object=False, books_in_category, back_url from PortalCategoryDetailView #}
+
+{% block portal_title %}Category: {{ category.name }}{% endblock %}
+
+{% block portal_content %}
+    {% include "books/_category_detail_content.html" %}
+{% endblock portal_content %}
