@@ -93,7 +93,6 @@ class CustomUser(AbstractUser):
         blank=True,
         help_text=_('Category of the borrower, e.g., Student, Faculty (used if role is Borrower)')
     )
-
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name=_('groups'),
@@ -134,6 +133,13 @@ class CustomUser(AbstractUser):
         This overrides the default AbstractUser.get_short_name().
         """
         return self.first_name
+
+    def save(self, *args, **kwargs):
+        if self.is_superuser and self.role != 'ADMIN':
+            self.role = 'ADMIN'
+        if self.is_staff and self.role == 'BORROWER':
+            self.role = 'LIBRARIAN'
+        super().save(*args, **kwargs)
 
     def __str__(self):
         """String representation of the CustomUser model."""

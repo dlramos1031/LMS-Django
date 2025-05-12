@@ -22,9 +22,9 @@
     <p class="mb-0">This action cannot be undone.</p>
 </div>
 
-<form method="post" action="{% url 'users:dashboard_user_delete' pk=user_to_delete.pk %}">
+<form method="post" action="{% url 'users:dashboard_borrower_delete_confirm' pk=user_to_delete.pk %}">
     {% csrf_token %}
-    <a href="{% url 'users:dashboard_user_list' %}" class="btn btn-secondary">
+    <a href="{% url 'users:dashboard_borrower_list' %}" class="btn btn-secondary">
         <i class="bi bi-x-circle"></i> Cancel
     </a>
     <button type="submit" class="btn btn-danger">

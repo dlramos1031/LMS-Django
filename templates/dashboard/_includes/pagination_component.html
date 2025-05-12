@@ -1,0 +1,46 @@
+{% comment %}
+  Pagination include template.
+  Expects 'page_obj' and 'other_query_params' (e.g., 'search=foo&borrower_type=STUDENT') from the context.
+{% endcomment %}
+
+{% if page_obj and page_obj.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+  <ul class="pagination justify-content-center">
+
+    {# Previous Page Link #}
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if other_query_params %}&amp;{{ other_query_params }}{% endif %}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span> Prev
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
+          <span aria-hidden="true">&laquo;</span> Prev
+        </a>
+      </li>
+    {% endif %}
+
+    {# Page Numbers (Simplified: Current Page / Total Pages) #}
+    <li class="page-item active" aria-current="page">
+        <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    </li>
+    
+    {# Next Page Link #}
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if other_query_params %}&amp;{{ other_query_params }}{% endif %}" aria-label="Next">
+          Next <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="#" tabindex="-1" aria-disabled="true">
+          Next <span aria-hidden="true">&raquo;</span>
+        </a>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}

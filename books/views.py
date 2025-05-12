@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -15,6 +14,9 @@ from rest_framework import viewsets, permissions, status, generics, serializers,
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django_filters.rest_framework import DjangoFilterBackend
+
+# User-related imports
+from users.decorators import is_staff_user, StaffRequiredMixin
 
 # App-specific imports
 from .filters import BookFilter
@@ -44,27 +46,6 @@ class IsLibrarianOrAdminPermission(permissions.BasePermission):
             request.user.is_authenticated and
             (request.user.role in ['LIBRARIAN', 'ADMIN'] or request.user.is_staff)
         )
-
-# --- Staff Permission Helper ---
-# This can be moved to a common 'decorators.py' or 'mixins.py' in a utility app or users app
-# For now, keeping it here for self-containment based on previous discussions.
-def is_staff_user(user):
-    """Checks if the user is authenticated and has a staff-like role."""
-    return user.is_authenticated and (user.role in ['LIBRARIAN', 'ADMIN'] or user.is_staff)
-
-class StaffRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
-    """Mixin to require staff privileges for accessing a view."""
-    login_url = reverse_lazy('users:login')
-
-    def test_func(self):
-        return is_staff_user(self.request.user)
-
-    def handle_no_permission(self):
-        messages.error(self.request, _("You do not have permission to access this page."))
-        if self.request.user.is_authenticated and not is_staff_user(self.request.user):
-            return redirect('books:portal_catalog')
-        return super().handle_no_permission()
-
 
 # === DRF ViewSets ===
 # (Your existing DRF ViewSets: AuthorViewSet, CategoryViewSet, BookViewSet,

@@ -21,9 +21,14 @@ from .serializers import RegisterSerializer, UserSerializer, UserDeviceSerialize
 from .forms import (
     UserRegistrationForm,
     CustomPasswordChangeForm,
-    BorrowerProfileUpdateForm
+    BorrowerProfileUpdateForm,
+    StaffBorrowerCreateForm,
+    StaffBorrowerChangeForm,
+    AdminStaffCreateForm,
+    AdminStaffChangeForm
 )
 from .models import CustomUser, UserDevice
+from .decorators import StaffRequiredMixin, AdminRequiredMixin
 from books.models import Borrowing, Notification
 
 User = get_user_model()
@@ -170,89 +175,212 @@ def my_reservations_view(request):
     return render(request, 'users/portal/my_reservations.html', context)
 
 
-# --- Staff Dashboard User Management Views ---
+# --- Staff Dashboard Borrower Management Views ---
 
-class StaffUserListView(StaffRequiredMixin, ListView):
+class StaffBorrowerListView(StaffRequiredMixin, ListView):
     model = CustomUser
-    template_name = 'users/dashboard/user_list.html'
-    context_object_name = 'users_list'
-    paginate_by = 15
+    template_name = 'users/dashboard/borrower_list.html'
+    context_object_name = 'borrowers'
+    paginate_by = 5
+
 
     def get_queryset(self):
-        queryset = CustomUser.objects.all().order_by('last_name', 'first_name')
+        # Librarians and Admins can see Borrowers
+        queryset = CustomUser.objects.filter(role='BORROWER').order_by('last_name', 'first_name')
         search_term = self.request.GET.get('search')
-        role_filter = self.request.GET.get('role')
+        borrower_type_filter = self.request.GET.get('borrower_type')
         if search_term:
             queryset = queryset.filter(
                 Q(username__icontains=search_term) |
                 Q(first_name__icontains=search_term) |
                 Q(last_name__icontains=search_term) |
-                Q(email__icontains=search_term)
+                Q(email__icontains=search_term) |
+                Q(borrower_id_value__icontains=search_term)
             )
-        if role_filter:
-            queryset = queryset.filter(role=role_filter)
+        if borrower_type_filter:
+            queryset = queryset.filter(borrower_type=borrower_type_filter)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _('Manage Users')
+        context['page_title'] = _('Manage Borrowers')
+
+        # For search/filter form repopulation
         context['current_search'] = self.request.GET.get('search', '')
-        context['current_role_filter'] = self.request.GET.get('role', '')
-        context['role_choices'] = CustomUser.ROLE_CHOICES
+        context['borrower_type_choices'] = CustomUser.BORROWER_TYPE_CHOICES
+        context['current_borrower_type_filter'] = self.request.GET.get('borrower_type', '')
+
+        # For pagination: pass existing GET params excluding 'page'
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None) # Remove 'page' key if it exists
+        context['other_query_params'] = query_params.urlencode()
+        
         return context
 
-class StaffUserCreateView(StaffRequiredMixin, CreateView):
-    model = CustomUser
-    fields = ['username', 'password', 'first_name', 'last_name', 'email', 'role', 'borrower_id_value', 'borrower_id_label', 'borrower_type', 'is_active', 'is_staff', 'is_superuser'] # Example fields
-    template_name = 'users/dashboard/user_form.html'
-    success_url = reverse_lazy('users:dashboard_user_list')
 
-    def form_valid(self, form):
-        user = form.save(commit=False)
-        user.set_password(form.cleaned_data["password"])
-        user.save()
-        messages.success(self.request, _(f"User '{user.username}' created successfully."))
-        return redirect(self.success_url)
+class StaffBorrowerCreateView(StaffRequiredMixin, CreateView):
+    model = CustomUser
+    form_class = StaffBorrowerCreateForm
+    template_name = 'users/dashboard/borrower_form.html'
+    success_url = reverse_lazy('users:dashboard_borrower_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['requesting_user'] = self.request.user
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _('Add New User')
+        context['page_title'] = _('Add New Borrower')
         context['form_mode'] = 'create'
         return context
 
-class StaffUserUpdateView(StaffRequiredMixin, UpdateView):
+    def form_valid(self, form):
+        # Role is set to BORROWER in StaffBorrowerCreateForm.save()
+        messages.success(self.request, _(f"Borrower '{form.instance.username}' created successfully."))
+        return super().form_valid(form)
+
+
+class StaffBorrowerUpdateView(StaffRequiredMixin, UpdateView):
     model = CustomUser
-    fields = ['username', 'first_name', 'last_name', 'email', 'role', 'borrower_id_value', 'borrower_id_label', 'borrower_type', 'is_active', 'is_staff', 'is_superuser'] # Password change should be separate
-    template_name = 'users/dashboard/user_form.html'
-    success_url = reverse_lazy('users:dashboard_user_list')
+    form_class = StaffBorrowerChangeForm
+    template_name = 'users/dashboard/borrower_form.html'
+    success_url = reverse_lazy('users:dashboard_borrower_list')
+    context_object_name = 'user_to_edit'
+
+    def get_queryset(self):
+        return CustomUser.objects.filter(role='BORROWER')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['requesting_user'] = self.request.user
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _(f"Edit User: {self.object.username}")
+        context['page_title'] = _(f"Edit Borrower: {self.object.username}")
         context['form_mode'] = 'edit'
         return context
 
     def form_valid(self, form):
-        messages.success(self.request, _(f"User '{form.instance.username}' updated successfully."))
+        messages.success(self.request, _(f"Borrower '{form.instance.username}' updated successfully."))
         return super().form_valid(form)
 
-class StaffUserDeleteView(StaffRequiredMixin, DeleteView):
+
+class StaffBorrowerDeleteView(StaffRequiredMixin, DeleteView):
     model = CustomUser
-    template_name = 'users/dashboard/user_confirm_delete.html'
-    success_url = reverse_lazy('users:dashboard_user_list')
+    template_name = 'users/dashboard/borrower_confirm_delete.html'
+    success_url = reverse_lazy('users:dashboard_borrower_list')
     context_object_name = 'user_to_delete'
+
+    def get_queryset(self):
+        return CustomUser.objects.filter(role='BORROWER')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['page_title'] = _(f"Confirm Delete User: {self.object.username}")
+        context['page_title'] = _(f"Confirm Delete Borrower: {self.object.username}")
+        return context
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        # Add any checks here, e.g., if borrower has active loans
+        # if self.object.borrowings.filter(status__in=['ACTIVE', 'OVERDUE']).exists():
+        #     messages.error(request, _("Cannot delete borrower with active loans."))
+        #     return redirect('users:dashboard_borrower_list')
+        messages.success(request, _(f"Borrower '{self.object.username}' deleted successfully."))
+        return super().delete(request, *args, **kwargs)
+
+
+# --- Staff Dashboard Staff Management Views ---
+class AdminStaffListView(AdminRequiredMixin, ListView):
+    model = CustomUser
+    template_name = 'users/dashboard/staff_list.html'
+    context_object_name = 'staff_members'
+    paginate_by = 15
+
+    def get_queryset(self):
+        # Admins see Librarians and other Admins
+        queryset = CustomUser.objects.filter(role__in=['LIBRARIAN', 'ADMIN']).order_by('role', 'last_name', 'first_name')
+        # Add search if needed
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _('Manage Staff Accounts')
+        return context
+
+class AdminStaffCreateView(AdminRequiredMixin, CreateView):
+    model = CustomUser
+    form_class = AdminStaffCreateForm # Use the new form
+    template_name = 'users/dashboard/staff_form.html' # NEW TEMPLATE
+    success_url = reverse_lazy('users:dashboard_staff_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['requesting_user'] = self.request.user # Pass for context if form needs it
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _('Add New Staff Member')
+        context['form_mode'] = 'create'
         return context
 
     def form_valid(self, form):
-        if self.object.role == 'BORROWER' and Borrowing.objects.filter(borrower=self.object, status__in=['ACTIVE', 'OVERDUE']).exists():
-            messages.error(self.request, _(f"Cannot delete borrower '{self.object.username}' with active or overdue loans."))
-            return redirect('users:dashboard_user_list')
-        messages.success(self.request, _(f"User '{self.object.username}' deleted successfully."))
+        # Role, is_staff, is_superuser are handled in AdminStaffCreateForm.save()
+        messages.success(self.request, _(f"Staff member '{form.instance.username}' created successfully."))
         return super().form_valid(form)
+
+class AdminStaffUpdateView(AdminRequiredMixin, UpdateView):
+    model = CustomUser
+    form_class = AdminStaffChangeForm # Use the new form
+    template_name = 'users/dashboard/staff_form.html' # NEW TEMPLATE
+    success_url = reverse_lazy('users:dashboard_staff_list')
+    context_object_name = 'user_to_edit'
+
+    def get_queryset(self): # Admins can edit Librarians and other Admins
+        return CustomUser.objects.filter(role__in=['LIBRARIAN', 'ADMIN'])
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['requesting_user'] = self.request.user
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _(f"Edit Staff: {self.object.username}")
+        context['form_mode'] = 'edit'
+        return context
+
+    def form_valid(self, form):
+        # Logic to ensure an admin doesn't de-admin themselves if they are the only one,
+        # or set is_staff/is_superuser based on role, is handled in AdminStaffChangeForm.clean()
+        messages.success(self.request, _(f"Staff member '{form.instance.username}' updated successfully."))
+        return super().form_valid(form)
+
+class AdminStaffDeleteView(AdminRequiredMixin, DeleteView):
+    model = CustomUser
+    template_name = 'users/dashboard/staff_confirm_delete.html' # NEW TEMPLATE
+    success_url = reverse_lazy('users:dashboard_staff_list')
+    context_object_name = 'user_to_delete'
+
+    def get_queryset(self):
+        # Admins can delete Librarians and other Admins (except themselves)
+        return CustomUser.objects.filter(role__in=['LIBRARIAN', 'ADMIN']).exclude(pk=self.request.user.pk)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _(f"Confirm Delete Staff: {self.object.username}")
+        return context
+
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if self.object.pk == request.user.pk: # Should be caught by queryset, but double check
+            messages.error(request, _("You cannot delete your own account."))
+            return redirect('users:dashboard_staff_list')
+        # Add other checks if needed (e.g., ensure at least one superuser remains)
+        messages.success(request, _(f"Staff member '{self.object.username}' deleted successfully."))
+        return super().delete(request, *args, **kwargs)
 
 
 # === DRF API Views ===

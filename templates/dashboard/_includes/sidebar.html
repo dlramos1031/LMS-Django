@@ -52,10 +52,17 @@
 
     <li class="nav-item sidebar-heading"><span>User Management</span></li>
     <li class="nav-item">
-        <a class="nav-link {% if 'dashboard_user' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'users:dashboard_user_list' %}">
-            <i class="bi bi-people"></i> Manage Users
+        <a class="nav-link {% if 'dashboard_borrower' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'users:dashboard_borrower_list' %}">
+            <i class="bi bi-people"></i> Manage Borrowers
         </a>
     </li>
+    {% if request.user.is_superuser or request.user.role == 'ADMIN' %}
+    <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_staff' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'users:dashboard_staff_list' %}">
+            <i class="bi bi-person-badge"></i> Manage Staff
+        </a>
+    </li>
+    {% endif %}
 
     {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
     <li class="nav-item sidebar-heading"><span>Administration</span></li>

@@ -46,7 +46,7 @@
                     </div>
                     <i class="bi bi-people-fill h1 opacity-75"></i>
                 </div>
-                <a href="{% url 'users:dashboard_user_list' %}" class="text-white stretched-link">Manage Users &raquo;</a>
+                <a href="{% url 'users:dashboard_borrower_list' %}" class="text-white stretched-link">Manage Borrowers &raquo;</a>
             </div>
         </div>
     </div>
@@ -101,7 +101,7 @@
     <h4>Quick Actions</h4>
     <p>
         <a href="{% url 'books:dashboard_book_add' %}" class="btn btn-outline-primary me-2"><i class="bi bi-plus-circle"></i> Add New Book Title</a>
-        <a href="{% url 'users:dashboard_user_add' %}" class="btn btn-outline-info me-2"><i class="bi bi-person-plus"></i> Add New User</a>
+        <a href="{% url 'users:dashboard_borrower_add' %}" class="btn btn-outline-info me-2"><i class="bi bi-person-plus"></i> Add New User</a>
         <a href="{% url 'books:dashboard_circulation_issue' %}" class="btn btn-outline-success"><i class="bi bi-book-half"></i> Issue a Book</a>
         {# Add more quick actions as needed #}
     </p>
