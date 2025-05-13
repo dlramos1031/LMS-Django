@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block dashboard_page_title_main %}
-    {% if form_mode == 'create' %}Add New Copy for "{{ book.title }}"{% else %}Edit Copy: <span class="text-muted">{{ form.instance.copy_id }}</span> for "{{ book.title }}"{% endif %}
+    {% if form_mode == 'create' %}Add New Copy for "{{ book.title }}"{% else %}Edit Copy of "{{ book.title }}"{% endif %}
 {% endblock %}
 
 {% block dashboard_page_actions %}

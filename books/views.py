@@ -12,7 +12,7 @@ from django.urls import reverse_lazy
 from datetime import datetime
 from time import time
 from uuid import uuid4
-
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 # DRF Imports
 from rest_framework import viewsets, permissions, status, generics, serializers, filters
 from rest_framework.response import Response
@@ -678,12 +678,50 @@ class StaffBookCopiesManageView(StaffRequiredMixin, DetailView):
     context_object_name = 'book'
     slug_field = 'isbn'
     slug_url_kwarg = 'isbn'
+    paginate_copies_by = 10
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         book_instance = self.get_object()
         context['page_title'] = _(f"Manage Copies for: {book_instance.title}")
-        context['book_copies'] = book_instance.copies.all().order_by('copy_id')
+
+        # Get copies related to this book
+        copies_queryset = book_instance.copies.all().order_by('copy_id')
+
+        # Get search and filter parameters from request
+        search_copy_id = self.request.GET.get('search_copy_id', '').strip()
+        status_filter = self.request.GET.get('status', '').strip()
+
+        if search_copy_id:
+            copies_queryset = copies_queryset.filter(copy_id__icontains=search_copy_id)
+        
+        if status_filter:
+            copies_queryset = copies_queryset.filter(status=status_filter)
+
+        # Paginate the copies_queryset
+        paginator = Paginator(copies_queryset, self.paginate_copies_by)
+        page_number = self.request.GET.get('page')
+        try:
+            paginated_copies = paginator.page(page_number)
+        except PageNotAnInteger:
+            paginated_copies = paginator.page(1)
+        except EmptyPage:
+            paginated_copies = paginator.page(paginator.num_pages)
+
+        context['book_copies_page_obj'] = paginated_copies # Pass paginated object to template
+        context['all_book_copies_count'] = copies_queryset.count() # Total count after filters
+
+        # For repopulating filter form
+        context['current_search_copy_id'] = search_copy_id
+        context['current_status_filter'] = status_filter
+        context['status_choices'] = BookCopy.STATUS_CHOICES
+
+        # For pagination links, preserve other GET parameters
+        query_params = self.request.GET.copy()
+        if 'page' in query_params:
+            del query_params['page']
+        context['other_query_params'] = query_params.urlencode()
+
         return context
 
 class StaffBookCopyCreateView(StaffRequiredMixin, CreateView):

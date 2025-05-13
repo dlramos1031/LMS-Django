@@ -81,45 +81,76 @@
             </a>
         </div>
     </div>
+    <div class="p-3 bg-light border-bottom">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="search_copy_id" class="form-control form-control-sm" placeholder="Search by Copy ID..." value="{{ current_search_copy_id|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    {% for status_val, status_disp in status_choices %}
+                        <option value="{{ status_val }}" {% if status_val == current_status_filter %}selected{% endif %}>{{ status_disp }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+
     <div class="card-body p-0"> {# Remove padding for full-width table #}
-        {% if book_copies %}
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-0"> {# mb-0 to remove bottom margin from table #}
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col" class="ps-3">Copy ID</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Date Acquired</th>
-                            <th scope="col">Condition Notes</th>
-                            <th scope="col" class="text-center pe-3">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for copy in book_copies %}
-                        <tr>
-                            <td class="ps-3">{{ copy.copy_id }}</td>
-                            <td><span class="badge bg-{% if copy.status == 'Available' %}success{% elif copy.status == 'On Loan'%}warning text-dark{% elif copy.status == 'Reserved'%}info text-dark{% elif copy.status == 'Damaged' or copy.status == 'Lost' %}danger{% else %}secondary{% endif %}">{{ copy.get_status_display }}</span></td>
-                            <td>{{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }}</td>
-                            <td>{{ copy.condition_notes|truncatechars:40|default:"-" }}</td>
-                            <td class="text-center pe-3">
-                                <a href="{% url 'books:dashboard_bookcopy_edit' pk=copy.pk %}" class="btn btn-sm btn-outline-primary me-1 py-0 px-1" title="Edit Copy {{copy.copy_id}}">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <a href="{% url 'books:dashboard_bookcopy_delete_confirm' pk=copy.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete Copy {{copy.copy_id}}">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        {% if book_copies_page_obj.object_list %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-3">Copy ID</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Date Acquired</th>
+                        <th scope="col">Condition Notes</th>
+                        <th scope="col" class="text-center pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for copy in book_copies_page_obj %} {# Iterate over the paginated copies #}
+                    <tr>
+                        <td class="ps-3">{{ copy.copy_id }}</td>
+                        <td><span class="badge bg-{% if copy.status == 'Available' %}success{% elif copy.status == 'On Loan'%}warning text-dark{% elif copy.status == 'Reserved'%}info text-dark{% elif copy.status == 'Damaged' or copy.status == 'Lost' %}danger{% else %}secondary{% endif %}">{{ copy.get_status_display }}</span></td>
+                        <td>{{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }}</td>
+                        <td>{{ copy.condition_notes|truncatechars:40|default:"-" }}</td>
+                        <td class="text-center pe-3">
+                            <a href="{% url 'books:dashboard_bookcopy_edit' pk=copy.pk %}" class="btn btn-sm btn-outline-primary me-1 py-0 px-1" title="Edit Copy {{copy.copy_id}}">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'books:dashboard_bookcopy_delete_confirm' pk=copy.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete Copy {{copy.copy_id}}">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-            <div class="p-3">
-                 <p class="text-muted mb-0">No physical copies have been added for this book title yet. Click "Add New Copy" above to get started.</p>
-            </div>
+        <div class="p-3">
+            <p class="text-muted mb-0">
+               {% if current_search_copy_id or current_status_filter %}
+                   No copies found matching your current filter criteria for this book.
+               {% else %}
+                   No physical copies have been added for this book title yet.
+               {% endif %}
+            </p>
+        </div>
         {% endif %}
     </div>
+    {# Pagination Controls #}
+    {% if book_copies_page_obj.has_other_pages %}
+        <div class="card-footer">
+            {% include "dashboard/_includes/pagination_component.html" with page_obj=book_copies_page_obj other_query_params=other_query_params %}
+        </div>
+    {% endif %}
 </div>
 
 {% endblock dashboard_content_main %}
