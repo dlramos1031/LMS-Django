@@ -5,7 +5,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Case, When
 from django.urls import reverse_lazy
 from datetime import timedelta
 
@@ -444,38 +444,39 @@ class StaffBookDetailView(StaffRequiredMixin, DetailView):
     model = Book
     template_name = 'books/dashboard/book_detail.html'
     context_object_name = 'book'
-    slug_field = 'isbn' # Assuming 'isbn' is the slug in your Book model and URL
-    slug_url_kwarg = 'isbn' # The name of the slug parameter in your URL pattern
+    slug_field = 'isbn'
+    slug_url_kwarg = 'isbn'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        book_instance = self.get_object() # The current Book instance
-
+        book_instance = self.get_object()
         context['page_title'] = _(f"Book Details: {book_instance.title}")
-        context['view_context'] = 'dashboard' # Critical for template logic
+        context['view_context'] = 'dashboard'
+        context['can_edit_this_object'] = self.request.user.is_staff
+        context['can_manage_copies'] = True
+        context['back_url'] = reverse_lazy('books:dashboard_book_list')
 
-        # Permissions/flags for template (staff context)
-        context['can_edit_this_object'] = self.request.user.is_staff # Staff can generally edit book details
-        context['can_manage_copies'] = True # Staff can manage copies
+        # Get all copies for this book (for the table on the book detail page)
+        context['all_book_copies'] = book_instance.copies.all().order_by('copy_id')
 
-        # These flags are for borrower actions, so set them to False for staff context
+        # Get current borrowings for this book (for the table on the book detail page)
+        current_borrowings_qs = Borrowing.objects.filter(
+            book_copy__book=book_instance,
+            status__in=['ACTIVE', 'OVERDUE', 'REQUESTED']
+        ).select_related('borrower', 'book_copy').annotate(
+            status_order=Case(
+                When(status__in=['ACTIVE', 'OVERDUE'], then=0),
+                When(status='REQUESTED', then=1),
+                default=2
+            )
+        ).order_by('status_order', 'issue_date')
+        context['current_book_borrowings'] = current_borrowings_qs
+
+        # These flags are for borrower actions, False for staff context
         context['has_active_or_pending_request'] = False
         context['can_borrow_this_book'] = False
         context['can_reserve_this_book'] = False
-        context['is_favorite_book'] = False # Staff don't use 'favorite' in this context
-
-        # Back button URL for dashboard context
-        # Links back to the page where staff manage copies for this specific book
-        context['back_url'] = reverse_lazy('books:dashboard_book_list')
-        # Or, if you want to go back to the main book list:
-        # context['back_url'] = reverse_lazy('books:dashboard_book_list')
-        
-        # Other details staff might want to see
-        context['all_book_copies'] = book_instance.copies.all().order_by('copy_id')
-        context['active_loans_for_this_book'] = Borrowing.objects.filter(
-            book_copy__book=book_instance, 
-            status__in=['ACTIVE', 'OVERDUE']
-        ).select_related('borrower', 'book_copy').order_by('due_date')
+        context['is_favorite_book'] = False
 
         return context
 

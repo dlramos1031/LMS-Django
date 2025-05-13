@@ -94,24 +94,52 @@
             <p class="text-muted">No physical copies registered for this title.</p>
             {% endif %}
 
-            <h5 class="mt-4">Active Loans for this Book Title ({{ active_loans_for_this_book.count }})</h5>
-            {% if active_loans_for_this_book %}
-             <div class="table-responsive" style="max-height: 200px;">
-                <table class="table table-sm table-striped">
-                    <thead><tr><th>Copy ID</th><th>Borrower</th><th>Due Date</th></tr></thead>
+            {# NEW SECTION: Pending and Active Borrows for this Book Title #}
+            <h5 class="mt-4">Current Circulation Status for "{{ book.title }}"</h5>
+            {% if current_book_borrowings %}
+            <div class="table-responsive" style="max-height: 400px;">
+                <table class="table table-sm table-striped table-hover">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>Borrower</th>
+                            <th>Copy ID</th>
+                            <th>Status</th>
+                            <th>Requested On / Issued On</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                    {% for loan in active_loans_for_this_book %}
-                    <tr>
-                        <td>{{loan.book_copy.copy_id}}</td>
-                        <td><a href="{% url 'users:dashboard_user_detail' pk=loan.borrower.pk %}">{{loan.borrower.username}}</a></td>
-                        <td>{{loan.due_date|date:"Y-m-d"}}</td>
-                    </tr>
-                    {% endfor %}
+                        {% for borrowing in current_book_borrowings %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'users:dashboard_user_detail' pk=borrowing.borrower.pk %}">
+                                    {{ borrowing.borrower.username }}
+                                </a>
+                            </td>
+                            <td>{{ borrowing.book_copy.copy_id }}</td>
+                            <td>
+                                <span class="badge {% if borrowing.status == 'ACTIVE' %}bg-success{% elif borrowing.status == 'OVERDUE' %}bg-danger{% elif borrowing.status == 'REQUESTED' %}bg-warning text-dark{% endif %}">
+                                    {{ borrowing.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ borrowing.issue_date|date:"Y-m-d H:i" }}</td>
+                            <td>{{ borrowing.due_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {% if borrowing.status == 'REQUESTED' %}
+                                    <a href="{% url 'books:dashboard_approve_request' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-success py-0 px-1 me-1" title="Approve"><i class="bi bi-check-lg"></i></a>
+                                    <a href="{% url 'books:dashboard_reject_request' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Reject"><i class="bi bi-x-lg"></i></a>
+                                {% elif borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
+                                    <a href="{% url 'books:dashboard_mark_loan_returned' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-info py-0 px-1" title="Mark Returned"><i class="bi bi-arrow-return-left"></i></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
             {% else %}
-            <p class="text-muted">No active loans for this book title.</p>
+                <p class="text-muted">No pending requests or active loans for this book title currently.</p>
             {% endif %}
         {% endif %} {# End of dashboard specific sections #}
     </div>
