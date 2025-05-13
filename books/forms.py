@@ -83,13 +83,14 @@ class IssueBookForm(forms.Form):
     borrower = forms.ModelChoiceField(
         queryset=CustomUser.objects.filter(role='BORROWER', is_active=True).order_by('username'),
         widget=forms.Select(attrs={'class': 'form-select select2-searchable'}),
-        label=_("Select Borrower")
+        label=_("Select Borrower"),
+        help_text=_("Select the registered borrower.")
     )
     book_copy = forms.ModelChoiceField(
         queryset=BookCopy.objects.filter(status='Available').select_related('book').order_by('book__title', 'copy_id'),
         widget=forms.Select(attrs={'class': 'form-select select2-searchable'}),
         label=_("Select Available Book Copy"),
-        help_text=_("Only available copies are listed.")
+        help_text=_("Only copies currently marked 'Available' are listed.")
     )
     due_date = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -107,6 +108,12 @@ class IssueBookForm(forms.Form):
         if due_date and due_date < timezone.now().date():
             raise forms.ValidationError(_("Due date cannot be in the past."))
         return due_date
+    
+    def clean_book_copy(self):
+        book_copy = self.cleaned_data.get('book_copy')
+        if book_copy and book_copy.status != 'Available':
+            raise forms.ValidationError(_(f"The selected book copy '{book_copy.copy_id}' is no longer available. Its status is {book_copy.get_status_display()}."))
+        return book_copy
 
 class ReturnBookForm(forms.Form):
     """Form for staff to process a book return using the BookCopy ID."""

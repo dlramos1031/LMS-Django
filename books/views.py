@@ -851,10 +851,9 @@ class StaffAuthorDeleteView(StaffRequiredMixin, DeleteView):
 @login_required
 @user_passes_test(is_staff_user)
 def staff_issue_book_view(request):
-    if not is_staff_user(request.user):
-        messages.error(request, _("You do not have permission to access this page."))
-        return redirect('books:portal_catalog')
-
+    """
+    Allows staff to manually issue an available book copy to a borrower.
+    """
     if request.method == 'POST':
         form = IssueBookForm(request.POST)
         if form.is_valid():
@@ -872,12 +871,16 @@ def staff_issue_book_view(request):
                     # issued_by=request.user # Optional
                 )
                 book_copy.status = 'On Loan'
-                book_copy.save()
+                book_copy.save(update_fields=['status'])
+
+                book_title = book_copy.book
+                book_title.total_borrows = F('total_borrows') + 1
+                book_title.save(update_fields=['total_borrows'])
 
                 Notification.objects.create(
                     recipient=borrower,
-                    notification_type='BORROW_APPROVED', # Or a general "Book Issued"
-                    message=f"The book '{book_copy.book.title}' (Copy: {book_copy.copy_id}) has been issued to you. Due: {due_date.strftime('%Y-%m-%d')}."
+                    notification_type='BORROW_APPROVED',
+                    message=_(f"The book '{book_copy.book.title}' (Copy: {book_copy.copy_id}) has been issued to you by library staff. It is due on {due_date.strftime('%B %d, %Y')}.")
                 )
                 messages.success(request, _(f"Book '{book_copy.book.title}' (Copy: {book_copy.copy_id}) issued to {borrower.username}."))
                 return redirect('books:dashboard_active_loans')
@@ -888,7 +891,7 @@ def staff_issue_book_view(request):
 
     context = {
         'form': form, 
-        'page_title': _('Issue Book')
+        'page_title': _('Issue Book Manually')
     }
     return render(request, 'books/dashboard/circulation/issue_book.html', context)
 
