@@ -1,13 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q, Count, Case, When
+from django.db.models import Q, F, Count, Case, When
 from django.urls import reverse_lazy
-from datetime import timedelta
+from datetime import datetime
 
 # DRF Imports
 from rest_framework import viewsets, permissions, status, generics, serializers, filters
@@ -158,7 +159,7 @@ class BorrowingViewSet(viewsets.ModelViewSet):
 
         requested_due_date = serializer.validated_data.get('due_date')
         status_val = 'REQUESTED'
-        due_date_val = requested_due_date or (timezone.now() + timedelta(days=14))
+        due_date_val = requested_due_date or (timezone.now() + datetime.timedelta(days=14))
 
         # Staff might directly create an 'ACTIVE' loan via API
         if self.request.user.role in ['LIBRARIAN', 'ADMIN'] or self.request.user.is_staff:
@@ -283,7 +284,7 @@ class BookPortalDetailView(DetailView):
         book_instance = self.get_object()
 
         context['page_title'] = book_instance.title
-        context['view_context'] = 'portal' # Critical for template logic
+        context['view_context'] = 'portal'
 
         # Borrower-specific flags and data
         if self.request.user.is_authenticated and not self.request.user.is_staff:
@@ -392,15 +393,84 @@ class StaffCategoryDetailView(StaffRequiredMixin, DetailView):
 
 
 @login_required
-def reserve_book_view(request, isbn): # Placeholder
-    """Allows a logged-in user to request a reservation for a book."""
-    book = get_object_or_404(Book, isbn=isbn)
-    # TODO: Implement actual reservation logic
-    # - Check if user already has this book reserved or an active loan.
-    # - Check if the book is reservable (e.g., all copies are out).
-    # - Create a Reservation record or update BookCopy status/queue.
-    messages.info(request, _(f"Reservation feature for '{book.title}' is not yet implemented."))
-    return redirect('books:portal_book_detail', isbn=isbn)
+@require_POST
+def portal_create_borrow_request_view(request):
+    """
+    Handles a borrow request submitted by a logged-in user from the portal.
+    Finds an available copy of the requested book and creates a 'REQUESTED' Borrowing record.
+    """
+    book_isbn = request.POST.get('book_isbn')
+    requested_due_date_str = request.POST.get('due_date')
+
+    if not request.user.is_authenticated or request.user.is_staff:
+        messages.error(request, _("Only registered borrowers can request to borrow books."))
+        if book_isbn:
+            return redirect('books:portal_book_detail', isbn=book_isbn)
+        return redirect('books:portal_catalog')
+
+    if not book_isbn or not requested_due_date_str:
+        messages.error(request, _("Book information or due date was missing in your request."))
+        return redirect(request.META.get('HTTP_REFERER', 'books:portal_catalog'))
+
+    book = get_object_or_404(Book, isbn=book_isbn)
+
+    existing_request_or_loan = Borrowing.objects.filter(
+        borrower=request.user,
+        book_copy__book=book,
+        status__in=['REQUESTED', 'ACTIVE', 'OVERDUE']
+    ).exists()
+
+    if existing_request_or_loan:
+        messages.warning(request, _(f"You already have an active loan or pending request for '{book.title}'."))
+        return redirect('books:portal_book_detail', isbn=book_isbn)
+
+    available_copy = BookCopy.objects.filter(book=book, status='Available').first()
+
+    if not available_copy:
+        messages.error(request, _(f"Sorry, no copies of '{book.title}' are currently available to request. Please try reserving or check back later."))
+        return redirect('books:portal_book_detail', isbn=book_isbn)
+
+    try:
+        due_date = datetime.strptime(requested_due_date_str, '%Y-%m-%d').date()
+        today = timezone.now().date()
+        if due_date <= today:
+            messages.error(request, _("The preferred due date must be in the future."))
+            return redirect('books:portal_book_detail', isbn=book_isbn)
+        # Optional: Enforce max loan period for requested due date from library policy
+        # max_due_date = today + timedelta(days=library_policy.MAX_LOAN_DAYS)
+        # if due_date > max_due_date:
+        #     messages.error(request, _(f"The preferred due date exceeds the maximum loan period of {library_policy.MAX_LOAN_DAYS} days."))
+        #     return redirect('books:portal_book_detail', isbn=book_isbn)
+
+    except ValueError:
+        messages.error(request, _("Invalid due date format submitted."))
+        return redirect('books:portal_book_detail', isbn=book_isbn)
+
+    # Create the Borrowing record with status 'REQUESTED'
+    try:
+        Borrowing.objects.create(
+            borrower=request.user,
+            book_copy=available_copy, # Assign the found available copy
+            # request_date is auto_now_add
+            due_date=due_date, # User's preferred due date
+            status='REQUESTED'
+            # issue_date will be set by staff upon approval
+        )
+        # Optionally, you could mark the available_copy as 'RESERVED_FOR_REQUEST' temporarily
+        # available_copy.status = 'Reserved' # Or a new status 'PendingApproval'
+        # available_copy.save()
+        # This needs careful thought: if many request at once, which one gets it?
+        # For now, we assume staff will see multiple requests if copies are available and pick.
+        # Or, only one request per copy. A better system might lock the copy during request.
+
+        messages.success(request, _(f"Your request to borrow '{book.title}' (Copy ID: {available_copy.copy_id}) has been submitted. Please await staff approval. You requested to return it by {due_date.strftime('%B %d, %Y')}."))
+        # Redirect to "My Borrowings" or "My Pending Requests" page
+        return redirect('books:portal_book_detail', isbn=book_isbn) 
+
+    except Exception as e:
+        messages.error(request, _(f"An error occurred while submitting your request: {e}"))
+        return redirect('books:portal_book_detail', isbn=book_isbn)
+
 
 @login_required
 def renew_book_view(request, borrowing_id): # Placeholder
@@ -835,22 +905,42 @@ def staff_return_book_view(request): # Placeholder - requires a form
     return render(request, 'books/dashboard/circulation/return_book.html', context)
 
 class StaffPendingRequestsView(StaffRequiredMixin, ListView):
-    """Displays borrow requests awaiting staff approval."""
+    """
+    Displays a list of borrow requests that are pending staff approval.
+    Ordered by the oldest request first.
+    """
     model = Borrowing
     template_name = 'books/dashboard/circulation/pending_requests.html'
     context_object_name = 'pending_requests'
     paginate_by = 10
 
     def get_queryset(self):
-        return Borrowing.objects.filter(status='REQUESTED').select_related('borrower', 'book_copy__book').order_by('issue_date')
+        # Order by request_date to show oldest requests first (First Come, First Served)
+        queryset = Borrowing.objects.filter(status='REQUESTED') \
+                                    .select_related('borrower', 'book_copy__book') \
+                                    .order_by('request_date')
+        
+        # Optional: Add search/filter by borrower username or book title
+        search_term = self.request.GET.get('search', '').strip()
+        if search_term:
+            queryset = queryset.filter(
+                Q(borrower__username__icontains=search_term) |
+                Q(book_copy__book__title__icontains=search_term) |
+                Q(book_copy__copy_id__icontains=search_term)
+            )
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Pending Borrow Requests')
+        context['current_search'] = self.request.GET.get('search', '')
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params'] = query_params.urlencode()
         return context
 
-@login_required
 @user_passes_test(is_staff_user)
+@require_POST
 def staff_approve_request_view(request, borrowing_id):
     """Approves a pending borrow request."""
     borrowing_request = get_object_or_404(Borrowing, id=borrowing_id, status='REQUESTED')
@@ -861,6 +951,8 @@ def staff_approve_request_view(request, borrowing_id):
         borrowing_request.save()
         book_copy.status = 'On Loan'
         book_copy.save()
+        book_title = book_copy.book
+        Book.objects.filter(pk=book_title.pk).update(total_borrows=F('total_borrows') + 1)
         Notification.objects.create(
             recipient=borrowing_request.borrower,
             notification_type='BORROW_APPROVED',
@@ -879,8 +971,8 @@ def staff_approve_request_view(request, borrowing_id):
         messages.error(request, _(f"Could not approve. Copy '{book_copy.copy_id}' is not available."))
     return redirect('books:dashboard_pending_requests')
 
-@login_required
 @user_passes_test(is_staff_user)
+@require_POST
 def staff_reject_request_view(request, borrowing_id):
     """Rejects a pending borrow request."""
     borrowing_request = get_object_or_404(Borrowing, id=borrowing_id, status='REQUESTED')

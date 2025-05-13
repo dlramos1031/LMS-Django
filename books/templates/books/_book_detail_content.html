@@ -150,7 +150,7 @@
     <div class="modal fade" id="borrowBookModal" tabindex="-1" aria-labelledby="borrowBookModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
-          <form method="post" action="{% url 'books:portal_catalog' %}"> {# URL for borrow request #}
+          <form method="post" action="{% url 'books:portal_borrow_request' %}"> {# URL for borrow request #}
             {% csrf_token %}
             <input type="hidden" name="book_isbn" value="{{ book.isbn }}">
             <div class="modal-header">

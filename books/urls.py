@@ -7,9 +7,8 @@ urlpatterns = [
     # Borrower Web Portal
     path('', views.BookPortalCatalogView.as_view(), name='portal_catalog'),
     path('book/<slug:isbn>/', views.BookPortalDetailView.as_view(), name='portal_book_detail'),
-    path('book/<slug:isbn>/reserve/', views.reserve_book_view, name='portal_book_reserve'),
-    path('borrowing/<int:borrowing_id>/renew/', views.renew_book_view, name='portal_borrowing_renew'),
-    
+    path('borrow-request/submit/', views.portal_create_borrow_request_view, name='portal_borrow_request'),
+    path('borrowing/<int:borrowing_id>/renew/', views.renew_book_view, name='portal_borrow_renew'),
     path('author/<int:pk>/', views.PortalAuthorDetailView.as_view(), name='portal_author_detail'),
     path('category/<int:pk>/', views.PortalCategoryDetailView.as_view(), name='portal_category_detail'),
 
