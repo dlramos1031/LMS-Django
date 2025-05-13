@@ -1,0 +1,9 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block portal_title %}{{ book.title }} - LMS Portal{% endblock %}
+
+{% block portal_content %}
+    {% include "books/_book_detail_content.html" %}
+{% endblock portal_content %}

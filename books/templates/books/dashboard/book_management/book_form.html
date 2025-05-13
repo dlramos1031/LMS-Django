@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}
+    {% if form_mode == 'create' %}Add New Book Title{% else %}Edit Book: {{ form.instance.title }}{% endif %}
+{% endblock %}
+
+{% block dashboard_page_title_main %}
+    {% if form_mode == 'create' %}Add New Book Title{% else %}Edit: <span class="text-muted">{{ form.instance.title }}</span>{% endif %}
+{% endblock %}
+
+{% block dashboard_page_actions %}
+    {% if form_mode != 'create' %}
+    <a href="{% url 'books:dashboard_bookcopy_list' isbn=book.isbn %}" class="btn btn-outline-info me-2">
+        <i class="bi bi-journal-text"></i> Manage Book copies
+    </a>
+    {% endif %}
+    <a href="{% url 'books:dashboard_book_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to Book List
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+<form method="post" enctype="multipart/form-data"> {# Add enctype if you plan to handle actual image uploads later #}
+    {% csrf_token %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Book Title Information</h5>
+        </div>
+        <div class="card-body">
+            {% if form.instance.pk and form.instance.cover_image %}
+            <div class="mb-3 row">
+                <label class="col-sm-3 col-form-label">Current Cover:</label>
+                <div class="col-sm-9">
+                    <img src="{{ form.instance.cover_image.url }}" alt="Current cover for {{ form.instance.title }}" style="max-height: 150px; border-radius: var(--bs-border-radius);">
+                </div>
+            </div>
+            {% endif %}
+            {% bootstrap_form form layout='horizontal' %}
+        </div>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi {% if form_mode == 'create' %}bi-plus-lg{% else %}bi-check-lg{% endif %}"></i>
+                {% if form_mode == 'create' %}Save New Book{% else %}Save Changes{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+
+{% endblock dashboard_content_main %}
+
+{% block modals %}{% endblock modals %}
+
+{% block javascript %}
+{{ block.super }}
+{# Add any specific JS for this page, e.g., for Select2 if you use it for authors/categories #}
+<script>
+    // Example for initializing Select2 if you were to use it (requires including Select2 JS/CSS)
+    // $(document).ready(function() {
+    //     $('.select2-multiple').select2({
+    //         theme: "bootstrap-5"
+    //     });
+    // });
+</script>
+{% endblock javascript %}

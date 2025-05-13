@@ -1,40 +1,51 @@
 from django.urls import path
-from .views import (
-    books_list_view,
-    book_detail_view,
-    borrow_book_view,
-    librarian_dashboard_view,
-    approve_borrow_view,
-    reject_borrow_view,
-    mark_returned_view,
-    add_book_view,
-    edit_book_view,
-    delete_book_view,
-    dashboard_pending_view,
-    dashboard_active_view,
-    dashboard_history_view,
-    dashboard_books_view,
-)
+from . import views
+
+app_name = 'books'
 
 urlpatterns = [
-    # Book List & Detail
-    path('books/', books_list_view, name='books_list'),
-    path('books/<int:pk>/', book_detail_view, name='book_detail'),
-    path('books/<int:pk>/borrow/', borrow_book_view, name='borrow_book'),
+    # Borrower Web Portal
+    path('', views.BookPortalCatalogView.as_view(), name='portal_catalog'),
+    path('book/<slug:isbn>/', views.BookPortalDetailView.as_view(), name='portal_book_detail'),
+    path('borrow-request/submit/', views.portal_create_borrow_request_view, name='portal_borrow_request'),
+    path('borrowing/<int:borrowing_id>/renew/', views.renew_book_view, name='portal_borrow_renew'),
+    path('author/<int:pk>/', views.PortalAuthorDetailView.as_view(), name='portal_author_detail'),
+    path('category/<int:pk>/', views.PortalCategoryDetailView.as_view(), name='portal_category_detail'),
 
-    # Librarian dashboard & Borrowing Management
-    path('dashboard/', librarian_dashboard_view, name='librarian_dashboard'),
-    path('dashboard/pending/', dashboard_pending_view, name='dashboard_pending'),
-    path('dashboard/active/', dashboard_active_view, name='dashboard_active'),
-    path('dashboard/history/', dashboard_history_view, name='dashboard_history'),
-    path('dashboard/books/', dashboard_books_view, name='dashboard_books'),
+    # Staff Dashboard
+    path('dashboard/', views.staff_dashboard_home_view, name='dashboard_home'),
 
-    path('dashboard/approve/<int:borrow_id>/', approve_borrow_view, name='approve_borrow'),
-    path('dashboard/reject/<int:borrow_id>/', reject_borrow_view, name='reject_borrow'),
-    path('dashboard/return/<int:borrow_id>/', mark_returned_view, name='mark_returned'),
+    # Book & Collection Management (Staff)
+    path('dashboard/books/', views.StaffBookListView.as_view(), name='dashboard_book_list'),
+    path('dashboard/books/add/', views.StaffBookCreateView.as_view(), name='dashboard_book_add'),
+    path('dashboard/books/view/<slug:isbn>/', views.StaffBookDetailView.as_view(), name='dashboard_book_detail'),
+    path('dashboard/books/edit/<slug:isbn>/', views.StaffBookUpdateView.as_view(), name='dashboard_book_edit'),
+    path('dashboard/books/delete/<slug:isbn>/confirm/', views.StaffBookDeleteView.as_view(), name='dashboard_book_delete_confirm'),
 
-    # Dashboard Book Management
-    path('dashboard/books/add/', add_book_view, name='add_book'),
-    path('dashboard/books/<int:book_id>/edit/', edit_book_view, name='edit_book'),
-    path('dashboard/books/<int:book_id>/delete/', delete_book_view, name='delete_book'),
+    path('dashboard/book-copies/<slug:isbn>/', views.StaffBookCopiesManageView.as_view(), name='dashboard_bookcopy_list'),
+    path('dashboard/book-copies/add/<slug:book_isbn>/', views.StaffBookCopyCreateView.as_view(), name='dashboard_bookcopy_add'),
+    path('dashboard/book-copies/edit/<int:pk>/', views.StaffBookCopyUpdateView.as_view(), name='dashboard_bookcopy_edit'),
+    path('dashboard/book-copies/delete/<int:pk>/confirm/', views.StaffBookCopyDeleteView.as_view(), name='dashboard_bookcopy_delete_confirm'),
+
+    path('dashboard/categories/', views.StaffCategoryListView.as_view(), name='dashboard_category_list'),
+    path('dashboard/categories/add/', views.StaffCategoryCreateView.as_view(), name='dashboard_category_add'),
+    path('dashboard/categories/view/<int:pk>/', views.StaffCategoryDetailView.as_view(), name='dashboard_category_detail'),
+    path('dashboard/categories/edit/<int:pk>/', views.StaffCategoryUpdateView.as_view(), name='dashboard_category_edit'),
+    path('dashboard/categories/delete/<int:pk>/confirm/', views.StaffCategoryDeleteView.as_view(), name='dashboard_category_delete_confirm'),
+
+    path('dashboard/authors/', views.StaffAuthorListView.as_view(), name='dashboard_author_list'),
+    path('dashboard/authors/add/', views.StaffAuthorCreateView.as_view(), name='dashboard_author_add'),
+    path('dashboard/authors/view/<int:pk>/', views.StaffAuthorDetailView.as_view(), name='dashboard_author_detail'),
+    path('dashboard/authors/edit/<int:pk>/', views.StaffAuthorUpdateView.as_view(), name='dashboard_author_edit'),
+    path('dashboard/authors/delete/<int:pk>/confirm/', views.StaffAuthorDeleteView.as_view(), name='dashboard_author_delete_confirm'),
+
+    # Circulation Management (Staff)
+    path('dashboard/circulation/issue/', views.staff_issue_book_view, name='dashboard_circulation_issue'),
+    path('dashboard/circulation/return/', views.staff_return_book_view, name='dashboard_circulation_return'),
+    path('dashboard/circulation/pending/', views.StaffPendingRequestsView.as_view(), name='dashboard_pending_requests'),
+    path('dashboard/circulation/pending/approve/<int:borrowing_id>/', views.staff_approve_request_view, name='dashboard_approve_request'),
+    path('dashboard/circulation/pending/reject/<int:borrowing_id>/', views.staff_reject_request_view, name='dashboard_reject_request'),
+    path('dashboard/circulation/active-loans/', views.StaffActiveLoansView.as_view(), name='dashboard_active_loans'),
+    path('dashboard/circulation/active-loans/mark-returned/<int:borrowing_id>/', views.staff_mark_loan_returned_view, name='dashboard_mark_loan_returned'),
+    path('dashboard/circulation/history/', views.StaffBorrowingHistoryView.as_view(), name='dashboard_borrowing_history'),
 ]

@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block title %}Register - LMS{% endblock %}
+
+{% block content_body %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="card-title text-center mb-4">Create Your Library Account</h3>
+
+                    {% if form.non_field_errors %}
+                      <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                          <p class="mb-0">{{ error }}</p>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
+                    {% bootstrap_messages %}
+
+                    <form method="post" action="{% url 'users:register' %}" id="register-form" novalidate>
+                        {% csrf_token %}
+
+                        {# Render general form errors if not using bootstrap_form #}
+                        {# {% if form.errors and not form.is_bound %} #}
+                        {# <div class="alert alert-danger">{{ form.non_field_errors }}</div> #}
+                        {# {% endif %} #}
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {% bootstrap_field form.first_name layout='horizontal' %}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form.last_name layout='horizontal' %}
+                            </div>
+
+                            <div class="col-12">
+                                {% bootstrap_field form.username layout='horizontal' %}
+                                <div id="username-feedback" class="invalid-feedback d-block"></div> {# For JS validation message #}
+                            </div>
+
+                            <div class="col-12">
+                                {% bootstrap_field form.email layout='horizontal' %}
+                                <div id="email-feedback" class="invalid-feedback d-block"></div> {# For JS validation message #}
+                            </div>
+
+                            <div class="col-md-6">
+                                {% bootstrap_field form.password1 layout='horizontal' %}
+                                <div id="password-strength" class="form-text mt-1"></div> {# For JS password strength #}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form.password2 layout='horizontal' %}
+                                <div id="password-match" class="form-text mt-1"></div> {# For JS password match #}
+                            </div>
+
+                             {# Include other fields from UserRegistrationForm if you added them, like middle_initial, suffix #}
+                            {# Example for middle_initial #}
+                            {# <div class="col-md-6"> #}
+                            {# {% bootstrap_field form.middle_initial layout='horizontal' %} #}
+                            {# </div> #}
+                            {# <div class="col-md-6"> #}
+                            {# {% bootstrap_field form.suffix layout='horizontal' %} #}
+                            {# </div> #}
+
+                        </div>
+
+                        <div class="d-grid mt-4 mb-3">
+                            <button type="submit" class="btn btn-primary btn-block" id="register-btn">Register</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <small class="text-muted">
+                        Already have an account? <a href="{% url 'users:login' %}" class="text-decoration-none">Login here</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Your existing JavaScript for registration form validation can remain here.
+    // Ensure API endpoints in fetch calls are correct (e.g., /api/auth/check-username/)
+    // and that these endpoints are defined in users/api_urls.py
+
+    const form = document.getElementById("register-form");
+    const usernameInput = form.elements.namedItem("username"); // More robust way to get form elements
+    const emailInput = form.elements.namedItem("email");
+    const passwordInput = form.elements.namedItem("password1"); // Assuming your form field is named 'password'
+    const confirmPasswordInput = form.elements.namedItem("password2"); // Assuming your form field is 'password2'
+    
+    const usernameFeedback = document.getElementById("username-feedback");
+    const emailFeedback = document.getElementById("email-feedback");
+    const strengthText = document.getElementById("password-strength");
+    const matchText = document.getElementById("password-match");
+    const registerBtn = document.getElementById("register-btn");
+
+    function updatePasswordStrength(pass) {
+      let strength = 0;
+      if (pass.length >= 8) strength++;
+      if (pass.match(/[a-z]/) && pass.match(/[A-Z]/)) strength++;
+      if (pass.match(/\d/)) strength++;
+      if (pass.match(/[^a-zA-Z\d]/)) strength++;
+
+      let strengthLabel = "Weak";
+      let strengthColor = "text-danger";
+      if (strength === 4) { strengthLabel = "Very Strong"; strengthColor = "text-success"; }
+      else if (strength === 3) { strengthLabel = "Strong"; strengthColor = "text-success"; }
+      else if (strength === 2) { strengthLabel = "Moderate"; strengthColor = "text-warning"; }
+      
+      strengthText.textContent = "Strength: " + strengthLabel;
+      strengthText.className = `form-text mt-1 ${strengthColor}`;
+      return strength >=2; // Consider moderate as minimum
+    }
+
+    function checkPasswordMatch() {
+      if (passwordInput.value === confirmPasswordInput.value && confirmPasswordInput.value.length > 0) {
+        matchText.textContent = "Passwords match ✅";
+        matchText.className = "form-text mt-1 text-success";
+        confirmPasswordInput.classList.remove("is-invalid");
+        confirmPasswordInput.classList.add("is-valid");
+        return true;
+      } else if (confirmPasswordInput.value.length > 0) {
+        matchText.textContent = "Passwords do not match ❌";
+        matchText.className = "form-text mt-1 text-danger";
+        confirmPasswordInput.classList.remove("is-valid");
+        confirmPasswordInput.classList.add("is-invalid");
+        return false;
+      } else {
+        matchText.textContent = "";
+        confirmPasswordInput.classList.remove("is-valid", "is-invalid");
+        return false;
+      }
+    }
+
+    async function checkAvailability(field, endpoint, feedbackElement) {
+        const value = field.value.trim();
+        if (!value) {
+            field.classList.remove("is-valid", "is-invalid");
+            feedbackElement.textContent = "";
+            return true; // Or false if required
+        }
+        try {
+            const response = await fetch(`${endpoint}?value=${encodeURIComponent(value)}`); // Adjust query param if needed
+            const data = await response.json();
+            if (data.exists) {
+                field.classList.add("is-invalid");
+                field.classList.remove("is-valid");
+                feedbackElement.textContent = `${field.name.charAt(0).toUpperCase() + field.name.slice(1)} is already taken.`;
+                return false;
+            } else {
+                field.classList.add("is-valid");
+                field.classList.remove("is-invalid");
+                feedbackElement.textContent = "";
+                return true;
+            }
+        } catch (error) {
+            console.error("Availability check error:", error);
+            feedbackElement.textContent = "Could not verify. Please try again.";
+            field.classList.add("is-invalid");
+            field.classList.remove("is-valid");
+            return false;
+        }
+    }
+    
+    let usernameTimeout, emailTimeout;
+
+    if(usernameInput) {
+        usernameInput.addEventListener("input", () => {
+            clearTimeout(usernameTimeout);
+            usernameTimeout = setTimeout(() => checkAvailability(usernameInput, "/api/auth/check-username/", usernameFeedback), 500);
+        });
+    }
+    if(emailInput) {
+        emailInput.addEventListener("input", () => {
+            clearTimeout(emailTimeout);
+            emailTimeout = setTimeout(() => checkAvailability(emailInput, "/api/auth/check-email/", emailFeedback), 500);
+        });
+    }
+    if(passwordInput) passwordInput.addEventListener("input", () => updatePasswordStrength(passwordInput.value));
+    if(confirmPasswordInput) confirmPasswordInput.addEventListener("input", checkPasswordMatch);
+
+    // Initial state for register button (optional: enable only after some validation)
+    // registerBtn.disabled = true; 
+});
+</script>
+{% endblock content_body %}

@@ -1,0 +1,34 @@
+{% extends "dashboard/base.html" %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Confirm Delete User{% endblock %}
+
+{% block dashboard_page_title_main %}Confirm Delete: {{ user_to_delete.username }}{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Warning!</h4>
+    <p>Are you sure you want to permanently delete the user "<strong>{{ user_to_delete.username }}</strong>" ({{ user_to_delete.get_full_name }})?</p>
+    {% if user_to_delete.is_superuser %}
+        <p class="fw-bold text-danger">This user is a Superuser. Deleting them can have significant consequences.</p>
+    {% elif user_to_delete.is_staff %}
+        <p class="fw-bold">This user is a Staff member.</p>
+    {% endif %}
+    {# Add checks for active borrowings if it's a borrower #}
+    {# {% if user_to_delete.role == 'BORROWER' and user_to_delete.borrowings.exists_active_loan %} #}
+    {# <p class="fw-bold">This borrower has active loans. Deleting them might orphan records.</p> #}
+    {# {% endif %} #}
+    <hr>
+    <p class="mb-0">This action cannot be undone.</p>
+</div>
+
+<form method="post" action="{% url 'users:dashboard_borrower_delete_confirm' pk=user_to_delete.pk %}">
+    {% csrf_token %}
+    <a href="{% url 'users:dashboard_borrower_list' %}" class="btn btn-secondary">
+        <i class="bi bi-x-circle"></i> Cancel
+    </a>
+    <button type="submit" class="btn btn-danger">
+        <i class="bi bi-trash-fill"></i> Yes, Delete This User
+    </button>
+</form>
+{% endblock dashboard_content_main %}

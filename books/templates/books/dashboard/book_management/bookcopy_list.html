@@ -1,0 +1,120 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Manage Copies: {{ book.title }}{% endblock %}
+
+{% block dashboard_page_title_main %}
+    Manage Book Copies</span>
+{% endblock %}
+
+{% block dashboard_page_actions %}
+    <a href="{% url 'books:dashboard_book_edit' isbn=book.isbn %}" class="btn btn-outline-info me-2">
+        <i class="bi bi-journal-text"></i> Edit Book Title Details
+    </a>
+    <a href="{% url 'books:dashboard_book_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to Book Titles
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+
+{# --- Book Title Summary Card --- #}
+<div class="card shadow-sm mb-4">
+    <div class="row g-0">
+        <div class="col-md-2 d-flex align-items-center justify-content-center p-3">
+            {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" class="img-fluid rounded-start" alt="Cover for {{ book.title }}" style="max-height: 180px; object-fit: contain;">
+            {% else %}
+            <div class="bg-light d-flex align-items-center justify-content-center text-secondary" style="height: 180px; width:100%; border-radius: var(--bs-card-inner-border-radius) 0 0 var(--bs-card-inner-border-radius);">
+                <i class="bi bi-book" style="font-size: 4rem;"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-10">
+            <div class="card-body">
+                <h4 class="card-title">{{ book.title }}</h4>
+                <p class="card-text mb-1"><small class="text-muted"><strong>ISBN:</strong> {{ book.isbn }}</small></p>
+                <p class="card-text mb-1">
+                    <small class="text-muted">
+                        <strong>Authors:</strong>
+                        {% for author in book.authors.all %}
+                            {{ author.name }}{% if not forloop.last %}, {% endif %}
+                        {% empty %}
+                            N/A
+                        {% endfor %}
+                    </small>
+                </p>
+                <p class="card-text">
+                    <small class="text-muted">
+                        <strong>Categories:</strong>
+                        {% for cat in book.categories.all|slice:":3" %}
+                            <span class="badge bg-light text-dark me-1 border">{{ cat.name }}</span>
+                        {% empty %}
+                            N/A
+                        {% endfor %}
+                        {% if book.categories.all|length > 3 %}...{% endif %}
+                    </small>
+                </p>
+                <p class="card-text">
+                    <small class="text-muted">
+                        <strong>Total Copies:</strong> {{ book_copies.count }} |
+                        <strong>Available:</strong> <span class="badge {% if book.available_copies_count > 0 %}bg-success{% else %}bg-secondary{% endif %}">{{ book.available_copies_count }}</span>
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{# --- Manage Physical Copies Section --- #}
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-collection-fill me-2"></i>Physical Copies</h5>
+        <a href="{% url 'books:dashboard_bookcopy_add' book_isbn=book.isbn %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus-circle-fill"></i> Add New Copy
+        </a>
+    </div>
+    <div class="card-body p-0"> {# Remove padding for full-width table #}
+        {% if book_copies %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0"> {# mb-0 to remove bottom margin from table #}
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-3">Copy ID</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Date Acquired</th>
+                            <th scope="col">Condition Notes</th>
+                            <th scope="col" class="text-center pe-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for copy in book_copies %}
+                        <tr>
+                            <td class="ps-3">{{ copy.copy_id }}</td>
+                            <td><span class="badge bg-{% if copy.status == 'Available' %}success{% elif copy.status == 'On Loan'%}warning text-dark{% elif copy.status == 'Reserved'%}info text-dark{% elif copy.status == 'Damaged' or copy.status == 'Lost' %}danger{% else %}secondary{% endif %}">{{ copy.get_status_display }}</span></td>
+                            <td>{{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }}</td>
+                            <td>{{ copy.condition_notes|truncatechars:40|default:"-" }}</td>
+                            <td class="text-center pe-3">
+                                <a href="{% url 'books:dashboard_bookcopy_edit' pk=copy.pk %}" class="btn btn-sm btn-outline-primary me-1 py-0 px-1" title="Edit Copy {{copy.copy_id}}">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'books:dashboard_bookcopy_delete_confirm' pk=copy.pk %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete Copy {{copy.copy_id}}">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-3">
+                 <p class="text-muted mb-0">No physical copies have been added for this book title yet. Click "Add New Copy" above to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock dashboard_content_main %}

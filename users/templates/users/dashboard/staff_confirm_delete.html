@@ -1,0 +1,29 @@
+{% extends "dashboard/base.html" %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Confirm Delete Staff Member{% endblock %}
+
+{% block dashboard_page_title_main %}Confirm Delete Staff: {{ user_to_delete.username }}{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Warning! This is an Administrative Action!</h4>
+    <p>Are you sure you want to permanently delete the staff account for "<strong>{{ user_to_delete.username }}</strong>" ({{ user_to_delete.get_full_name }})?</p>
+    <p>Role: <strong>{{ user_to_delete.get_role_display }}</strong></p>
+    {% if user_to_delete.is_superuser %}
+        <p class="fw-bold text-danger">This user is a Superuser. Deleting them can have significant impact on system administration.</p>
+    {% endif %}
+    <hr>
+    <p class="mb-0">This action cannot be undone.</p>
+</div>
+
+<form method="post" action="{% url 'users:dashboard_staff_delete_confirm' pk=user_to_delete.pk %}">
+    {% csrf_token %}
+    <a href="{% url 'users:dashboard_staff_list' %}" class="btn btn-secondary">
+        <i class="bi bi-x-circle"></i> Cancel
+    </a>
+    <button type="submit" class="btn btn-danger">
+        <i class="bi bi-trash-fill"></i> Yes, Delete This Staff Account
+    </button>
+</form>
+{% endblock dashboard_content_main %}

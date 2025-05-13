@@ -1,0 +1,134 @@
+{% load static %}
+{% load bootstrap5 %}
+
+{# This template expects: #}
+{# - profile_user: The CustomUser object whose profile is being viewed. #}
+{# - view_context: 'portal' or 'dashboard'. #}
+{# - is_own_profile: Boolean, true if request.user is viewing their own profile. #}
+{# - can_edit_this_profile: Boolean, true if request.user has permission to edit profile_user (dashboard context). #}
+{# - borrowings: Queryset of borrowing records for profile_user (can be paginated). #}
+{# - back_url: URL for the back button. #}
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body text-center">
+                    {% if profile_user.profile_picture %}
+                        <img src="{{ profile_user.profile_picture.url }}" alt="{{ profile_user.username }}"
+                             class="rounded-circle img-fluid mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="d-flex justify-content-center align-items-center">
+                            <div class="rounded-circle bg-secondary text-light mb-3"
+                                style="width: 150px; height: 150px;">
+                                <i class="bi bi-person-fill" style="font-size: 5rem;"></i>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <h4 class="card-title mb-1">{{ profile_user.get_full_name|default:profile_user.username }}</h4>
+                    <p class="text-muted mb-2">@{{ profile_user.username }}</p>
+                    <span class="badge 
+                        {% if profile_user.role == 'ADMIN' %}bg-danger
+                        {% elif profile_user.role == 'LIBRARIAN' %}bg-info text-dark
+                        {% else %}bg-primary{% endif %} mb-3">{{ profile_user.get_role_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Contact & Library Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Full Name:</dt>
+                        <dd class="col-sm-8">{{ profile_user.get_full_name|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-3">Email:</dt>
+                        <dd class="col-sm-8">{{ profile_user.email|default:"N/A" }}</dd>
+
+                        <dt class="col-sm-3">Phone Number:</dt>
+                        <dd class="col-sm-8">{{ profile_user.phone_number|default:"N/A" }}</dd>
+
+                        {% if profile_user.role == 'BORROWER' and not profile_user.is_staff %}
+                            <dt class="col-sm-3">{{ profile_user.borrower_id_label|default:"Library ID" }}:</dt>
+                            <dd class="col-sm-8">{{ profile_user.borrower_id_value|default:"N/A" }}</dd>
+
+                            <dt class="col-sm-3">Borrower Type:</dt>
+                            <dd class="col-sm-8">{{ profile_user.get_borrower_type_display|default:"N/A" }}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-3">Date Joined:</dt>
+                        <dd class="col-sm-8">{{ profile_user.date_joined|date:"F j, Y" }}</dd>
+                        
+                        {% if profile_user.role == 'BORROWER' and not profile_user.is_staff %}
+                            <dt class="col-sm-3">Physical Address:</dt>
+                            <dd class="col-sm-8">{{ profile_user.physical_address|linebreaksbr|default:"N/A" }}</dd>
+
+                            <dt class="col-sm-3">Birth Date:</dt>
+                            <dd class="col-sm-8">{{ profile_user.birth_date|date:"F j, Y"|default:"N/A" }}</dd>
+                        {% endif %}
+
+                        {% if view_context == 'dashboard' %}
+                            <dt class="col-sm-3">Staff Status:</dt>
+                            <dd class="col-sm-8">{% if profile_user.is_staff %}Yes{% else %}No{% endif %}</dd>
+                            <dt class="col-sm-3">Superuser Status:</dt>
+                            <dd class="col-sm-8">{% if profile_user.is_superuser %}Yes{% else %}No{% endif %}</dd>
+                            <dt class="col-sm-3">Active Account:</dt>
+                            <dd class="col-sm-8">{% if profile_user.is_active %}Yes{% else %}No{% endif %}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+        </div>
+        {# Borrowing Activity #}
+        {% if profile_user.role == 'BORROWER' and not profile_user.is_staff %}
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Borrowing Activity for {{profile_user.username}}</h5>
+                {% if is_own_profile and view_context == 'portal' %}
+                    <a href="{% url 'users:my_borrowings' %}" class="btn btn-sm btn-outline-primary">View All My History</a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if borrowings %}
+                    <ul class="list-group list-group-flush">
+                        {% for borrowing in borrowings %} {# Display more if paginated, or slice if not #}
+                            <li class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
+                                            {{ borrowing.book_copy.book.title }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">{{ borrowing.issue_date|timesince }} ago</small>
+                                </div>
+                                <p class="mb-1">
+                                    Status: <span class="fw-bold 
+                                        {% if borrowing.status == 'ACTIVE' %}text-success{% elif borrowing.status == 'OVERDUE'%}text-danger{% elif borrowing.status == 'REQUESTED'%}text-warning{% else %}text-secondary{% endif %}">
+                                        {{ borrowing.get_status_display }}
+                                    </span>
+                                    {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
+                                        - Due: {{ borrowing.due_date|date:"F j, Y" }}
+                                    {% elif borrowing.status == 'RETURNED' or borrowing.status == 'RETURNED_LATE' %}
+                                        - Returned: {{ borrowing.actual_return_date|date:"F j, Y" }}
+                                    {% endif %}
+                                </p>
+                                {% if view_context == 'dashboard' and borrowing.status in "ACTIVE,OVERDUE" %}
+                                <small><a href="{% url 'books:dashboard_mark_loan_returned' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-success mt-1">Mark Returned</a></small>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    {% if borrowings.has_other_pages and view_context == 'dashboard' %} {# Example if borrowings is paginated for dashboard view #}
+                        {% include "dashboard/_includes/pagination_component.html" with page_obj=borrowings other_query_params="" %}
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No borrowing activity found for this user.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>

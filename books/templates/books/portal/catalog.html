@@ -1,0 +1,60 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block portal_title %}Book Catalog{% endblock %}
+
+{% block portal_content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-6">Explore Our Collection</h1>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <form method="get" action="{% url 'books:portal_catalog' %}">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Search by title, author, ISBN..." value="{{ search_term|default:'' }}">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-4">
+            <form method="get" id="categoryFilterForm" action="{% url 'books:portal_catalog' %}">
+                 {% if search_term %} {# Preserve search term when filtering by category #}
+                    <input type="hidden" name="q" value="{{ search_term|default:'' }}">
+                {% endif %}
+                <select name="category" class="form-select" onchange="document.getElementById('categoryFilterForm').submit();">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category_id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    {% if books %}
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {% for book_item in books %} {# Ensure your BookPortalCatalogView uses 'books' as context_object_name #}
+                <div class="col">
+                    {% include "books/portal/_book_card.html" with book=book_item %}
+                </div>
+            {% endfor %}
+        </div>
+
+        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj url_name="books:portal_catalog" %}
+
+    {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-bookshelf h1 text-muted mb-3"></i>
+            <p class="lead">No books found matching your criteria.</p>
+            {% if search_term or selected_category_id %}
+                <a href="{% url 'books:portal_catalog' %}" class="btn btn-outline-secondary">Clear Filters & Search</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock portal_content %}

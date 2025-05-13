@@ -1,31 +1,41 @@
 from django.urls import path
-from .views import (
-    register_view, 
-    user_profile_view, 
-    add_user_view, 
-    edit_user_view, 
-    delete_user_view, 
-    edit_profile_view,
-    dashboard_users_view,
-    CustomPasswordChangeView, 
-    CustomLoginViewWeb
-)
-from django.contrib.auth.views import LogoutView as DjangoLogoutView
+from . import views
+# from django.contrib.auth import views as auth_views # If using built-in views for password reset
+
+app_name = 'users'
 
 urlpatterns = [
-    # Web auth
-    path('register/', register_view, name='register'),
-    path('login/', CustomLoginViewWeb.as_view(), name='login'),
-    path('logout/', DjangoLogoutView.as_view(next_page='login'), name='logout'),
-    path('change-password/', CustomPasswordChangeView.as_view(), name='change_password'),
+    # --- Borrower Web Portal & General Auth URLs ---
+    path('register/', views.user_register_view, name='register'),
+    path('login/', views.user_login_view, name='login'),
+    path('logout/', views.user_logout_view, name='logout'),
+    path('password_change/', views.change_password_view, name='password_change'),
 
-    # Profile
-    path('profile/<int:user_id>/', user_profile_view, name='user_profile'),
-    path('profile/<int:user_id>/edit', edit_profile_view, name='edit_profile'),
+    path('staff_login/', views.staff_login_view, name='staff_login'),
+    
+    # --- Borrower Profile and Borrowing URLs ---
+    path('profile/', views.user_profile_view, name='my_profile'),
+    path('profile/edit/', views.user_profile_edit_view, name='edit_my_profile'),
+    path('my-borrowings/', views.my_borrowings_view, name='my_borrowings'),
+    path('my-reservations/', views.my_reservations_view, name='my_reservations'),
 
-    # Dashboard user management
-    path('dashboard/users/', dashboard_users_view, name='dashboard_users'),
-    path('dashboard/users/add/', add_user_view, name='add_user'),
-    path('dashboard/users/<int:user_id>/edit/', edit_user_view, name='edit_user'),
-    path('dashboard/users/<int:user_id>/delete/', delete_user_view, name='delete_user'),
+    # Example for Django's built-in password reset (ensure templates are in registration/ directory)
+    # path('password_reset/', auth_views.PasswordResetView.as_view(template_name='users/registration/password_reset_form.html', email_template_name='users/registration/password_reset_email.html', subject_template_name='users/registration/password_reset_subject.txt', success_url=reverse_lazy('users:password_reset_done')), name='password_reset'),
+    # path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='users/registration/password_reset_done.html'), name='password_reset_done'),
+    # path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='users/registration/password_reset_confirm.html', success_url=reverse_lazy('users:password_reset_complete')), name='password_reset_confirm'),
+    # path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='users/registration/password_reset_complete.html'), name='password_reset_complete'),
+    # ... other password reset views from django.contrib.auth.urls ...
+
+    # --- Staff Dashboard: Borrower Management URLs ---
+    path('dashboard/borrowers/', views.StaffBorrowerListView.as_view(), name='dashboard_borrower_list'),
+    path('dashboard/borrowers/add/', views.StaffBorrowerCreateView.as_view(), name='dashboard_borrower_add'),
+    path('dashboard/borrowers/view/<int:pk>/', views.StaffUserDetailView.as_view(), name='dashboard_borrower_detail'),
+    path('dashboard/borrowers/edit/<int:pk>/', views.StaffBorrowerUpdateView.as_view(), name='dashboard_borrower_edit'),
+    path('dashboard/borrowers/delete/<int:pk>/confirm/', views.StaffBorrowerDeleteView.as_view(), name='dashboard_borrower_delete_confirm'),
+
+    # --- Staff Dashboard: Staff Management URLs (Admin Only) ---
+    path('dashboard/staff/', views.AdminStaffListView.as_view(), name='dashboard_staff_list'),
+    path('dashboard/staff/add/', views.AdminStaffCreateView.as_view(), name='dashboard_staff_add'),
+    path('dashboard/staff/edit/<int:pk>/', views.AdminStaffUpdateView.as_view(), name='dashboard_staff_edit'),
+    path('dashboard/staff/delete/<int:pk>/confirm/', views.AdminStaffDeleteView.as_view(), name='dashboard_staff_delete_confirm'),
 ]

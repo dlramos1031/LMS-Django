@@ -1,0 +1,11 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{# Expects: author, view_context='portal', can_edit_this_object=False, books_by_author, back_url from PortalAuthorDetailView #}
+
+{% block portal_title %}Author: {{ author.name }}{% endblock %}
+
+{% block portal_content %}
+    {% include "books/_author_detail_content.html" %}
+{% endblock portal_content %}

@@ -1,0 +1,26 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Book Details: {{ book.title }}{% endblock %}
+
+{% block dashboard_page_title_main %}Book Details: <span class="text-muted">{{ book.title }}</span>{% endblock %}
+
+{% block dashboard_page_actions %}
+    {% if can_edit_this_object %}
+    <a href="{% url 'books:dashboard_book_edit' isbn=book.isbn %}" class="btn btn-primary me-2">
+        <i class="bi bi-pencil-square"></i> Edit Book
+    </a>
+    {% endif %}
+    {% if back_url %}
+        <a href="{{ back_url }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left-circle"></i> Back to Book List
+        </a>
+    {% endif %}
+{% endblock %}
+
+{# No dashboard_page_actions here unless you want specific actions for the view-only page itself #}
+
+{% block dashboard_content_main %}
+    {% include "books/_book_detail_content.html" %}
+{% endblock dashboard_content_main %}

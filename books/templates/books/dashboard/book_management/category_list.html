@@ -1,0 +1,60 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Manage Categories{% endblock %}
+
+{% block dashboard_page_title_main %}Manage Book Categories{% endblock %}
+
+{% block dashboard_page_actions %}
+    <a href="{% url 'books:dashboard_category_add' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle-fill"></i> Add New Category
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+    {# Optional: Add a search/filter form here if desired #}
+
+    <div class="table-responsive mt-3">
+        <table class="table table-striped table-hover table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th class="text-center">Book Count</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category_item in categories %} {# Or page_obj.object_list #}
+                <tr>
+                    <td>
+                        <a href="{% url 'books:dashboard_category_detail' pk=category_item.pk %}">{{ category_item.name }}</a>
+                    </td>
+                    <td>{{ category_item.description|truncatechars:100|default:"N/A" }}</td>
+                    <td class="text-center">{{ category_item.books.count }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'books:dashboard_category_edit' pk=category_item.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Category">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="{% url 'books:dashboard_category_delete_confirm' pk=category_item.pk %}" class="btn btn-sm btn-outline-danger" title="Delete Category">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No categories found. <a href="{% url 'books:dashboard_category_add' %}">Add the first one!</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj %}
+        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj %}
+    {% endif %}
+
+{% endblock dashboard_content_main %}

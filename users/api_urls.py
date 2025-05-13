@@ -1,22 +1,22 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
-    RegisterView,
-    CustomLoginView,
-    LogoutView,
-    CustomPasswordChangeView,
-    UserProfileView,
-    RegisterDeviceView,
-    check_username,
-    check_email,
+    UserRegistrationAPIView,
+    UserLoginAPIView,
+    UserLogoutAPIView,
+    UserProfileAPIView,
+    ChangePasswordAPIView,
+    UserDeviceViewSet
 )
 
+router = DefaultRouter()
+router.register(r'devices', UserDeviceViewSet, basename='userdevice')
+
 urlpatterns = [
-    path('register/', RegisterView.as_view(), name='api_register'),
-    path('login/', CustomLoginView.as_view(), name='api_login'),
-    path('logout/', LogoutView.as_view(), name='api_logout'),
-    path('change-password/', CustomPasswordChangeView.as_view(), name='api_change_password'),
-    path('check-username/', check_username, name='check_username'),
-    path('check-email/', check_email, name='check_email'),
-    path('profile/', UserProfileView.as_view(), name='api_user_profile'),
-    path('device/register/', RegisterDeviceView.as_view(), name='device-register'),
+    path('register/', UserRegistrationAPIView.as_view(), name='api_user_register'),
+    path('login/', UserLoginAPIView.as_view(), name='api_user_login'),
+    path('logout/', UserLogoutAPIView.as_view(), name='api_user_logout'),
+    path('profile/', UserProfileAPIView.as_view(), name='api_user_profile'),
+    path('change-password/', ChangePasswordAPIView.as_view(), name='api_change_password'),
+    path('', include(router.urls)),
 ]

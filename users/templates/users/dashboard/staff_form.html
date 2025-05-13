@@ -1,0 +1,41 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}
+    {% if form_mode == 'create' %}Add New Staff Member{% else %}Edit Staff: {{ form.instance.username }}{% endif %}
+{% endblock %}
+
+{% block dashboard_page_title_main %}
+    {% if form_mode == 'create' %}Add New Staff Member{% else %}Edit Staff: <span class="text-muted">{{ form.instance.username }}</span>{% endif %}
+{% endblock %}
+
+{% block dashboard_page_actions %}
+    <a href="{% url 'users:dashboard_staff_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to Staff List
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Staff Account Details</h5>
+        </div>
+        <div class="card-body">
+            {% comment %}
+            The AdminStaffCreateForm and AdminStaffChangeForm will control which fields are shown
+            and how the 'role', 'is_staff', 'is_superuser' fields behave.
+            {% endcomment %}
+            {% bootstrap_form form layout='horizontal' %}
+        </div>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi {% if form_mode == 'create' %}bi-person-plus-fill{% else %}bi-check-lg{% endif %}"></i>
+                {% if form_mode == 'create' %}Create Staff Member{% else %}Save Changes{% endif %}
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock dashboard_content_main %}

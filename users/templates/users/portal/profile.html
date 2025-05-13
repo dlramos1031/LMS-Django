@@ -1,0 +1,11 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{# profile_user, view_context, is_own_profile, borrowings, page_title are passed from user_profile_view #}
+
+{% block portal_title %}{{ page_title|default:profile_user.username }}{% endblock %}
+
+{% block portal_content %}
+    {% include "users/_profile_content.html" %} {# Include the shared content #}
+{% endblock portal_content %}

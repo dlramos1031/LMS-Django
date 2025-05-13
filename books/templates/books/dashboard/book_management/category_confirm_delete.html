@@ -1,0 +1,29 @@
+{% extends "dashboard/base.html" %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Confirm Delete Category{% endblock %}
+
+{% block dashboard_page_title_main %}Confirm Delete: {{ category_to_delete.name }}{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Warning!</h4>
+    <p>Are you sure you want to permanently delete the category "<strong>{{ category_to_delete.name }}</strong>"?</p>
+    {% if category_to_delete.books.count > 0 %}
+        <p class="fw-bold">This category is associated with {{ category_to_delete.books.count }} book{{ category_to_delete.books.count|pluralize }}. Deleting it might affect these books.</p>
+        {# Consider your model's on_delete behavior for Category in Book model #}
+    {% endif %}
+    <hr>
+    <p class="mb-0">This action cannot be undone.</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <a href="{% url 'books:dashboard_category_list' %}" class="btn btn-secondary">
+        <i class="bi bi-x-circle"></i> Cancel
+    </a>
+    <button type="submit" class="btn btn-danger">
+        <i class="bi bi-trash-fill"></i> Yes, Delete This Category
+    </button>
+</form>
+{% endblock dashboard_content_main %}

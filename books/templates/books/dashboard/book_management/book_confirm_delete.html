@@ -1,0 +1,26 @@
+{% extends "dashboard/base.html" %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Confirm Delete Book{% endblock %}
+
+{% block dashboard_page_title_main %}Confirm Delete: {{ book_to_delete.title }}{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="alert alert-danger">
+    <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Warning!</h4>
+    <p>Are you sure you want to permanently delete the book titled "<strong>{{ book_to_delete.title }}</strong>" (ISBN: {{ book_to_delete.isbn }})?</p>
+    <p>This action will also delete all associated physical copies of this book.</p>
+    <hr>
+    <p class="mb-0">This action cannot be undone.</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <a href="{% url 'books:dashboard_book_list' %}" class="btn btn-secondary">
+        <i class="bi bi-x-circle"></i> Cancel
+    </a>
+    <button type="submit" class="btn btn-danger">
+        <i class="bi bi-trash-fill"></i> Yes, Delete This Book
+    </button>
+</form>
+{% endblock dashboard_content_main %}

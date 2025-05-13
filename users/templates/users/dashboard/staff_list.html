@@ -1,0 +1,105 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Manage Staff Accounts{% endblock %}
+
+{% block dashboard_page_title_main %}Manage Staff Accounts (Librarians & Admins){% endblock %}
+
+{% block dashboard_page_actions %}
+    {% if request.user.is_superuser %}
+    <a href="{% url 'users:dashboard_staff_add' %}" class="btn btn-success">
+        <i class="bi bi-person-plus-fill"></i> Add New Staff Member
+    </a>
+    {% endif %}
+{% endblock %}
+
+{% block dashboard_content_main %}
+    {# Optional: Add a search/filter form here if desired for staff list #}
+    {# Consider filtering by role (Librarian/Admin) if the list gets long #}
+    <form method="get" action="{% url 'users:dashboard_staff_list' %}" class="row g-3 align-items-center mb-4 p-3 bg-light border rounded shadow-sm">
+        <div class="col-md-5"> {# Adjusted column size #}
+            <label for="staffSearchInput" class="visually-hidden">Search Staff</label>
+            <input type="text" name="search" class="form-control form-control-sm" id="staffSearchInput" placeholder="Search username, name, email..." value="{{ current_search|default:'' }}">
+        </div>
+        <div class="col-md-4"> {# Added column for role filter #}
+            <label for="staffRoleFilterInput" class="visually-hidden">Filter by Role</label>
+            <select name="staff_role" class="form-select form-select-sm" id="staffRoleFilterInput">
+                <option value="">All Staff Roles</option>
+                {% for role_val, role_disp in staff_role_choices %}
+                    <option value="{{ role_val }}" {% if role_val == current_staff_role_filter %}selected{% endif %}>{{ role_disp }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3"> {# Adjusted column size #}
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Filter/Search</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff_member in staff_members %} {# Or page_obj.object_list #}
+                <tr>
+                    <td>
+                        <a href="{% url 'users:dashboard_borrower_detail' pk=staff_member.pk %}">{{ staff_member.username }}</a>
+                    </td>
+                    <td>{{ staff_member.get_full_name|default:"N/A" }}</td>
+                    <td>{{ staff_member.email|default:"N/A" }}</td>
+                    <td><span class="badge 
+                        {% if staff_member.role == 'ADMIN' %}bg-danger{% elif staff_member.role == 'LIBRARIAN' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                        {{ staff_member.get_role_display }}
+                    </span></td>
+                    <td class="text-center">
+                        {% if staff_member.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if request.user.is_superuser %}
+                            <a href="{% url 'users:dashboard_staff_edit' pk=staff_member.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit {{ staff_member.username }}">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            {% if request.user.pk != staff_member.pk %} {# Superuser cannot delete themselves via this UI #}
+                            <a href="{% url 'users:dashboard_staff_delete_confirm' pk=staff_member.pk %}" class="btn btn-sm btn-outline-danger" title="Delete {{ staff_member.username }}">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-muted small fst-italic">(Your Account)</span>
+                            {% endif %}
+                        {% else %}
+                             <span class="text-muted small fst-italic">N/A</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        No staff members found.
+                        {% if request.user.is_superuser %}
+                            <a href="{% url 'users:dashboard_staff_add' %}">Add the first staff member!</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj %}
+        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj search_term=current_search %}
+    {% endif %}
+
+{% endblock dashboard_content_main %}
