@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
@@ -13,6 +14,8 @@ from datetime import datetime
 from time import time
 from uuid import uuid4
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.core.exceptions import PermissionDenied
+
 # DRF Imports
 from rest_framework import viewsets, permissions, status, generics, serializers, filters
 from rest_framework.response import Response
@@ -21,6 +24,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 # User-related imports
 from users.decorators import is_staff_user, StaffRequiredMixin
+from users.models import CustomUser
 
 # App-specific imports
 from .filters import BookFilter
@@ -291,16 +295,17 @@ class BookPortalDetailView(DetailView):
 
         # Borrower-specific flags and data
         if self.request.user.is_authenticated and not self.request.user.is_staff:
-            has_request = Borrowing.objects.filter(
+            active_or_pending_borrowing = Borrowing.objects.filter(
                 borrower=self.request.user,
-                book_copy__book=book_instance,
-                status__in=['REQUESTED', 'ACTIVE']
-            ).exists()
-            context['has_active_or_pending_request'] = has_request
+                book_copy__book=book_instance, # Filter for the current book title
+                status__in=['REQUESTED', 'ACTIVE', 'OVERDUE']
+            ).first() # Get the specific instance if it exists
+            context['active_or_pending_borrowing_for_this_book'] = active_or_pending_borrowing
+            context['has_active_or_pending_request'] = active_or_pending_borrowing is not None
             
-            can_borrow = book_instance.available_copies_count > 0 and not has_request
+            can_borrow = book_instance.available_copies_count > 0 and not context['has_active_or_pending_request']
+            context['can_reserve_this_book'] = book_instance.available_copies_count == 0 and not context['has_active_or_pending_request']
             context['can_borrow_this_book'] = can_borrow
-            context['can_reserve_this_book'] = book_instance.available_copies_count == 0 and not has_request
             
             # TODO: Implement favorite logic if desired
             # context['is_favorite_book'] = Favorite.objects.filter(user=self.request.user, book=book_instance).exists()
@@ -1351,3 +1356,106 @@ class StaffBorrowingHistoryView(StaffRequiredMixin, ListView):
 
         return context
 
+class BorrowingDetailView(LoginRequiredMixin, DetailView):
+    model = Borrowing
+    pk_url_kwarg = 'borrowing_id' # To match the URL
+    context_object_name = 'borrowing'
+    # Template will be decided based on view_context in get_context_data
+
+    def get_object(self, queryset=None):
+        """
+        Override to ensure the user has permission to view this borrowing record.
+        """
+        borrowing = super().get_object(queryset)
+        user = self.request.user
+
+        if user == borrowing.borrower or is_staff_user(user):
+            return borrowing
+        else:
+            raise PermissionDenied(_("You do not have permission to view this borrowing record."))
+
+    def get_template_names(self):
+        """
+        Return a list of template names to be used for the request.
+        This allows us to use different wrapper templates for portal vs dashboard.
+        """
+        if is_staff_user(self.request.user) and 'dashboard' in self.request.resolver_match.url_name:
+            return ['books/dashboard/borrowing_detail.html']
+        elif self.request.user == self.get_object().borrower: # Ensure it's the borrower for portal view
+            return ['books/portal/borrowing_detail.html']
+        else:
+            # This case should ideally be caught by get_object's PermissionDenied,
+            # but as a fallback, perhaps a generic access denied template.
+            # Or, rely on the PermissionDenied to be handled by Django's default 403.html
+            raise PermissionDenied(_("Template access unclear for your role."))
+
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        borrowing = self.object # The borrowing instance
+        user = self.request.user
+
+        # Determine view context
+        is_staff_viewing = is_staff_user(user) and 'dashboard' in self.request.resolver_match.url_name
+        
+        if is_staff_viewing:
+            context['view_context'] = 'dashboard'
+            context['page_title'] = _(f"Borrowing Details: ID #{borrowing.id}")
+            context['can_approve_request'] = borrowing.status == 'REQUESTED'
+            context['can_reject_request'] = borrowing.status == 'REQUESTED'
+            context['can_mark_returned'] = borrowing.status in ['ACTIVE', 'OVERDUE']
+            context['can_cancel_request'] = False # Staff don't cancel, they reject
+        elif user == borrowing.borrower: # Borrower's portal view
+            context['view_context'] = 'portal'
+            context['page_title'] = _("Borrowing Details")
+            context['can_approve_request'] = False
+            context['can_reject_request'] = False
+            context['can_mark_returned'] = False
+            context['can_cancel_request'] = borrowing.status == 'REQUESTED'
+        else: # Should not happen due to get_object check
+            context['view_context'] = 'portal' # Default, but access should be denied
+            context['page_title'] = _("Borrowing Details")
+            # Set all action flags to False
+            context['can_approve_request'] = False
+            context['can_reject_request'] = False
+            context['can_mark_returned'] = False
+            context['can_cancel_request'] = False
+
+        # Common context items
+        context['book'] = borrowing.book_copy.book
+        context['book_copy'] = borrowing.book_copy
+        context['borrower_profile'] = borrowing.borrower
+        
+        # For back button logic - can be refined
+        # context['back_url'] = self.request.META.get('HTTP_REFERER', reverse_lazy('books:portal_catalog' if context['view_context'] == 'portal' else 'books:dashboard_home'))
+
+        return context
+
+def borrower_cancel_request_view(request, borrowing_id):
+    """
+    Allows a logged-in borrower to cancel their own 'REQUESTED' borrow request.
+    """
+    try:
+        borrowing_request = get_object_or_404(
+            Borrowing,
+            id=borrowing_id,
+            borrower=request.user, # Crucial: only the owner can cancel
+            status='REQUESTED'     # Crucial: only cancellable if still requested
+        )
+    except Borrowing.DoesNotExist:
+        messages.error(request, _("Borrowing request not found or you do not have permission to cancel it."))
+        return redirect(request.META.get('HTTP_REFERER', reverse_lazy('users:my_borrowings'))) # Sensible fallback
+
+    # Proceed to cancel
+    borrowing_request.status = 'CANCELLED'
+    # Optionally, add a note if your model supports it, e.g., borrowing_request.notes_by_borrower = "Cancelled by user."
+    borrowing_request.save(update_fields=['status']) # Only update status field
+
+    # Optional: Notify staff that a request was cancelled by the user, if desired
+    # For example, by creating a Notification for staff or logging it.
+
+    messages.success(request, _(f"Your request for '{borrowing_request.book_copy.book.title}' has been successfully cancelled."))
+    
+    # Redirect back to "My Borrowings" or the borrowing detail page itself
+    # If redirecting to detail, ensure it handles the new 'CANCELLED' status gracefully
+    return redirect(reverse_lazy('users:my_borrowings'))

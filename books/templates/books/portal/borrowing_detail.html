@@ -1,0 +1,12 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block portal_title %}
+    {{ page_title|default:"Borrowing Details" }}
+{% endblock %}
+
+{% block portal_content %}
+    {# Include the shared content template #}
+    {% include "books/_borrowing_detail_content.html" %}
+{% endblock portal_content %}

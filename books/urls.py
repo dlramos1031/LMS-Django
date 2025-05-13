@@ -8,9 +8,13 @@ urlpatterns = [
     path('', views.BookPortalCatalogView.as_view(), name='portal_catalog'),
     path('book/<slug:isbn>/', views.BookPortalDetailView.as_view(), name='portal_book_detail'),
     path('borrow-request/submit/', views.portal_create_borrow_request_view, name='portal_borrow_request'),
-    path('borrowing/<int:borrowing_id>/renew/', views.renew_book_view, name='portal_borrow_renew'),
     path('author/<int:pk>/', views.PortalAuthorDetailView.as_view(), name='portal_author_detail'),
     path('category/<int:pk>/', views.PortalCategoryDetailView.as_view(), name='portal_category_detail'),
+
+    # Borrowing (Borrower)
+    path('borrowing/<int:borrowing_id>/', views.BorrowingDetailView.as_view(), name='portal_borrowing_detail'),
+    path('borrowing/cancel/<int:borrowing_id>/', views.borrower_cancel_request_view, name='portal_borrowing_cancel'),
+    path('borrowing/renew/<int:borrowing_id>/', views.renew_book_view, name='portal_borrow_renew'),
 
     # Staff Dashboard
     path('dashboard/', views.staff_dashboard_home_view, name='dashboard_home'),
@@ -49,4 +53,7 @@ urlpatterns = [
     path('dashboard/circulation/active-loans/', views.StaffActiveLoansView.as_view(), name='dashboard_active_loans'),
     path('dashboard/circulation/active-loans/mark-returned/<int:borrowing_id>/', views.staff_mark_loan_returned_view, name='dashboard_mark_loan_returned'),
     path('dashboard/circulation/history/', views.StaffBorrowingHistoryView.as_view(), name='dashboard_borrowing_history'),
+
+    # Borrowing Details (Staff)
+    path('dashboard/borrowing/<int:borrowing_id>/', views.BorrowingDetailView.as_view(), name='dashboard_borrowing_detail'),
 ]

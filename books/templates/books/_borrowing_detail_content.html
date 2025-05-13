@@ -1,0 +1,179 @@
+{% load static %}
+{% load bootstrap5 %}
+
+<div class="container py-4">
+    {# {% if page_title %} <h1 class="mb-4">{{ page_title }}</h1> {% endif %} #}
+
+    <div class="row g-4">
+        {# Column 1: Book and Borrower Info #}
+        <div class="col-lg-5">
+            {# Book Card #}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-book-half me-2"></i>Book Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4 col-sm-12 text-center text-md-start">
+                            {% if book.cover_image %}
+                                <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_book_detail' isbn=book.isbn %}{% else %}{% url 'books:portal_book_detail' isbn=book.isbn %}{% endif %}">
+                                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" class="img-fluid rounded shadow-sm" style="max-height: 200px; object-fit: contain;">
+                                </a>
+                            {% else %}
+                                <div class="bg-light border rounded d-flex align-items-center justify-content-center text-secondary" style="height: 150px; width:100%; border-style: dashed!important;">
+                                    <i class="bi bi-book h1"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8 col-sm-12">
+                            <h6 class="card-title">
+                                <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_book_detail' isbn=book.isbn %}{% else %}{% url 'books:portal_book_detail' isbn=book.isbn %}{% endif %}" class="text-decoration-none">
+                                    {{ book.title }}
+                                </a>
+                            </h6>
+                            <p class="card-text mb-1"><small class="text-muted"><strong>ISBN:</strong> {{ book.isbn }}</small></p>
+                            <p class="card-text mb-1"><small class="text-muted"><strong>Copy ID:</strong> {{ book_copy.copy_id }}</small></p>
+                            <p class="card-text mb-0"><small class="text-muted">
+                                <strong>Authors:</strong>
+                                {% for author in book.authors.all %}
+                                    {{ author.name }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    N/A
+                                {% endfor %}
+                            </small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Borrower Card #}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Borrower Details</h5>
+                </div>
+                <div class="card-body">
+                     <div class="row g-3">
+                        <div class="col-md-4 col-sm-12 text-center text-md-start">
+                            {% if borrower_profile.profile_picture %}
+                                <a href="{% if view_context == 'dashboard' %}{% url 'users:dashboard_borrower_detail' pk=borrower_profile.pk %}{% else %}{% url 'users:my_profile' %}{% endif %}">
+                                    <img src="{{ borrower_profile.profile_picture.url }}" alt="{{ borrower_profile.username }}" class="img-fluid rounded-circle shadow-sm" style="width: 100px; height: 100px; object-fit: cover;">
+                                </a>
+                            {% else %}
+                                 <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-secondary mx-auto" style="width: 100px; height: 100px;">
+                                    <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8 col-sm-12">
+                            <h6 class="card-title">
+                                <a href="{% if view_context == 'dashboard' %}{% url 'users:dashboard_borrower_detail' pk=borrower_profile.pk %}{% else %}{% url 'users:my_profile' %}{% endif %}" class="text-decoration-none">
+                                    {{ borrower_profile.get_full_name|default:borrower_profile.username }}
+                                </a>
+                            </h6>
+                            <p class="card-text mb-1"><small class="text-muted"><strong>Username:</strong> @{{ borrower_profile.username }}</small></p>
+                            {% if borrower_profile.borrower_id_value %}
+                            <p class="card-text mb-1"><small class="text-muted"><strong>{{ borrower_profile.borrower_id_label|default:"Library ID" }}:</strong> {{ borrower_profile.borrower_id_value }}</small></p>
+                            {% endif %}
+                             <p class="card-text mb-0"><small class="text-muted"><strong>Role:</strong> {{ borrower_profile.get_role_display }}</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Column 2: Borrowing Info & Actions #}
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-journal-arrow-down me-2"></i>Borrowing Transaction #{{ borrowing.id }}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge fs-6
+                                {% if borrowing.status == 'ACTIVE' %}bg-success
+                                {% elif borrowing.status == 'OVERDUE'%}bg-danger
+                                {% elif borrowing.status == 'REQUESTED'%}bg-warning text-dark
+                                {% elif borrowing.status == 'RETURNED' or borrowing.status == 'RETURNED_LATE' %}bg-primary
+                                {% elif borrowing.status == 'CANCELLED' or borrowing.status == 'REJECTED' %}bg-secondary
+                                {% elif borrowing.status == 'LOST_BY_BORROWER' %}bg-dark
+                                {% else %}bg-light text-dark border{% endif %}">
+                                {{ borrowing.get_status_display }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4">Requested On:</dt>
+                        <dd class="col-sm-8">{{ borrowing.request_date|date:"F d, Y, P"|default:"N/A" }}</dd>
+
+                        {% if borrowing.issue_date %}
+                        <dt class="col-sm-4">Issued On:</dt>
+                        <dd class="col-sm-8">{{ borrowing.issue_date|date:"F d, Y, P" }}</dd>
+                        {% endif %}
+                        
+                        <dt class="col-sm-4">Due Date:</dt>
+                        <dd class="col-sm-8">{{ borrowing.due_date|date:"F d, Y"|default:"N/A" }}</dd>
+
+                        {% if borrowing.return_date %}
+                        <dt class="col-sm-4">Returned On:</dt>
+                        <dd class="col-sm-8">{{ borrowing.return_date|date:"F d, Y, P" }}</dd>
+                        {% endif %}
+
+                        {% if borrowing.fine_amount > 0 %}
+                        <dt class="col-sm-4 text-danger">Fine Incurred:</dt>
+                        <dd class="col-sm-8 text-danger fw-bold">${{ borrowing.fine_amount|floatformat:2 }}</dd>
+                        {% endif %}
+
+                        {% if borrowing.notes_by_librarian %}
+                        <dt class="col-sm-4">Librarian Notes:</dt>
+                        <dd class="col-sm-8 fst-italic text-muted">{{ borrowing.notes_by_librarian|linebreaksbr }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+
+                {# --- Action Buttons --- #}
+                {% if can_cancel_request or can_approve_request or can_reject_request or can_mark_returned %}
+                <div class="card-footer text-end">
+                    {% if can_cancel_request %}
+                        <form method="post" action="{% url 'books:portal_borrowing_cancel' borrowing_id=borrowing.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to cancel this request?');">
+                                <i class="bi bi-x-circle me-1"></i> Cancel Request
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    {% if view_context == 'dashboard' %}
+                        {% if can_approve_request %}
+                        <form method="post" action="{% url 'books:dashboard_approve_request' borrowing_id=borrowing.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-check-lg me-1"></i> Approve Request
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        {% if can_reject_request %}
+                        <form method="post" action="{% url 'books:dashboard_reject_request' borrowing_id=borrowing.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="bi bi-x-lg me-1"></i> Reject Request
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        {% if can_mark_returned %}
+                        <form method="post" action="{% url 'books:dashboard_mark_loan_returned' borrowing_id=borrowing.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-info btn-sm">
+                                <i class="bi bi-arrow-return-left me-1"></i> Mark as Returned
+                            </button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,19 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}
+    {{ page_title|default:"Borrowing Details" }}
+{% endblock %}
+
+{% block dashboard_page_title_main %}
+    Borrowing Details: #{{ borrowing.id }} {# Displaying the borrowing ID in the main title #}
+{% endblock %}
+
+{% block dashboard_page_actions %}
+{% endblock %}
+
+{% block dashboard_content_main %}
+    {# Include the shared content template #}
+    {% include "books/_borrowing_detail_content.html" %}
+{% endblock dashboard_content_main %}

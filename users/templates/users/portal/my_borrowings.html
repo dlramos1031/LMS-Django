@@ -15,14 +15,12 @@
         </div>
         <div class="card-body p-0">
             {% if active_borrowings %}
-                <ul class="list-group list-group-flush">
+                <div class="list-group list-group-flush"> {# Changed from ul to div for a tags #}
                     {% for borrowing in active_borrowings %}
-                    <li class="list-group-item">
+                    <a href="{% url 'books:portal_borrowing_detail' borrowing_id=borrowing.id %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                             <h6 class="mb-1">
-                                <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
-                                    {{ borrowing.book_copy.book.title }}
-                                </a>
+                                {{ borrowing.book_copy.book.title }}
                                 <small class="text-muted">(Copy: {{ borrowing.book_copy.copy_id }})</small>
                             </h6>
                             <small class="text-muted">
@@ -44,22 +42,16 @@
                             </span>
                             {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
                                 - Due: {{ borrowing.due_date|date:"F j, Y" }}
-                                {% if borrowing.status == 'ACTIVE' %}
-                                    {# Placeholder for Renew Button - Implement renew_book_view logic first #}
-                                    {# <a href="{% url 'books:portal_borrow_renew' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-primary ms-2">Request Renewal</a> #}
-                                {% endif %}
                             {% elif borrowing.status == 'REQUESTED' %}
                                 - Preferred Due: {{ borrowing.due_date|date:"F j, Y" }}
-                                {# Option to cancel request if needed (would require a new view/logic) #}
-                                {# <form method="post" action="{% url 'cancel_borrow_request' borrowing_id=borrowing.id %}" class="d-inline"> {% csrf_token %} <button type="submit" class="btn btn-sm btn-outline-danger ms-2">Cancel Request</button></form> #}
                             {% endif %}
                         </p>
                         {% if borrowing.notes_by_librarian %}
                             <small class="text-muted fst-italic">Librarian Note: {{ borrowing.notes_by_librarian }}</small>
                         {% endif %}
-                    </li>
+                    </a>
                     {% endfor %}
-                </ul>
+                </div>
             {% else %}
                 <p class="p-3 text-muted mb-0">You have no active loans or pending requests.</p>
             {% endif %}
@@ -73,14 +65,12 @@
         </div>
         <div class="card-body p-0">
             {% if past_borrowings %}
-                <ul class="list-group list-group-flush">
+                <div class="list-group list-group-flush"> {# Changed from ul to div for a tags #}
                     {% for borrowing in past_borrowings %}
-                    <li class="list-group-item">
+                    <a href="{% url 'books:portal_borrowing_detail' borrowing_id=borrowing.id %}" class="list-group-item list-group-item-action">
                         <div class="d-flex w-100 justify-content-between">
                              <h6 class="mb-1">
-                                <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
-                                    {{ borrowing.book_copy.book.title }}
-                                </a>
+                                {{ borrowing.book_copy.book.title }}
                                 <small class="text-muted">(Copy: {{ borrowing.book_copy.copy_id }})</small>
                             </h6>
                             <small class="text-muted">
@@ -105,9 +95,9 @@
                          {% if borrowing.notes_by_librarian %}
                             <small class="text-muted fst-italic">Librarian Note: {{ borrowing.notes_by_librarian }}</small>
                         {% endif %}
-                    </li>
+                    </a>
                     {% endfor %}
-                </ul>
+                </div>
             {% else %}
                 <p class="p-3 text-muted mb-0">You have no past borrowing records.</p>
             {% endif %}

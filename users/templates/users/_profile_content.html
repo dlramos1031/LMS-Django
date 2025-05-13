@@ -84,37 +84,44 @@
             </div>
             <div class="card-body">
                 {% if borrowings %}
-                    <ul class="list-group list-group-flush">
-                        {% for borrowing in borrowings %} {# Display more if paginated, or slice if not #}
-                            <li class="list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">
-                                        <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
-                                            {{ borrowing.book_copy.book.title }}
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted">{{ borrowing.issue_date|timesince }} ago</small>
-                                </div>
-                                <p class="mb-1">
-                                    Status: <span class="fw-bold 
-                                        {% if borrowing.status == 'ACTIVE' %}text-success{% elif borrowing.status == 'OVERDUE'%}text-danger{% elif borrowing.status == 'REQUESTED'%}text-warning{% else %}text-secondary{% endif %}">
-                                        {{ borrowing.get_status_display }}
-                                    </span>
-                                    {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
-                                        - Due: {{ borrowing.due_date|date:"F j, Y" }}
-                                    {% elif borrowing.status == 'RETURNED' or borrowing.status == 'RETURNED_LATE' %}
-                                        - Returned: {{ borrowing.actual_return_date|date:"F j, Y" }}
-                                    {% endif %}
-                                </p>
-                                {% if view_context == 'dashboard' and borrowing.status in "ACTIVE,OVERDUE" %}
-                                <small><a href="{% url 'books:dashboard_mark_loan_returned' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-success mt-1">Mark Returned</a></small>
+                <ul class="list-group list-group-flush">
+                    {% for borrowing_item in borrowings %} {# Renamed to borrowing_item to avoid conflict with outer loop var if any #}
+                        <li class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_book_detail' isbn=borrowing_item.book_copy.book.isbn %}{% else %}{% url 'books:portal_book_detail' isbn=borrowing_item.book_copy.book.isbn %}{% endif %}" class="text-decoration-none">
+                                        {{ borrowing_item.book_copy.book.title }}
+                                    </a>
+                                    {# Link to Borrowing Detail #}
+                                    <small class="ms-2">
+                                        <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_borrowing_detail' borrowing_id=borrowing_item.id %}{% else %}{% url 'books:portal_borrowing_detail' borrowing_id=borrowing_item.id %}{% endif %}" class="text-muted">(Details #{{ borrowing_item.id }})</a>
+                                    </small>
+                                </h6>
+                                <small class="text-muted">{{ borrowing_item.issue_date|default:borrowing_item.request_date|timesince }} ago</small>
+                            </div>
+                            <p class="mb-1">
+                                Status: <span class="fw-bold 
+                                    {% if borrowing_item.status == 'ACTIVE' %}text-success{% elif borrowing_item.status == 'OVERDUE'%}text-danger{% elif borrowing_item.status == 'REQUESTED'%}text-warning{% else %}text-secondary{% endif %}">
+                                    {{ borrowing_item.get_status_display }}
+                                </span>
+                                {% if borrowing_item.status == 'ACTIVE' or borrowing_item.status == 'OVERDUE' %}
+                                    - Due: {{ borrowing_item.due_date|date:"F j, Y" }}
+                                {% elif borrowing_item.status == 'RETURNED' or borrowing_item.status == 'RETURNED_LATE' %}
+                                    - Returned: {{ borrowing_item.actual_return_date|date:"F j, Y" }}
+                                {% elif borrowing_item.status == 'REQUESTED' %}
+                                     - Requested: {{ borrowing_item.request_date|date:"F j, Y" }}
                                 {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    {% if borrowings.has_other_pages and view_context == 'dashboard' %} {# Example if borrowings is paginated for dashboard view #}
-                        {% include "dashboard/_includes/pagination_component.html" with page_obj=borrowings other_query_params="" %}
-                    {% endif %}
+                            </p>
+                            {% if view_context == 'dashboard' and borrowing_item.status in "ACTIVE,OVERDUE" %}
+                            {# This action is now on the detail page, so this button might be redundant or link to the detail page instead #}
+                            <small><a href="{% url 'books:dashboard_borrowing_detail' borrowing_id=borrowing_item.id %}" class="btn btn-sm btn-outline-info mt-1">Manage Loan</a></small>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                {% if borrowings.has_other_pages and view_context == 'dashboard' %}
+                    {% include "dashboard/_includes/pagination_component.html" with page_obj=borrowings other_query_params=other_query_params_borrowings %}
+                {% endif %}
                 {% else %}
                     <p class="text-muted">No borrowing activity found for this user.</p>
                 {% endif %}
