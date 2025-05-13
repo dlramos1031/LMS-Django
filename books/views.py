@@ -6,7 +6,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q, F, Count, Case, When
+from django.db.models import Q, F, Count, Case, When, BooleanField
 from django.urls import reverse_lazy
 from datetime import datetime
 
@@ -560,10 +560,17 @@ class StaffBookListView(StaffRequiredMixin, ListView):
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('authors', 'categories').annotate(
             copy_count=Count('copies'),
-            available_copy_count=Count('copies', filter=Q(copies__status='Available'))
-        )
-        
+            has_available_copies=Case(
+                When(copies__status='Available', then=True),
+                default=False,
+                output_field=BooleanField()
+            )
+        ).distinct()
+
         search_term = self.request.GET.get('search', '').strip()
+        category_filter = self.request.GET.get('category', '').strip()
+        availability_filter = self.request.GET.get('availability', '').strip()
+
         if search_term:
             queryset = queryset.filter(
                 Q(title__icontains=search_term) |
@@ -571,14 +578,26 @@ class StaffBookListView(StaffRequiredMixin, ListView):
                 Q(authors__name__icontains=search_term) |
                 Q(categories__name__icontains=search_term) |
                 Q(publisher__icontains=search_term)
-            ).distinct()
+            )
+        
+        if category_filter:
+            queryset = queryset.filter(categories__id=category_filter)
             
+        if availability_filter:
+            if availability_filter == 'available':
+                queryset = queryset.filter(has_available_copies=True)
+            elif availability_filter == 'unavailable':
+                queryset = queryset.filter(has_available_copies=False)
+
         return queryset.order_by('title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Manage Book Titles')
         context['current_search'] = self.request.GET.get('search', '')
+        context['all_categories'] = Category.objects.all().order_by('name')
+        context['current_category_filter'] = self.request.GET.get('category', '')
+        context['current_availability_filter'] = self.request.GET.get('availability', '')
         
         query_params = self.request.GET.copy()
         query_params.pop('page', None) 

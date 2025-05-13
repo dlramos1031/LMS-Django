@@ -258,10 +258,11 @@ class StaffBorrowerListView(StaffRequiredMixin, ListView):
 
 
     def get_queryset(self):
-        # Librarians and Admins can see Borrowers
         queryset = CustomUser.objects.filter(role='BORROWER').order_by('last_name', 'first_name')
-        search_term = self.request.GET.get('search')
-        borrower_type_filter = self.request.GET.get('borrower_type')
+        search_term = self.request.GET.get('search', '').strip()
+        borrower_type_filter = self.request.GET.get('borrower_type', '').strip()
+        status_filter = self.request.GET.get('status', '').strip()
+
         if search_term:
             queryset = queryset.filter(
                 Q(username__icontains=search_term) |
@@ -272,20 +273,32 @@ class StaffBorrowerListView(StaffRequiredMixin, ListView):
             )
         if borrower_type_filter:
             queryset = queryset.filter(borrower_type=borrower_type_filter)
+        
+        if status_filter:
+            if status_filter == 'active':
+                queryset = queryset.filter(is_active=True)
+            elif status_filter == 'inactive':
+                queryset = queryset.filter(is_active=False)
+                
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Manage Borrowers')
 
-        # For search/filter form repopulation
         context['current_search'] = self.request.GET.get('search', '')
         context['borrower_type_choices'] = CustomUser.BORROWER_TYPE_CHOICES
         context['current_borrower_type_filter'] = self.request.GET.get('borrower_type', '')
+        
+        # Add status filter choices and current value
+        context['status_choices'] = [
+            ('active', _('Active')),
+            ('inactive', _('Inactive')),
+        ]
+        context['current_status_filter'] = self.request.GET.get('status', '')
 
-        # For pagination: pass existing GET params excluding 'page'
         query_params = self.request.GET.copy()
-        query_params.pop('page', None) # Remove 'page' key if it exists
+        query_params.pop('page', None)
         context['other_query_params'] = query_params.urlencode()
         
         return context

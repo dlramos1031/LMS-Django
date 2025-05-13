@@ -4,7 +4,7 @@
 
 {% block dashboard_page_title %}Manage Borrowers{% endblock %}
 
-{% block dashboard_page_title_main %}Manage Borrowers{% endblock %}
+{% block dashboard_page_title_main %}Manage Borrower Accounts{% endblock %}
 
 {% block dashboard_page_actions %}
     {% if perms.users.add_customuser or request.user.is_superuser or request.user.role == 'ADMIN' %} {# Staff can add borrowers #}
@@ -16,20 +16,29 @@
 
 {% block dashboard_content_main %}
     <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light border rounded shadow-sm">
-        <div class="col-md-6">
+        <div class="col-md-6"> {# Adjusted column size #}
             <label for="userSearchInput" class="visually-hidden">Search Borrowers</label>
             <input type="text" name="search" class="form-control form-control-sm" id="userSearchInput" placeholder="Search username, name, email, Library ID..." value="{{ current_search|default:'' }}">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-2"> {# Adjusted column size #}
             <label for="borrowerTypeFilterInput" class="visually-hidden">Filter by Borrower Type</label>
             <select name="borrower_type" class="form-select form-select-sm" id="borrowerTypeFilterInput">
-                <option value="">All Borrower Types</option>
+                <option value="">All Types</option>
                 {% for type_value, type_display in borrower_type_choices %}
                     <option value="{{ type_value }}" {% if type_value == current_borrower_type_filter %}selected{% endif %}>{{ type_display }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-2"> {# New Status Filter Dropdown #}
+            <label for="statusFilterInput" class="visually-hidden">Filter by Status</label>
+            <select name="status" class="form-select form-select-sm" id="statusFilterInput">
+                <option value="">All Statuses</option>
+                {% for status_value, status_display in status_choices %}
+                    <option value="{{ status_value }}" {% if status_value == current_status_filter %}selected{% endif %}>{{ status_display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2"> {# Adjusted column size #}
             <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Filter/Search</button>
         </div>
     </form>
