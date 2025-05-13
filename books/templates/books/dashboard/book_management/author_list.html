@@ -37,6 +37,16 @@
                 {% for author_item in authors %} {# Or page_obj.object_list #}
                 <tr>
                     <td>
+                        {% if author_item.author_photo %}
+                            <img src="{{ author_item.author_photo.url }}" alt="{{ author_item.name }}" 
+                                 class="me-2 rounded-circle" 
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                        {% else %}
+                            <span class="d-inline-block bg-light border rounded-circle me-2 align-middle" 
+                                  style="width: 40px; height: 40px; line-height: 40px; text-align: center;">
+                                <i class="bi bi-person-fill text-muted fs-5"></i>
+                            </span>
+                        {% endif %}
                         <a href="{% url 'books:dashboard_author_detail' pk=author_item.pk %}">{{ author_item.name }}</a>
                     </td>
                     <td>{{ author_item.get_life_span }}</td>
