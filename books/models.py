@@ -26,11 +26,44 @@ class Author(models.Model):
         help_text=_("A short biography of the author (optional)")
     )
     date_of_birth = models.DateField(
+        _("Date of Birth"), # Changed to use verbose_name directly
         null=True, 
         blank=True,
         help_text=_("Author's date of birth (optional)")
     )
-    # Optional: date_of_death, nationality, website, etc.
+    date_of_death = models.DateField(
+        _("Date of Death"),
+        null=True,
+        blank=True,
+        help_text=_("Author's date of death, if applicable (optional)")
+    )
+    nationality = models.CharField(
+        _("Nationality"),
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_("Author's nationality (e.g., British, American) (optional)")
+    )
+    alternate_names = models.CharField(
+        _("Alternate Names"),
+        max_length=500, # Increased length for potentially multiple names
+        blank=True,
+        null=True,
+        help_text=_("Other names the author is known by, separated by commas (e.g., pen names, maiden names) (optional)")
+    )
+    author_website = models.URLField(
+        _("Author Website"),
+        blank=True,
+        null=True,
+        help_text=_("A link to the author's official website or a relevant resource page (optional)")
+    )
+    author_photo = models.ImageField(
+        _("Author Photo"),
+        upload_to='author_photos/',
+        blank=True,
+        null=True,
+        help_text=_("A photo of the author (optional).")
+    )
 
     def __str__(self):
         """String representation of the Author model, used in Django admin and debugging."""
@@ -40,6 +73,16 @@ class Author(models.Model):
         ordering = ['name']
         verbose_name = _('Author')
         verbose_name_plural = _('Authors')
+
+    def get_life_span(self):
+        if self.date_of_birth:
+            birth_year = self.date_of_birth.year
+            if self.date_of_death:
+                death_year = self.date_of_death.year
+                return f"{birth_year}–{death_year}"
+            return f"Born {birth_year}"
+        return "N/A"
+    get_life_span.short_description = _('Life Span')
 
 
 class Category(models.Model):

@@ -68,14 +68,21 @@ class CategoryForm(forms.ModelForm):
         }
 
 class AuthorForm(forms.ModelForm):
-    """Form for creating and updating Author instances."""
     class Meta:
         model = Author
-        fields = ['name', 'biography', 'date_of_birth']
+        fields = [
+            'name', 'biography', 'date_of_birth', 'date_of_death', 
+            'nationality', 'alternate_names', 'author_website', 'author_photo'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'biography': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
             'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'date_of_death': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'nationality': forms.TextInput(attrs={'class': 'form-control'}),
+            'alternate_names': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('e.g., Mark Twain, J.K. Rowling')}),
+            'author_website': forms.URLInput(attrs={'class': 'form-control', 'placeholder': _('https://example.com')}),
+            'author_photo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
 class IssueBookForm(forms.Form):

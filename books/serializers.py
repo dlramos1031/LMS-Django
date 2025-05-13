@@ -8,13 +8,15 @@ CustomUser = get_user_model()
 # Author & Category serializers
 
 class AuthorSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the Author model.
-    Includes all relevant fields for author representation.
-    """
+    life_span = serializers.CharField(source='get_life_span', read_only=True) # Added for API if useful
+
     class Meta:
         model = Author
-        fields = ['id', 'name', 'biography', 'date_of_birth']
+        fields = [
+            'id', 'name', 'biography', 'date_of_birth', 'date_of_death',
+            'nationality', 'alternate_names', 'author_website', 'author_photo',
+            'life_span'
+        ]
 
 class CategorySerializer(serializers.ModelSerializer):
     """

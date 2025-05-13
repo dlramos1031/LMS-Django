@@ -27,7 +27,8 @@
             <thead class="table-light">
                 <tr>
                     <th>Name</th>
-                    <th>Date of Birth</th>
+                    <th>Life Span</th>
+                    <th>Nationality</th>
                     <th class="text-center">Book Count</th>
                     <th class="text-center">Actions</th>
                 </tr>
@@ -38,7 +39,8 @@
                     <td>
                         <a href="{% url 'books:dashboard_author_detail' pk=author_item.pk %}">{{ author_item.name }}</a>
                     </td>
-                    <td>{{ author_item.date_of_birth|date:"Y-m-d"|default:"N/A" }}</td>
+                    <td>{{ author_item.get_life_span }}</td>
+                    <td>{{ author_item.nationality|default:"N/A" }}</td>
                     <td class="text-center">{{ author_item.books.count }}</td>
                     <td class="text-center">
                         <a href="{% url 'books:dashboard_author_edit' pk=author_item.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Edit Author">

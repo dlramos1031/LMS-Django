@@ -73,8 +73,7 @@
   </nav>
   
   <main class="{% block main_container_class %}container mt-4 pt-5{% endblock %}"> {# Added pt-5 for fixed-top navbar #}
-      {% block content_body %} {# Renamed from 'content' to avoid clash with portal_base's block #}
-          {% bootstrap_messages %}
+      {% block content_body %}
           {# Content from child templates will go here #}
       {% endblock content_body %}
   </main>

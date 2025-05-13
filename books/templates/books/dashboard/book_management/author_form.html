@@ -17,13 +17,24 @@
 {% endblock %}
 
 {% block dashboard_content_main %}
-<form method="post">
+{# IMPORTANT: Add enctype for file uploads #}
+<form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <div class="card shadow-sm">
         <div class="card-header">
             <h5 class="mb-0">Author Information</h5>
         </div>
         <div class="card-body">
+            {# Display current photo if editing and photo exists #}
+            {% if form.instance.pk and form.instance.author_photo %}
+            <div class="mb-3 row">
+                <label class="col-sm-2 col-form-label">Current Photo:</label> {# Adjust col-sm-* as per your layout preference #}
+                <div class="col-sm-10">
+                    <img src="{{ form.instance.author_photo.url }}" alt="Current photo of {{ form.instance.name }}" class="img-thumbnail" style="max-height: 150px; border-radius: var(--bs-border-radius);">
+                </div>
+            </div>
+            {% endif %}
+
             {% bootstrap_form form layout='horizontal' %}
         </div>
         <div class="card-footer text-end">

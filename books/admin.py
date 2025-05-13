@@ -4,8 +4,24 @@ from django.utils.translation import gettext_lazy as _
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    list_display = ('name', 'date_of_birth')
-    search_fields = ('name',)
+    list_display = ('name', 'date_of_birth', 'date_of_death', 'nationality', 'get_life_span') # Added get_life_span
+    search_fields = ('name', 'alternate_names', 'nationality')
+    list_filter = ('nationality',) # Example filter
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'alternate_names', 'author_website') #, 'author_photo')
+        }),
+        (_('Biographical Information'), {
+            'fields': ('biography', 'date_of_birth', 'date_of_death', 'nationality')
+        }),
+    )
+    readonly_fields = ('author_photo_preview',)
+    def author_photo_preview(self, obj):
+        from django.utils.html import format_html
+        if obj.author_photo:
+            return format_html('<img src="{}" width="100" height="auto" />', obj.author_photo.url)
+        return _("No photo")
+    author_photo_preview.short_description = _("Photo Preview")
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

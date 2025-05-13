@@ -1,18 +1,38 @@
-{# LMS/Backend/books/templates/books/_author_detail_content.html #}
 {% load static %}
 {% load bootstrap5 %}
-
-{# Expects: author, view_context, can_edit_this_object, books_by_author, back_url #}
 
 <div class="container py-4">
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
+            <div class="row">
+                <div class="col-md-3 text-center mb-3 mb-md-0">
+                    {% if author.author_photo %}
+                        <img src="{{ author.author_photo.url }}" alt="{{ author.name }}" class="img-fluid rounded-circle shadow-sm" style="max-width: 150px; max-height: 150px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-secondary" style="width: 150px; height: 150px;">
+                            <i class="bi bi-person-fill" style="font-size: 5rem;"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col"> {# Adjust to col-md-9 if photo is added #}
                     <h1 class="card-title h2">{{ author.name }}</h1>
-                    <p class="card-text text-muted">
-                        <strong>Date of Birth:</strong> {{ author.date_of_birth|date:"F d, Y"|default:"N/A" }}
+                    {% if author.alternate_names %}
+                        <p class="text-muted mb-1"><small>Also known as: {{ author.alternate_names }}</small></p>
+                    {% endif %}
+                    <p class="card-text text-muted mb-1">
+                        <strong>Born:</strong> {{ author.date_of_birth|date:"F d, Y"|default:"N/A" }}
+                        {% if author.date_of_death %}
+                            <br><strong>Died:</strong> {{ author.date_of_death|date:"F d, Y" }}
+                        {% endif %}
                     </p>
+                    {% if author.nationality %}
+                        <p class="card-text text-muted mb-1"><strong>Nationality:</strong> {{ author.nationality }}</p>
+                    {% endif %}
+                    {% if author.author_website %}
+                        <p class="card-text text-muted mb-3">
+                            <strong>Website:</strong> <a href="{{ author.author_website }}" target="_blank" rel="noopener noreferrer">{{ author.author_website }}</a>
+                        </p>
+                    {% endif %}
                 </div>
             </div>
             <hr>
@@ -35,7 +55,6 @@
                 {% for book_item in books_by_author %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        {# Link to the context-aware book detail page #}
                         <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_book_detail' isbn=book_item.isbn %}{% else %}{% url 'books:portal_book_detail' isbn=book_item.isbn %}{% endif %}" class="text-decoration-none fw-medium">
                             {{ book_item.title }}
                         </a>
