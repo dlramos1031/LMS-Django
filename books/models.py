@@ -243,17 +243,24 @@ class Borrowing(models.Model):
         related_name='borrowings', 
         help_text=_("The user borrowing the book")
     )
-    issue_date = models.DateTimeField(
+    request_date = models.DateTimeField(
+        verbose_name=_("Request Date"),
         auto_now_add=True,
-        help_text=_("Date and time the book was issued")
+        help_text=_("Date and time the borrow request was made or manual issue initiated.")
     )
-    due_date = models.DateTimeField(
-        help_text=_("Date and time the book is due to be returned")
+    issue_date = models.DateTimeField(
+        verbose_name=_("Issue Date"),
+        null=True, blank=True,
+        help_text=_("Date and time the loan was approved and officially started.")
     )
-    actual_return_date = models.DateTimeField(
-        null=True, 
-        blank=True,
-        help_text=_("Date and time the book was actually returned (if returned)")
+    due_date = models.DateField(
+        verbose_name=_("Due Date"),
+        help_text=_("Date the book is due to be returned. Set by user/staff during request/approval.")
+    )
+    return_date = models.DateTimeField(
+        verbose_name=_("Actual Return Date"),
+        null=True, blank=True,
+        help_text=_("Date and time the book was actually returned.")
     )
     STATUS_CHOICES = [
         ('REQUESTED', _('Requested')),                  # Book is requested before librarian approval
@@ -261,8 +268,9 @@ class Borrowing(models.Model):
         ('RETURNED', _('Returned')),                    # Book has been returned on or before the due date
         ('RETURNED_LATE', _('Returned Late')),          # Book returned after the due date
         ('OVERDUE', _('Overdue')),                      # Book not yet returned and is past its due date
-        ('LOST_BY_BORROWER', _('Lost by Borrower')),    # Borrower reported or confirmed the book as lost
+        ('REJECTED', _('Request Rejected')),            # Borrow request was rejected by librarian
         ('CANCELLED', _('Request Cancelled')),          # If a borrow request was cancelled before approval
+        ('LOST_BY_BORROWER', _('Lost by Borrower')),    # Borrower reported or confirmed the book as lost
     ]
     status = models.CharField(
         max_length=20,
@@ -272,12 +280,12 @@ class Borrowing(models.Model):
     )
     fine_amount = models.DecimalField(
         max_digits=6,
-        decimal_places=2, 
+        decimal_places=2,
         default=0.00,
         help_text=_("Fine incurred for this borrowing, if any (e.g., for late return)")
     )
     notes_by_librarian = models.TextField(
-        blank=True, 
+        blank=True,
         null=True,
         help_text=_("Internal notes by librarian regarding this loan (e.g., damage noted on return) (optional)")
     )
@@ -293,8 +301,16 @@ class Borrowing(models.Model):
         This could also be handled more robustly with Django Signals for better decoupling.
         """
         is_new_active_loan = False
-        if self._state.adding and self.status in ['ACTIVE', 'REQUESTED']:
+        if self._state.adding and self.status == 'ACTIVE':
             is_new_active_loan = True
+        elif not self._state.adding:
+            try:
+                old_instance = Borrowing.objects.get(pk=self.pk)
+                if old_instance.status != 'ACTIVE' and self.status == 'ACTIVE':
+                    is_new_active_loan = True
+            except Borrowing.DoesNotExist:
+                if self.status == 'ACTIVE':
+                    is_new_active_loan = True
         
         super().save(*args, **kwargs)
 
@@ -303,7 +319,7 @@ class Borrowing(models.Model):
             Book.objects.filter(pk=book_title.pk).update(total_borrows=models.F('total_borrows') + 1)
 
     class Meta:
-        ordering = ['-issue_date']
+        ordering = ['-request_date']
         verbose_name = _('Borrowing Record')
         verbose_name_plural = _('Borrowing Records')
 

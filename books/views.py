@@ -191,14 +191,14 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                 {'error': _('This book loan is not currently active or overdue.')},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        borrowing_record.actual_return_date = timezone.now()
+        borrowing_record.return_date = timezone.now()
         book_copy_instance = borrowing_record.book_copy
         book_copy_instance.status = 'Available'
         book_copy_instance.save(update_fields=['status'])
 
-        if borrowing_record.due_date.date() < borrowing_record.actual_return_date.date():
+        if borrowing_record.due_date.date() < borrowing_record.return_date.date():
             borrowing_record.status = 'RETURNED_LATE'
-            overdue_days = (borrowing_record.actual_return_date.date() - borrowing_record.due_date.date()).days
+            overdue_days = (borrowing_record.return_date.date() - borrowing_record.due_date.date()).days
             if overdue_days > 0: # Ensure positive fine
                 borrowing_record.fine_amount = overdue_days * 1.00 # Example fine
         else:
@@ -427,7 +427,7 @@ def staff_dashboard_home_view(request):
         'book_title_count': Book.objects.count(),
         'book_copy_count': BookCopy.objects.count(),
         'active_loans_count': Borrowing.objects.filter(status='ACTIVE').count(),
-        'overdue_loans_count': Borrowing.objects.filter(status='OVERDUE', actual_return_date__isnull=True).count(),
+        'overdue_loans_count': Borrowing.objects.filter(status='OVERDUE', return_date__isnull=True).count(),
         'total_borrowers_count': CustomUser.objects.filter(role='BORROWER').count(),
         'pending_requests_count': Borrowing.objects.filter(status='REQUESTED').count(),
     }
@@ -917,7 +917,7 @@ def staff_mark_loan_returned_view(request, borrowing_id):
     loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
     book_copy = loan.book_copy
 
-    loan.actual_return_date = timezone.now()
+    loan.return_date = timezone.now()
     loan.status = 'RETURNED_LATE' if loan.due_date.date() < timezone.now().date() else 'RETURNED'
     # TODO: Implement actual fine calculation based on library policy
     # if loan.status == 'RETURNED_LATE':
@@ -945,7 +945,7 @@ class StaffBorrowingHistoryView(StaffRequiredMixin, ListView):
     def get_queryset(self):
         return Borrowing.objects.filter(
             status__in=['RETURNED', 'RETURNED_LATE', 'REJECTED', 'CANCELLED', 'LOST_BY_BORROWER']
-        ).select_related('borrower', 'book_copy__book').order_by('-actual_return_date', '-issue_date')
+        ).select_related('borrower', 'book_copy__book').order_by('-return_date', '-issue_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

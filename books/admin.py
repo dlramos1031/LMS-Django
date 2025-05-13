@@ -51,7 +51,7 @@ class BookCopyAdmin(admin.ModelAdmin):
 
 @admin.register(Borrowing)
 class BorrowingAdmin(admin.ModelAdmin):
-    list_display = ('__str__', 'borrower', 'book_copy', 'issue_date', 'due_date', 'actual_return_date', 'status', 'fine_amount')
+    list_display = ('__str__', 'borrower', 'book_copy', 'issue_date', 'due_date', 'return_date', 'status', 'fine_amount')
     list_filter = ('status', 'issue_date', 'due_date', 'borrower')
     search_fields = ('borrower__username', 'book_copy__copy_id', 'book_copy__book__title')
     autocomplete_fields = ['borrower', 'book_copy']
@@ -61,7 +61,7 @@ class BorrowingAdmin(admin.ModelAdmin):
             'fields': ('borrower', 'book_copy', 'due_date', 'status')
         }),
         (_('Return and Fine Details'), {
-            'fields': ('actual_return_date', 'fine_amount', 'notes_by_librarian'),
+            'fields': ('return_date', 'fine_amount', 'notes_by_librarian'),
             'classes': ('collapse',)
         }),
         (_('System Info (Read-Only)'), {

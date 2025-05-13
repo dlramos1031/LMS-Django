@@ -133,7 +133,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
             'id', 
             'borrower', 'borrower_id', 
             'book_copy', 'book_copy_id', 
-            'issue_date', 'due_date', 'actual_return_date', 
+            'issue_date', 'due_date', 'return_date', 
             'status', 'fine_amount', 'notes_by_librarian'
         ]
         read_only_fields = ['issue_date', 'fine_amount']
