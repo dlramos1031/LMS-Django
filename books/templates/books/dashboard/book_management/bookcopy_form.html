@@ -11,8 +11,8 @@
 {% endblock %}
 
 {% block dashboard_page_actions %}
-    <a href="{% url 'books:dashboard_book_edit' isbn=book.isbn %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left-circle"></i> Back to "{{ book.title }}"
+    <a href="{% url 'books:dashboard_bookcopy_list' isbn=book.isbn %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to Book Copies
     </a>
 {% endblock %}
 

@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.utils import timezone
@@ -9,6 +10,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q, F, Count, Case, When, BooleanField
 from django.urls import reverse_lazy
 from datetime import datetime
+from time import time
+from uuid import uuid4
 
 # DRF Imports
 from rest_framework import viewsets, permissions, status, generics, serializers, filters
@@ -32,7 +35,7 @@ from .serializers import (
     NotificationSerializer
 )
 # Assuming forms will be created in books/forms.py
-from .forms import BookForm, BookCopyForm, CategoryForm, AuthorForm, IssueBookForm, ReturnBookForm
+from .forms import BookForm, BookCopyForm, CategoryForm, AuthorForm, IssueBookForm, ReturnBookForm, BatchAddBookCopyForm
 
 CustomUser = get_user_model()
 
@@ -717,6 +720,76 @@ class StaffBookCopyCreateView(StaffRequiredMixin, CreateView):
                 else:
                     messages.error(self.request, f"Error in '{form.fields[field].label if field in form.fields else field}': {error}")
         return super().form_invalid(form)
+
+class StaffBatchAddBookCopiesView(StaffRequiredMixin, View):
+    template_name = 'books/dashboard/book_management/batch_add_bookcopy_form.html'
+
+    def get_book(self, book_isbn):
+        return get_object_or_404(Book, isbn=book_isbn)
+
+    def get(self, request, book_isbn):
+        book = self.get_book(book_isbn)
+        form = BatchAddBookCopyForm()
+        context = {
+            'form': form,
+            'book': book,
+            'page_title': _(f"Batch Add Copies for '{book.title}'")
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, book_isbn):
+        book = self.get_book(book_isbn)
+        form = BatchAddBookCopyForm(request.POST)
+        if form.is_valid():
+            number_of_copies = form.cleaned_data['number_of_copies']
+            default_status = form.cleaned_data['default_status']
+            date_acquired = form.cleaned_data['date_acquired']
+            condition_notes = form.cleaned_data['condition_notes']
+            copy_id_prefix = form.cleaned_data.get('copy_id_prefix', '').strip()
+
+            new_copies = []
+            for i in range(number_of_copies):
+                # Generate a unique provisional copy_id
+                # This is a simple approach; you might want something more robust or sequential
+                # based on existing copy IDs for that book.
+                timestamp_suffix = int(time() * 1000) # Milliseconds for more uniqueness
+                unique_part = f"{timestamp_suffix}-{i+1}" 
+                
+                provisional_copy_id = f"{copy_id_prefix}{book.isbn}-{unique_part}"
+                if len(provisional_copy_id) > 100: # Ensure it doesn't exceed max_length of copy_id
+                    provisional_copy_id = provisional_copy_id[:97] + "..."
+
+
+                # Check for extremely unlikely collision, loop to find a unique one
+                while BookCopy.objects.filter(copy_id=provisional_copy_id).exists():
+                    unique_part = f"{int(time() * 1000)}-{i+1}-{uuid4().hex[:4]}"
+                    provisional_copy_id = f"{copy_id_prefix}{book.isbn}-{unique_part}"
+                    if len(provisional_copy_id) > 100:
+                         provisional_copy_id = provisional_copy_id[:97] + "..."
+                
+                new_copies.append(
+                    BookCopy(
+                        book=book,
+                        copy_id=provisional_copy_id,
+                        status=default_status,
+                        date_acquired=date_acquired,
+                        condition_notes=condition_notes
+                    )
+                )
+            
+            try:
+                BookCopy.objects.bulk_create(new_copies)
+                messages.success(request, _(f"{number_of_copies} new copies for '{book.title}' added successfully with provisional IDs. Please review and update IDs as needed."))
+                return redirect('books:dashboard_bookcopy_list', isbn=book.isbn)
+            except Exception as e:
+                messages.error(request, _(f"An error occurred while adding copies: {e}"))
+
+        context = {
+            'form': form,
+            'book': book,
+            'page_title': _(f"Batch Add Copies for '{book.title}'")
+        }
+        return render(request, self.template_name, context)
 
 class StaffBookCopyUpdateView(StaffRequiredMixin, UpdateView):
     """View for staff to edit an existing book copy."""

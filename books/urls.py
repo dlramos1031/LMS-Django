@@ -24,6 +24,7 @@ urlpatterns = [
 
     path('dashboard/book-copies/<slug:isbn>/', views.StaffBookCopiesManageView.as_view(), name='dashboard_bookcopy_list'),
     path('dashboard/book-copies/add/<slug:book_isbn>/', views.StaffBookCopyCreateView.as_view(), name='dashboard_bookcopy_add'),
+    path('dashboard/book-copies/batch-add/<slug:book_isbn>/', views.StaffBatchAddBookCopiesView.as_view(), name='dashboard_bookcopy_batch_add'),
     path('dashboard/book-copies/edit/<int:pk>/', views.StaffBookCopyUpdateView.as_view(), name='dashboard_bookcopy_edit'),
     path('dashboard/book-copies/delete/<int:pk>/confirm/', views.StaffBookCopyDeleteView.as_view(), name='dashboard_bookcopy_delete_confirm'),
 

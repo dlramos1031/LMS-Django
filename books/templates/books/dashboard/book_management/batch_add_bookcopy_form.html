@@ -1,0 +1,42 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}{{ page_title }}{% endblock %}
+
+{% block dashboard_page_title_main %}{{ page_title }}{% endblock %}
+
+{% block dashboard_page_actions %}
+    <a href="{% url 'books:dashboard_bookcopy_list' isbn=book.isbn %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Back to Book Copies
+    </a>
+{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-collection-plus-fill me-2"></i>Batch Add Copies</h5>
+            </div>
+            <div class="card-body">
+                <p class="alert alert-info small">
+                    You are adding multiple copies for the book: <strong>{{ book.title }}</strong> (ISBN: {{ book.isbn }}).
+                    Provisional Copy IDs will be generated. You can edit individual copies later to assign specific barcode IDs.
+                </p>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% bootstrap_form form layout='vertical' %} {# Using vertical layout for this simpler form #}
+
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle-fill"></i> Add Copies
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock dashboard_content_main %}

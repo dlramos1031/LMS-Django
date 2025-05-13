@@ -57,6 +57,45 @@ class BookCopyForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 
+class BatchAddBookCopyForm(forms.Form):
+    number_of_copies = forms.IntegerField(
+        min_value=1,
+        max_value=100, # Or some other reasonable max for a single batch
+        label=_("Number of New Copies to Add"),
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'value': 1})
+    )
+    default_status = forms.ChoiceField(
+        choices=BookCopy.STATUS_CHOICES,
+        initial='Available',
+        label=_("Default Status for New Copies"),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    date_acquired = forms.DateField(
+        initial=timezone.now().date(),
+        label=_("Date Acquired"),
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+    copy_id_prefix = forms.CharField(
+        max_length=50,
+        required=False,
+        label=_("Copy ID Prefix (Optional)"),
+        help_text=_("e.g., 'MAINLIB-'. A unique suffix will be auto-generated."),
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    condition_notes = forms.CharField(
+        max_length=200,
+        required=False,
+        label=_("Condition Notes (Optional)"),
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
+    def clean_number_of_copies(self):
+        num = self.cleaned_data.get('number_of_copies')
+        if num is None or num < 1:
+            raise forms.ValidationError(_("Please enter a valid number of copies (at least 1)."))
+        return num
+
+
 class CategoryForm(forms.ModelForm):
     """Form for creating and updating Category instances."""
     class Meta:
