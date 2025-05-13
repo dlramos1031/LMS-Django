@@ -15,10 +15,10 @@
 
 {% block dashboard_content_main %}
     <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light border rounded shadow-sm">
-        <div class="col-md-5">
+        <div class="col-md-6">
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Search Borrower, Book Title, Copy ID, ISBN..." value="{{ current_search|default:'' }}">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <select name="status_filter" class="form-select form-select-sm">
                 <option value="">All Historical Statuses</option>
                 {% for status_val, status_disp in historical_status_choices %}

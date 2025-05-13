@@ -927,14 +927,15 @@ def staff_issue_book_view(request):
             book_copy = form.cleaned_data['book_copy']
             due_date = form.cleaned_data['due_date']
 
-            # Check again if book_copy is still available before creating borrowing record
+            current_time = timezone.now()
+
             if book_copy.status == 'Available':
                 Borrowing.objects.create(
                     borrower=borrower,
                     book_copy=book_copy,
+                    issue_date=current_time,
                     due_date=due_date,
-                    status='ACTIVE', # Staff issues directly to ACTIVE
-                    # issued_by=request.user # Optional
+                    status='ACTIVE',
                 )
                 book_copy.status = 'On Loan'
                 book_copy.save(update_fields=['status'])
@@ -942,6 +943,7 @@ def staff_issue_book_view(request):
                 book_title = book_copy.book
                 book_title.total_borrows = F('total_borrows') + 1
                 book_title.save(update_fields=['total_borrows'])
+                book_title.refresh_from_db()
 
                 Notification.objects.create(
                     recipient=borrower,
@@ -963,7 +965,7 @@ def staff_issue_book_view(request):
 
 @login_required
 @user_passes_test(is_staff_user)
-def staff_return_book_view(request): # Placeholder - requires a form
+def staff_return_book_view(request):
     """Allows staff to mark a borrowed book copy as returned."""
     # form = ReturnBookForm(request.POST or None)
     # if request.method == 'POST' and form.is_valid():
