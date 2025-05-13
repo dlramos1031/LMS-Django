@@ -139,33 +139,50 @@ def user_profile_edit_view(request):
 
 @login_required
 def change_password_view(request):
+    if request.user.role in ['LIBRARIAN', 'ADMIN'] or request.user.is_staff:
+        messages.info(request, _("Staff members should use the dashboard to manage borrowings."))
+        return redirect('books:dashboard_home')
+
     if request.method == 'POST':
         form = CustomPasswordChangeForm(request.user, request.POST)
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
             messages.success(request, _('Your password was successfully updated!'))
-            return redirect('users:my_profile')
+            return redirect('users:my_profile') 
         else:
             messages.error(request, _('Please correct the errors below.'))
     else:
         form = CustomPasswordChangeForm(request.user)
-    return render(request, 'users/registration/password_change_form.html', {
+    
+    context = {
         'form': form,
-        'page_title': _('Change Password')
-    })
+        'page_title': _('Change Password'),
+        'view_context': 'portal',
+    }
+    return render(request, 'users/registration/password_change_form.html', context)
 
 
 # --- New Borrower Web Portal Views ---
 @login_required
 def my_borrowings_view(request):
-    user_borrowings = Borrowing.objects.filter(borrower=request.user).select_related('book_copy__book').order_by('-issue_date')
-    active_borrowings = user_borrowings.filter(status__in=['ACTIVE', 'OVERDUE', 'REQUESTED'])
-    past_borrowings = user_borrowings.filter(status__in=['RETURNED', 'RETURNED_LATE', 'CANCELLED', 'LOST_BY_BORROWER'])
+    if request.user.role in ['LIBRARIAN', 'ADMIN'] or request.user.is_staff:
+        messages.info(request, _("Staff members should use the dashboard to manage borrowings."))
+        return redirect('books:dashboard_home')
+    
+    user_borrowings = Borrowing.objects.filter(borrower=request.user).select_related('book_copy__book').order_by('-issue_date', '-request_date')
+
+    active_borrowing_statuses = ['ACTIVE', 'OVERDUE', 'REQUESTED']
+    past_borrowing_statuses = ['RETURNED', 'RETURNED_LATE', 'CANCELLED', 'REJECTED', 'LOST_BY_BORROWER']
+
+    active_borrowings = user_borrowings.filter(status__in=active_borrowing_statuses)
+    past_borrowings = user_borrowings.filter(status__in=past_borrowing_statuses)
+
     context = {
         'active_borrowings': active_borrowings,
         'past_borrowings': past_borrowings,
-        'page_title': _('My Borrowings')
+        'page_title': _('My Borrowings'),
+        'view_context': 'portal',
     }
     return render(request, 'users/portal/my_borrowings.html', context)
 
@@ -176,7 +193,7 @@ def my_reservations_view(request):
         'reservations': user_reservations,
         'page_title': _('My Reservations')
     }
-    return render(request, 'users/portal/my_reservations.html', context)
+    return render(request, 'users/portal/my_borrowings.html', context)
 
 def staff_login_view(request):
     if request.user.is_authenticated and is_staff_user(request.user):

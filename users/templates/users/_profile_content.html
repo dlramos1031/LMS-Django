@@ -49,19 +49,18 @@
                         <dd class="col-sm-8">{{ profile_user.phone_number|default:"N/A" }}</dd>
 
                         {% if profile_user.role == 'BORROWER' and not profile_user.is_staff %}
-                            <dt class="col-sm-3">Physical Address:</dt>
-                            <dd class="col-sm-8">{{ profile_user.physical_address|linebreaksbr|default:"N/A" }}</dd>
+                        <dt class="col-sm-3">Physical Address:</dt>
+                        <dd class="col-sm-8">{{ profile_user.physical_address|linebreaksbr|default:"N/A" }}</dd>
 
-                            <dt class="col-sm-3">Birth Date:</dt>
-                            <dd class="col-sm-8">{{ profile_user.birth_date|date:"F j, Y"|default:"N/A" }}</dd>
-                            
-                            <dt class="col-sm-3">{{ profile_user.borrower_id_label|default:"Library ID" }}:</dt>
-                            <dd class="col-sm-8">{{ profile_user.borrower_id_value|default:"N/A" }}</dd>
+                        <dt class="col-sm-3">Birth Date:</dt>
+                        <dd class="col-sm-8">{{ profile_user.birth_date|date:"F j, Y"|default:"N/A" }}</dd>
+                        
+                        <dt class="col-sm-3">{{ profile_user.borrower_id_label|default:"Library ID" }}:</dt>
+                        <dd class="col-sm-8">{{ profile_user.borrower_id_value|default:"N/A" }}</dd>
 
-                            <dt class="col-sm-3">Borrower Type:</dt>
-                            <dd class="col-sm-8">{{ profile_user.get_borrower_type_display|default:"N/A" }}</dd>
+                        <dt class="col-sm-3">Borrower Type:</dt>
+                        <dd class="col-sm-8">{{ profile_user.get_borrower_type_display|default:"N/A" }}</dd>
                         {% endif %}
-
 
                         <dt class="col-sm-3">Date Joined:</dt>
                         <dd class="col-sm-8">{{ profile_user.date_joined|date:"F j, Y" }}</dd>

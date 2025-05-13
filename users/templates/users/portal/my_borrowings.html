@@ -1,0 +1,117 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block portal_title %}{{ page_title|default:"My Borrowings" }}{% endblock %}
+
+{% block portal_content %}
+<div class="container py-4">
+    <h1 class="mb-4">{{ page_title }}</h1>
+
+    {# Active Borrowings and Requests Section #}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Active Loans & Pending Requests</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if active_borrowings %}
+                <ul class="list-group list-group-flush">
+                    {% for borrowing in active_borrowings %}
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
+                                    {{ borrowing.book_copy.book.title }}
+                                </a>
+                                <small class="text-muted">(Copy: {{ borrowing.book_copy.copy_id }})</small>
+                            </h6>
+                            <small class="text-muted">
+                                {% if borrowing.status == 'REQUESTED' %}
+                                    Requested: {{ borrowing.request_date|date:"M d, Y" }}
+                                {% elif borrowing.issue_date %}
+                                    Issued: {{ borrowing.issue_date|date:"M d, Y" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <p class="mb-1">
+                            Status: 
+                            <span class="fw-bold
+                                {% if borrowing.status == 'ACTIVE' %}text-success
+                                {% elif borrowing.status == 'OVERDUE'%}text-danger
+                                {% elif borrowing.status == 'REQUESTED'%}text-warning
+                                {% else %}text-secondary{% endif %}">
+                                {{ borrowing.get_status_display }}
+                            </span>
+                            {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
+                                - Due: {{ borrowing.due_date|date:"F j, Y" }}
+                                {% if borrowing.status == 'ACTIVE' %}
+                                    {# Placeholder for Renew Button - Implement renew_book_view logic first #}
+                                    {# <a href="{% url 'books:portal_borrow_renew' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-primary ms-2">Request Renewal</a> #}
+                                {% endif %}
+                            {% elif borrowing.status == 'REQUESTED' %}
+                                - Preferred Due: {{ borrowing.due_date|date:"F j, Y" }}
+                                {# Option to cancel request if needed (would require a new view/logic) #}
+                                {# <form method="post" action="{% url 'cancel_borrow_request' borrowing_id=borrowing.id %}" class="d-inline"> {% csrf_token %} <button type="submit" class="btn btn-sm btn-outline-danger ms-2">Cancel Request</button></form> #}
+                            {% endif %}
+                        </p>
+                        {% if borrowing.notes_by_librarian %}
+                            <small class="text-muted fst-italic">Librarian Note: {{ borrowing.notes_by_librarian }}</small>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="p-3 text-muted mb-0">You have no active loans or pending requests.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {# Past Borrowings Section #}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-archive-fill me-2"></i>Borrowing History</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if past_borrowings %}
+                <ul class="list-group list-group-flush">
+                    {% for borrowing in past_borrowings %}
+                    <li class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                             <h6 class="mb-1">
+                                <a href="{% url 'books:portal_book_detail' isbn=borrowing.book_copy.book.isbn %}" class="text-decoration-none">
+                                    {{ borrowing.book_copy.book.title }}
+                                </a>
+                                <small class="text-muted">(Copy: {{ borrowing.book_copy.copy_id }})</small>
+                            </h6>
+                            <small class="text-muted">
+                                {% if borrowing.return_date %}
+                                    Returned: {{ borrowing.return_date|date:"M d, Y" }}
+                                {% elif borrowing.issue_date %}
+                                     Issued: {{ borrowing.issue_date|date:"M d, Y" }}
+                                {% else %}
+                                    Requested: {{ borrowing.request_date|date:"M d, Y" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <p class="mb-1">
+                            Status: <span class="fw-bold text-secondary">{{ borrowing.get_status_display }}</span>
+                            {% if borrowing.status == 'RETURNED' or borrowing.status == 'RETURNED_LATE' %}
+                                - Due: {{ borrowing.due_date|date:"F j, Y" }}
+                            {% endif %}
+                        </p>
+                        {% if borrowing.fine_amount > 0 %}
+                            <p class="mb-1 text-danger">Fine Incurred: ${{ borrowing.fine_amount|floatformat:2 }}</p>
+                        {% endif %}
+                         {% if borrowing.notes_by_librarian %}
+                            <small class="text-muted fst-italic">Librarian Note: {{ borrowing.notes_by_librarian }}</small>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="p-3 text-muted mb-0">You have no past borrowing records.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock portal_content %}

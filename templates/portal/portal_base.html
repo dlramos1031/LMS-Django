@@ -18,11 +18,6 @@
                 <i class="bi bi-journal-check me-1"></i>My Borrowings
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.view_name == 'users:my_reservations' %}active fw-semibold{% endif %}" href="{% url 'users:my_reservations' %}">
-                <i class="bi bi-bookmark-star me-1"></i>My Reservations
-            </a>
-        </li>
         {% endif %}
     </ul>
     <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
@@ -38,10 +33,18 @@
                     {{ user.first_name|default:user.username }}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdownPortal">
-                    <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:my_profile' %}active{% endif %}" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>View Profile</a></li>
-                    <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:edit_my_profile' %}active{% endif %}" href="{% url 'users:edit_my_profile' %}"><i class="bi bi-pencil-square me-2"></i>Edit Profile</a></li>
-                    <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:password_change' %}active{% endif %}" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
-                    <li><hr class="dropdown-divider"></li>
+                    {% if user.role == 'BORROWER' and not user.is_staff %} {# Only show profile links relevant to borrower portal context #}
+                        <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:my_profile' %}active{% endif %}" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>View Profile</a></li>
+                        <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:edit_my_profile' %}active{% endif %}" href="{% url 'users:edit_my_profile' %}"><i class="bi bi-pencil-square me-2"></i>Edit Profile</a></li>
+                        <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:password_change' %}active{% endif %}" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                    {% elif user.is_staff %} {# Staff might have a link to their dashboard profile if different #}
+                         <li><a class="dropdown-item" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>View My Staff Profile</a></li>
+                         <li><a class="dropdown-item" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
+                         <li><hr class="dropdown-divider"></li>
+                         <li><a class="dropdown-item" href="{% url 'books:dashboard_home' %}"><i class="bi bi-speedometer2 me-2"></i>Staff Dashboard</a></li>
+                         <li><hr class="dropdown-divider"></li>
+                    {% endif %}
                     <li>
                         <form action="{% url 'users:logout' %}" method="post" class="d-inline">
                             {% csrf_token %}
