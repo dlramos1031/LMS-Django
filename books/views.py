@@ -558,15 +558,32 @@ class StaffBookListView(StaffRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = Book.objects.all().prefetch_related('authors', 'categories').annotate(
+        queryset = super().get_queryset().prefetch_related('authors', 'categories').annotate(
             copy_count=Count('copies'),
             available_copy_count=Count('copies', filter=Q(copies__status='Available'))
-        ).order_by('title')
-        return queryset
+        )
+        
+        search_term = self.request.GET.get('search', '').strip()
+        if search_term:
+            queryset = queryset.filter(
+                Q(title__icontains=search_term) |
+                Q(isbn__icontains=search_term) |
+                Q(authors__name__icontains=search_term) |
+                Q(categories__name__icontains=search_term) |
+                Q(publisher__icontains=search_term)
+            ).distinct()
+            
+        return queryset.order_by('title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Manage Book Titles')
+        context['current_search'] = self.request.GET.get('search', '')
+        
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None) 
+        context['other_query_params'] = query_params.urlencode()
+        
         return context
 
 class StaffBookCreateView(StaffRequiredMixin, CreateView):
@@ -751,9 +768,24 @@ class StaffCategoryListView(StaffRequiredMixin, ListView):
     context_object_name = 'categories'
     paginate_by = 20
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search_term = self.request.GET.get('search', '').strip()
+        if search_term:
+            queryset = queryset.filter(
+                Q(name__icontains=search_term) |
+                Q(description__icontains=search_term)
+            ).distinct()
+        return queryset.order_by('name')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Manage Categories')
+        context['current_search'] = self.request.GET.get('search', '')
+
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params'] = query_params.urlencode()
         return context
 
 class StaffCategoryCreateView(StaffRequiredMixin, CreateView):
@@ -799,13 +831,28 @@ class StaffCategoryDeleteView(StaffRequiredMixin, DeleteView):
 class StaffAuthorListView(StaffRequiredMixin, ListView):
     """View for staff to list and manage authors."""
     model = Author
-    form_class = AuthorForm
     template_name = 'books/dashboard/book_management/author_list.html'
     context_object_name = 'authors'
     paginate_by = 20
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search_term = self.request.GET.get('search', '').strip()
+        if search_term:
+            queryset = queryset.filter(
+                Q(name__icontains=search_term) |
+                Q(biography__icontains=search_term)
+            ).distinct()
+        return queryset.order_by('name')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Manage Authors')
+        context['current_search'] = self.request.GET.get('search', '')
+
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params'] = query_params.urlencode()
         return context
 
 class StaffAuthorCreateView(StaffRequiredMixin, CreateView):

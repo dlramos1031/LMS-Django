@@ -13,8 +13,14 @@
 {% endblock %}
 
 {% block dashboard_content_main %}
-    {# Optional: Add a search/filter form here if desired for the book list #}
-    {# {% include "dashboard/_includes/search_form_component.html" with search_url_name="books:dashboard_book_list" placeholder_text="Search books by title, ISBN, author..." current_search_term=search_term %} #}
+    <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light border rounded shadow-sm">
+        <div class="col-md-8"> {# Adjust column size as needed #}
+            <input type="text" name="search" class="form-control form-control-sm" placeholder="Search by Title, ISBN, Author, Category, Publisher..." value="{{ current_search|default:'' }}">
+        </div>
+        <div class="col-md-4"> {# Adjust column size #}
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Search Books</button>
+        </div>
+    </form>
 
     <div class="table-responsive mt-3">
         <table class="table table-striped table-hover table-sm align-middle">
@@ -83,7 +89,7 @@
     </div>
 
     {% if page_obj %}
-        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj %}
+        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj other_query_params=other_query_params %}
     {% endif %}
 
 {% endblock dashboard_content_main %}
