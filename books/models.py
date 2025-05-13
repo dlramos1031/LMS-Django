@@ -264,7 +264,7 @@ class Borrowing(models.Model):
     )
     STATUS_CHOICES = [
         ('REQUESTED', _('Requested')),                  # Book is requested before librarian approval
-        ('ACTIVE', _('Active Loan')),                   # Book is currently borrowed by the user
+        ('ACTIVE', _('Active')),                        # Book is currently borrowed by the user
         ('RETURNED', _('Returned')),                    # Book has been returned on or before the due date
         ('RETURNED_LATE', _('Returned Late')),          # Book returned after the due date
         ('OVERDUE', _('Overdue')),                      # Book not yet returned and is past its due date

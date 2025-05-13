@@ -986,20 +986,103 @@ def staff_reject_request_view(request, borrowing_id):
     messages.info(request, _(f"Request for '{borrowing_request.book_copy.book.title}' rejected."))
     return redirect('books:dashboard_pending_requests')
 
+@user_passes_test(is_staff_user)
+@require_POST
+def staff_mark_loan_returned_view(request, borrowing_id):
+    """
+    Processes a book return by staff. Updates borrowing record and book copy status.
+    Calculates fines if applicable.
+    """
+    if not is_staff_user(request.user):
+        messages.error(request, _("You do not have permission to perform this action."))
+        return redirect('books:dashboard_home')
+
+    loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
+    book_copy_instance = loan.book_copy
+
+    loan.actual_return_date = timezone.now()
+
+    fine_amount_calculated = 0
+    if loan.due_date.date() < loan.actual_return_date.date():
+        loan.status = 'RETURNED_LATE'
+        overdue_days = (loan.actual_return_date.date() - loan.due_date.date()).days
+        if overdue_days > 0:
+            FINE_RATE_PER_DAY = 1.00 # Example: $1.00 per day
+            fine_amount_calculated = overdue_days * FINE_RATE_PER_DAY
+            loan.fine_amount = fine_amount_calculated
+    else:
+        loan.status = 'RETURNED'
+        loan.fine_amount = 0
+
+    loan.save()
+
+    book_copy_instance.status = 'Available'
+    book_copy_instance.save(update_fields=['status'])
+
+    # Create Notification
+    return_message = _(f"Book '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) has been successfully returned.")
+    notification_type = 'RETURN_CONFIRMED'
+    if loan.status == 'RETURNED_LATE' and fine_amount_calculated > 0:
+        fine_message = _(f" A fine of ${fine_amount_calculated:.2f} has been applied for late return.")
+        return_message += fine_message
+        notification_type = 'FINE_ISSUED' # Or have a separate notification for fines
+
+    Notification.objects.create(
+        recipient=loan.borrower,
+        notification_type=notification_type,
+        message=return_message
+    )
+    messages.success(request, return_message)
+    
+    return redirect('books:dashboard_active_loans')
+
+
+
 class StaffActiveLoansView(StaffRequiredMixin, ListView):
-    """Displays all currently active and overdue loans."""
+    """
+    Displays a list of all currently active and overdue loans.
+    Ordered by due date to prioritize those due soonest or already overdue.
+    """
     model = Borrowing
-    template_name = 'books/dashboard/circulation/active_loans.html'
+    template_name = 'books/dashboard/circulation/active_loans.html' # You've created this empty file
     context_object_name = 'active_loans'
     paginate_by = 10
 
     def get_queryset(self):
-        return Borrowing.objects.filter(status__in=['ACTIVE', 'OVERDUE']).select_related('borrower', 'book_copy__book').order_by('due_date')
+        queryset = Borrowing.objects.filter(status__in=['ACTIVE', 'OVERDUE']) \
+                                    .select_related('borrower', 'book_copy__book') \
+                                    .order_by('due_date') # Show soonest due/most overdue first
+
+        search_term = self.request.GET.get('search', '').strip()
+        # Optional: Filter by 'OVERDUE' status explicitly if needed via a dropdown
+        # status_filter = self.request.GET.get('status_filter', '').strip()
+
+        if search_term:
+            queryset = queryset.filter(
+                Q(borrower__username__icontains=search_term) |
+                Q(borrower__first_name__icontains=search_term) |
+                Q(borrower__last_name__icontains=search_term) |
+                Q(book_copy__book__title__icontains=search_term) |
+                Q(book_copy__copy_id__icontains=search_term) |
+                Q(book_copy__book__isbn__icontains=search_term)
+            )
+        # if status_filter == 'OVERDUE':
+        #     queryset = queryset.filter(status='OVERDUE', due_date__date__lt=timezone.now().date())
+        # elif status_filter == 'ACTIVE_NOT_OVERDUE':
+        #     queryset = queryset.filter(status='ACTIVE', due_date__date__gte=timezone.now().date())
+            
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Active & Overdue Loans')
-        context['now_date'] = timezone.now().date()
+        context['now_date'] = timezone.now().date() # For easy overdue comparison in template
+        context['current_search'] = self.request.GET.get('search', '')
+        # context['current_status_filter'] = self.request.GET.get('status_filter', '')
+        
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params'] = query_params.urlencode()
         return context
 
 @login_required
@@ -1010,7 +1093,7 @@ def staff_mark_loan_returned_view(request, borrowing_id):
     book_copy = loan.book_copy
 
     loan.return_date = timezone.now()
-    loan.status = 'RETURNED_LATE' if loan.due_date.date() < timezone.now().date() else 'RETURNED'
+    loan.status = 'RETURNED_LATE' if loan.due_date < timezone.now().date() else 'RETURNED'
     # TODO: Implement actual fine calculation based on library policy
     # if loan.status == 'RETURNED_LATE':
     #     overdue_duration = timezone.now() - loan.due_date
@@ -1028,29 +1111,61 @@ def staff_mark_loan_returned_view(request, borrowing_id):
     return redirect('books:dashboard_active_loans')
 
 class StaffBorrowingHistoryView(StaffRequiredMixin, ListView):
-    """Displays a history of all non-active borrowing records."""
+    """
+    Displays a comprehensive history of all non-active borrowing records
+    (e.g., returned, rejected, cancelled).
+    """
     model = Borrowing
     template_name = 'books/dashboard/circulation/borrowing_history.html'
     context_object_name = 'borrowing_history'
     paginate_by = 15
 
     def get_queryset(self):
-        return Borrowing.objects.filter(
-            status__in=['RETURNED', 'RETURNED_LATE', 'REJECTED', 'CANCELLED', 'LOST_BY_BORROWER']
-        ).select_related('borrower', 'book_copy__book').order_by('-return_date', '-issue_date')
+        # Define statuses that represent "historical" or "closed" records
+        historical_statuses = [
+            'RETURNED', 'RETURNED_LATE', 
+            'REJECTED', 'CANCELLED', 
+            'LOST_BY_BORROWER'
+        ]
+        
+        queryset = Borrowing.objects.filter(status__in=historical_statuses) \
+                                    .select_related('borrower', 'book_copy__book') \
+                                    .order_by('-return_date', '-request_date') # Show most recently concluded first
+
+        # --- Search Functionality ---
+        search_term = self.request.GET.get('search', '').strip()
+        status_filter = self.request.GET.get('status_filter', '').strip()
+
+        if search_term:
+            queryset = queryset.filter(
+                Q(borrower__username__icontains=search_term) |
+                Q(borrower__first_name__icontains=search_term) |
+                Q(borrower__last_name__icontains=search_term) |
+                Q(book_copy__book__title__icontains=search_term) |
+                Q(book_copy__copy_id__icontains=search_term) |
+                Q(book_copy__book__isbn__icontains=search_term)
+            )
+        
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        # --- End Search Functionality ---
+            
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Borrowing History')
+
+        context['current_search'] = self.request.GET.get('search', '')
+        context['historical_status_choices'] = [
+            choice for choice in Borrowing.STATUS_CHOICES 
+            if choice[0] in ['RETURNED', 'RETURNED_LATE', 'REJECTED', 'CANCELLED', 'LOST_BY_BORROWER']
+        ]
+        context['current_status_filter'] = self.request.GET.get('status_filter', '')
+
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['other_query_params'] = query_params.urlencode()
+
         return context
 
-class StaffReservationListView(StaffRequiredMixin, TemplateView): # Or ListView for a Reservation model
-    """Displays and manages book reservations (placeholder)."""
-    template_name = 'books/dashboard/circulation/reservation_list.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = _('Manage Book Reservations')
-        # TODO: Fetch actual reservation data
-        # context['reservations'] = ...
-        return context

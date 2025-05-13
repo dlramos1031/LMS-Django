@@ -46,7 +46,6 @@ urlpatterns = [
     path('dashboard/circulation/pending/approve/<int:borrowing_id>/', views.staff_approve_request_view, name='dashboard_approve_request'),
     path('dashboard/circulation/pending/reject/<int:borrowing_id>/', views.staff_reject_request_view, name='dashboard_reject_request'),
     path('dashboard/circulation/active-loans/', views.StaffActiveLoansView.as_view(), name='dashboard_active_loans'),
-    path('dashboard/circulation/active-loans/<int:borrowing_id>/mark-returned/', views.staff_mark_loan_returned_view, name='dashboard_mark_loan_returned'),
+    path('dashboard/circulation/active-loans/mark-returned/<int:borrowing_id>/', views.staff_mark_loan_returned_view, name='dashboard_mark_loan_returned'),
     path('dashboard/circulation/history/', views.StaffBorrowingHistoryView.as_view(), name='dashboard_borrowing_history'),
-    path('dashboard/circulation/reservations/', views.StaffReservationListView.as_view(), name='dashboard_reservations'),
 ]

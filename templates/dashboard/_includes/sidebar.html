@@ -14,17 +14,12 @@
     </li>
     <li class="nav-item">
         <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_active_loans' %}active{% endif %}" href="{% url 'books:dashboard_active_loans' %}">
-            <i class="bi bi-journals"></i> Active Loans
+            <i class="bi bi-journals"></i> Active Borrows
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_borrowing_history' %}active{% endif %}" href="{% url 'books:dashboard_borrowing_history' %}">
             <i class="bi bi-archive"></i> Borrowing History
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if request.resolver_match.view_name == 'books:dashboard_reservations' %}active{% endif %}" href="{% url 'books:dashboard_reservations' %}">
-            <i class="bi bi-bookmark-star"></i> Reservations
         </a>
     </li>
 
