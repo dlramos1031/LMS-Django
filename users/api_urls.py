@@ -6,7 +6,9 @@ from .views import (
     UserLogoutAPIView,
     UserProfileAPIView,
     ChangePasswordAPIView,
-    UserDeviceViewSet
+    UserDeviceViewSet,
+    CheckUsernameAvailabilityAPIView,
+    CheckEmailAvailabilityAPIView
 )
 
 router = DefaultRouter()
@@ -18,5 +20,7 @@ urlpatterns = [
     path('logout/', UserLogoutAPIView.as_view(), name='api_user_logout'),
     path('profile/', UserProfileAPIView.as_view(), name='api_user_profile'),
     path('change-password/', ChangePasswordAPIView.as_view(), name='api_change_password'),
+    path('check-username/', CheckUsernameAvailabilityAPIView.as_view(), name='api_check_username'),
+    path('check-email/', CheckEmailAvailabilityAPIView.as_view(), name='api_check_email'),
     path('', include(router.urls)),
 ]

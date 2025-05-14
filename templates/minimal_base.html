@@ -8,28 +8,15 @@
     <title>{% block title %}LMS Auth{% endblock %}</title>
     
     <link rel="stylesheet" href="{% static 'css/inter_font.css' %}">
-    
     <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
-    
     {% bootstrap_css %}
-    
     <link rel="stylesheet" href="{% static 'css/auth_styles.css' %}">
     
-    <style>
-        /* The styles previously in minimal_base.html (body background, auth-container) 
-          are now largely handled by auth_styles.css (body.auth-page).
-          You can keep specific overrides here if needed, or remove this style block
-          if auth_styles.css covers everything.
-        */
-    </style>
 </head>
-<body class="auth-page"> {# Added auth-page class #}
-    {# The auth-container div can remain to structure content before it's wrapped by auth-card in child templates #}
-    {# Or, the child template's auth-card can be the direct child of body if auth-container is removed #}
-    {# For now, let's keep auth-container; child templates will place auth-card inside it. #}
+{# Allow child templates to override the body class completely if needed #}
+<body class="{% block body_class_override %}auth-page-base auth-page-dashboard{% endblock %}"> 
     <div class="auth-container"> 
         {% block auth_content %}
-        {# Content from child templates (e.g., staff_login.html) will go here, wrapped in an .auth-card #}
         {% endblock auth_content %}
     </div>
     

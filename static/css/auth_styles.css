@@ -1,27 +1,26 @@
 /* static/css/auth_styles.css */
 
-/* --- Page Body and Background --- */
-body.auth-page {
+/* --- Common Base for Auth Pages --- */
+body.auth-page-base {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
-  padding-top: 56px; 
   padding-bottom: 20px;
   position: relative; 
   background-color: #f0f2f5;
 }
 
-body.auth-page::before {
+/* --- Background Image Pseudo-elements --- */
+body.auth-page-base::before {
   content: "";
   position: fixed; 
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url("../images/library_bg.jpg");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -30,6 +29,22 @@ body.auth-page::before {
   -webkit-filter: blur(5px); 
   z-index: -1; 
   transform: scale(1.05); 
+}
+
+/* Specific Background for Portal Auth Pages */
+body.auth-page-portal::before {
+  background-image: url("../images/library_bg.jpg");
+}
+body.auth-page-portal {
+  padding-top: 90px;
+}
+
+/* Specific Background for Dashboard (Staff) Auth Page */
+body.auth-page-dashboard::before {
+  background-image: url("../images/admin_bg.jpg");
+}
+body.auth-page-dashboard {
+   padding-top: 56px;
 }
 
 /* --- Authentication Card --- */
@@ -43,6 +58,8 @@ body.auth-page::before {
   border: none; 
   position: relative; 
   z-index: 1;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
 }
 
 .auth-card .card-title {
@@ -135,11 +152,12 @@ body.auth-page::before {
 
 /* --- Responsive Adjustments --- */
 @media (max-width: 576px) {
-  body.auth-page {
-      padding-top: 20px;
+  body.auth-page-portal, body.auth-page-dashboard { /* Apply to both */
+      padding-top: 70px; /* Adjust if navbar is smaller on mobile */
   }
   .auth-card {
-      margin: 1rem;
+      margin-left: 1rem;
+      margin-right: 1rem;
       padding: 1.5rem;
   }
 }

@@ -1,106 +1,127 @@
-{% extends 'base.html' %}
+{% extends "base.html" %} {# Extends the main base template with the navbar #}
 {% load static %}
 {% load bootstrap5 %}
 
-{% block title %}Register - LMS{% endblock %}
+{% block title %}Register - LMS Portal{% endblock %}
+
+{% block body_class %}auth-page-base auth-page-portal{% endblock %} {# Apply portal auth body classes #}
 
 {% block content_body %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <h3 class="card-title text-center mb-4">Create Your Library Account</h3>
+<div class="auth-page-content-wrapper">
+    <div class="auth-card"> {# Apply the styled card #}
+        <div class="text-center mb-4">
+            <i class="bi bi-person-plus-fill h1 text-primary"></i>
+        </div>
+        <h3 class="card-title text-center mb-3">Create Your Library Account</h3>
 
-                    {% if form.non_field_errors %}
-                      <div class="alert alert-danger">
-                        {% for error in form.non_field_errors %}
-                          <p class="mb-0">{{ error }}</p>
-                        {% endfor %}
-                      </div>
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}
+              <p class="mb-0">{{ error }}</p>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endif %}
+        {% bootstrap_messages %}
+
+        <form method="post" action="{% url 'users:register' %}" id="register-form" novalidate>
+            {% csrf_token %}
+
+            <div class="row g-3">
+                {# Username #}
+                <div class="col-12">
+                    <label for="{{ form.username.id_for_label }}" class="form-label visually-hidden">{{ form.username.label }}</label>
+                    <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}"
+                           class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                           placeholder="Username" value="{{ form.username.value|default:'' }}" required>
+                    <div id="username-feedback" class="form-text text-danger mt-1"></div> {# For JS validation message #}
+                    {% if form.username.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.username.errors %}{{ error }}{% endfor %}
+                        </div>
                     {% endif %}
-                    {% bootstrap_messages %}
-
-                    <form method="post" action="{% url 'users:register' %}" id="register-form" novalidate>
-                        {% csrf_token %}
-
-                        {# Render general form errors if not using bootstrap_form #}
-                        {# {% if form.errors and not form.is_bound %} #}
-                        {# <div class="alert alert-danger">{{ form.non_field_errors }}</div> #}
-                        {# {% endif %} #}
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                {% bootstrap_field form.first_name layout='horizontal' %}
-                            </div>
-                            <div class="col-md-6">
-                                {% bootstrap_field form.last_name layout='horizontal' %}
-                            </div>
-
-                            <div class="col-12">
-                                {% bootstrap_field form.username layout='horizontal' %}
-                                <div id="username-feedback" class="invalid-feedback d-block"></div> {# For JS validation message #}
-                            </div>
-
-                            <div class="col-12">
-                                {% bootstrap_field form.email layout='horizontal' %}
-                                <div id="email-feedback" class="invalid-feedback d-block"></div> {# For JS validation message #}
-                            </div>
-
-                            <div class="col-md-6">
-                                {% bootstrap_field form.password1 layout='horizontal' %}
-                                <div id="password-strength" class="form-text mt-1"></div> {# For JS password strength #}
-                            </div>
-                            <div class="col-md-6">
-                                {% bootstrap_field form.password2 layout='horizontal' %}
-                                <div id="password-match" class="form-text mt-1"></div> {# For JS password match #}
-                            </div>
-
-                             {# Include other fields from UserRegistrationForm if you added them, like middle_initial, suffix #}
-                            {# Example for middle_initial #}
-                            {# <div class="col-md-6"> #}
-                            {# {% bootstrap_field form.middle_initial layout='horizontal' %} #}
-                            {# </div> #}
-                            {# <div class="col-md-6"> #}
-                            {# {% bootstrap_field form.suffix layout='horizontal' %} #}
-                            {# </div> #}
-
-                        </div>
-
-                        <div class="d-grid mt-4 mb-3">
-                            <button type="submit" class="btn btn-primary btn-block" id="register-btn">Register</button>
-                        </div>
-                    </form>
                 </div>
-                <div class="card-footer text-center py-3">
-                    <small class="text-muted">
-                        Already have an account? <a href="{% url 'users:login' %}" class="text-decoration-none">Login here</a>
-                    </small>
+
+                {# Email #}
+                <div class="col-12">
+                    <label for="{{ form.email.id_for_label }}" class="form-label visually-hidden">{{ form.email.label }}</label>
+                    <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}"
+                           class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                           placeholder="Email Address" value="{{ form.email.value|default:'' }}" required>
+                    <div id="email-feedback" class="form-text text-danger mt-1"></div> {# For JS validation message #}
+                    {% if form.email.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.email.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Password 1 #}
+                <div class="col-md-6">
+                    <label for="{{ form.password1.id_for_label }}" class="form-label visually-hidden">{{ form.password1.label }}</label>
+                    <input type="password" name="{{ form.password1.name }}" id="{{ form.password1.id_for_label }}"
+                           class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
+                           placeholder="Password" required>
+                    <div id="password-strength" class="form-text mt-1"></div> {# For JS password strength #}
+                    {% if form.password1.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.password1.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Password 2 #}
+                <div class="col-md-6">
+                    <label for="{{ form.password2.id_for_label }}" class="form-label visually-hidden">{{ form.password2.label }}</label>
+                    <input type="password" name="{{ form.password2.name }}" id="{{ form.password2.id_for_label }}"
+                           class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
+                           placeholder="Confirm Password" required>
+                    <div id="password-match" class="form-text mt-1"></div> {# For JS password match #}
+                    {% if form.password2.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.password2.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
+
+            <div class="d-grid mt-4 mb-3">
+                <button type="submit" class="btn btn-primary btn-block" id="register-btn">Register</button>
+            </div>
+        </form>
+        <div class="text-center auth-links">
+            <small class="text-muted">
+                Already have an account? <a href="{% url 'users:login' %}" class="text-decoration-none">Login here</a>
+            </small>
         </div>
     </div>
 </div>
 
+{% endblock content_body %}
+
+{% block page_specific_scripts %}
+{# Your existing JavaScript for registration form validation #}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Your existing JavaScript for registration form validation can remain here.
-    // Ensure API endpoints in fetch calls are correct (e.g., /api/auth/check-username/)
-    // and that these endpoints are defined in users/api_urls.py
-
     const form = document.getElementById("register-form");
-    const usernameInput = form.elements.namedItem("username"); // More robust way to get form elements
-    const emailInput = form.elements.namedItem("email");
-    const passwordInput = form.elements.namedItem("password1"); // Assuming your form field is named 'password'
-    const confirmPasswordInput = form.elements.namedItem("password2"); // Assuming your form field is 'password2'
+    if (!form) return; // Exit if form not found
+
+    // Helper to safely get form elements
+    const getEl = (name) => form.elements.namedItem(name);
+
+    const usernameInput = getEl("username");
+    const emailInput = getEl("email");
+    const passwordInput = getEl("password1"); // Corrected to password1
+    const confirmPasswordInput = getEl("password2"); // Corrected to password2
     
     const usernameFeedback = document.getElementById("username-feedback");
     const emailFeedback = document.getElementById("email-feedback");
     const strengthText = document.getElementById("password-strength");
     const matchText = document.getElementById("password-match");
-    const registerBtn = document.getElementById("register-btn");
+    // const registerBtn = document.getElementById("register-btn"); // Not used in this script version
 
     function updatePasswordStrength(pass) {
+      if (!strengthText) return;
       let strength = 0;
       if (pass.length >= 8) strength++;
       if (pass.match(/[a-z]/) && pass.match(/[A-Z]/)) strength++;
@@ -115,56 +136,58 @@ document.addEventListener("DOMContentLoaded", function () {
       
       strengthText.textContent = "Strength: " + strengthLabel;
       strengthText.className = `form-text mt-1 ${strengthColor}`;
-      return strength >=2; // Consider moderate as minimum
     }
 
     function checkPasswordMatch() {
+      if (!matchText || !passwordInput || !confirmPasswordInput) return;
       if (passwordInput.value === confirmPasswordInput.value && confirmPasswordInput.value.length > 0) {
         matchText.textContent = "Passwords match ✅";
         matchText.className = "form-text mt-1 text-success";
         confirmPasswordInput.classList.remove("is-invalid");
         confirmPasswordInput.classList.add("is-valid");
-        return true;
       } else if (confirmPasswordInput.value.length > 0) {
         matchText.textContent = "Passwords do not match ❌";
         matchText.className = "form-text mt-1 text-danger";
         confirmPasswordInput.classList.remove("is-valid");
         confirmPasswordInput.classList.add("is-invalid");
-        return false;
       } else {
         matchText.textContent = "";
         confirmPasswordInput.classList.remove("is-valid", "is-invalid");
-        return false;
       }
     }
 
     async function checkAvailability(field, endpoint, feedbackElement) {
+        if (!field || !feedbackElement) return;
         const value = field.value.trim();
         if (!value) {
             field.classList.remove("is-valid", "is-invalid");
             feedbackElement.textContent = "";
-            return true; // Or false if required
+            return;
         }
         try {
-            const response = await fetch(`${endpoint}?value=${encodeURIComponent(value)}`); // Adjust query param if needed
+            const response = await fetch(`${endpoint}?value=${encodeURIComponent(value)}`);
+            if (!response.ok) {
+                console.error("Availability check network error:", response.statusText);
+                feedbackElement.textContent = "Could not verify. Server error.";
+                field.classList.add("is-invalid");
+                field.classList.remove("is-valid");
+                return;
+            }
             const data = await response.json();
             if (data.exists) {
                 field.classList.add("is-invalid");
                 field.classList.remove("is-valid");
-                feedbackElement.textContent = `${field.name.charAt(0).toUpperCase() + field.name.slice(1)} is already taken.`;
-                return false;
+                feedbackElement.textContent = `${field.placeholder || field.name} is already taken.`;
             } else {
                 field.classList.add("is-valid");
                 field.classList.remove("is-invalid");
                 feedbackElement.textContent = "";
-                return true;
             }
         } catch (error) {
             console.error("Availability check error:", error);
             feedbackElement.textContent = "Could not verify. Please try again.";
             field.classList.add("is-invalid");
             field.classList.remove("is-valid");
-            return false;
         }
     }
     
@@ -173,20 +196,20 @@ document.addEventListener("DOMContentLoaded", function () {
     if(usernameInput) {
         usernameInput.addEventListener("input", () => {
             clearTimeout(usernameTimeout);
+            // Assuming your API is at /api/auth/check-username/
             usernameTimeout = setTimeout(() => checkAvailability(usernameInput, "/api/auth/check-username/", usernameFeedback), 500);
         });
     }
     if(emailInput) {
         emailInput.addEventListener("input", () => {
             clearTimeout(emailTimeout);
+            // Assuming your API is at /api/auth/check-email/
             emailTimeout = setTimeout(() => checkAvailability(emailInput, "/api/auth/check-email/", emailFeedback), 500);
         });
     }
     if(passwordInput) passwordInput.addEventListener("input", () => updatePasswordStrength(passwordInput.value));
     if(confirmPasswordInput) confirmPasswordInput.addEventListener("input", checkPasswordMatch);
 
-    // Initial state for register button (optional: enable only after some validation)
-    // registerBtn.disabled = true; 
 });
 </script>
-{% endblock content_body %}
+{% endblock page_specific_scripts %}

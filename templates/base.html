@@ -4,21 +4,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Library Management System{% endblock %}</title>
+    
     <link rel="stylesheet" href="{% static 'css/inter_font.css' %}">
+
     <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
+    
     {% bootstrap_css %}
-    {% bootstrap_javascript %}
+    
     <link rel="stylesheet" href="{% static 'css/auth_styles.css' %}">
+
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            padding-top: 70px;
+            font-family: 'Inter', sans-serif; /* Apply Inter font globally */
+            /* Default padding-top for pages with the fixed navbar */
+            /* This will be overridden by auth-page-portal if that class is present */
+            padding-top: 70px; 
         }
+        /* General container for auth card when using base.html */
+        .auth-page-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* This will center the card vertically if there's enough space */
+            align-items: center;
+            width: 100%;
+            /* min-height calculation can be tricky with a fixed navbar. 
+               If auth-page-base is on body, its min-height:100vh will work.
+               If not, this wrapper might need its own min-height or rely on body's.
+            */
+        }
+
     </style>
     {% block page_specific_styles %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}"> {# Added body_class block #}
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
     <div class="container-fluid">
       <a class="navbar-brand fw-bold"
@@ -32,10 +52,19 @@
       <div class="collapse navbar-collapse" id="mainNavbarContent">
           {% block site_nav_items %}
               <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                  {% if not user.is_authenticated %}
+                  {% if not user.is_authenticated or user.role == 'BORROWER' %} {# Show Catalog if not logged in OR if a borrower #}
                       <li class="nav-item">
-                          <a class="nav-link" href="{% url 'books:portal_catalog' %}">View Catalog</a>
+                          <a class="nav-link {% if request.resolver_match.view_name == 'books:portal_catalog' %}active fw-semibold{% endif %}" href="{% url 'books:portal_catalog' %}">
+                            <i class="bi bi-search me-1"></i>Catalog
+                          </a>
                       </li>
+                  {% endif %}
+                  {% if user.is_authenticated and user.role == 'BORROWER' and not user.is_staff %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.view_name == 'users:my_borrowings' %}active fw-semibold{% endif %}" href="{% url 'users:my_borrowings' %}">
+                            <i class="bi bi-journal-check me-1"></i>My Borrowings
+                        </a>
+                    </li>
                   {% endif %}
               </ul>
               <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
@@ -67,10 +96,10 @@
                       </li>
                   {% else %}
                       <li class="nav-item">
-                          <a class="nav-link" href="{% url 'users:login' %}?next={{ request.get_full_path|urlencode }}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
+                          <a class="nav-link {% if request.resolver_match.view_name == 'users:login' %}active{% endif %}" href="{% url 'users:login' %}?next={{ request.get_full_path|urlencode }}"><i class="bi bi-box-arrow-in-right me-1"></i>Login</a>
                       </li>
                       <li class="nav-item">
-                          <a class="nav-link" href="{% url 'users:register' %}"><i class="bi bi-person-plus me-1"></i>Register</a>
+                          <a class="nav-link {% if request.resolver_match.view_name == 'users:register' %}active{% endif %}" href="{% url 'users:register' %}"><i class="bi bi-person-plus me-1"></i>Register</a>
                       </li>
                   {% endif %}
               </ul>
@@ -79,11 +108,13 @@
     </div>
   </nav>
   
-  <main class="{% block main_container_class %}container mt-4 pt-5{% endblock %}"> {# Original: container mt-4 pt-5. pt-5 is for fixed-top navbar. #}
+  {# The main_container_class block can be used by child templates to change container type if needed #}
+  <main class="{% block main_container_class %}container{% endblock %}"> 
       {% block content_body %}
           {# Content from child templates will go here #}
       {% endblock content_body %}
   </main>
+  {% bootstrap_javascript %} 
 
   {% block page_specific_scripts %}{% endblock %}
 </body>

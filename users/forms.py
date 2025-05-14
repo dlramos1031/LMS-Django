@@ -7,25 +7,11 @@ class UserRegistrationForm(UserCreationForm):
     """
     Form for public user registration. Defaults role to BORROWER.
     """
-    first_name = forms.CharField(max_length=150, required=True, label=_("First Name"))
-    last_name = forms.CharField(max_length=150, required=True, label=_("Last Name"))
-    middle_initial = forms.CharField(max_length=10, required=False, label=_("Middle Initial (Optional)"))
-    suffix = forms.CharField(max_length=10, required=False, label=_("Suffix (e.g., Jr., Sr.) (Optional)"))
     email = forms.EmailField(required=True, label=_("Email Address"))
-    borrower_id_value = forms.CharField(max_length=50, required=False, label=_("Library ID / Student ID (Optional)"), help_text=_("If you have one, please enter your library or student ID."))
-    borrower_type = forms.ChoiceField(choices=[('', '---------')] + list(CustomUser.BORROWER_TYPE_CHOICES), required=False, label=_("Borrower Type (Optional)"))
-
+    
     class Meta(UserCreationForm.Meta):
         model = CustomUser
-        fields = UserCreationForm.Meta.fields + (
-            'first_name',
-            'last_name',
-            'middle_initial',
-            'suffix',
-            'email',
-            'borrower_id_value',
-            'borrower_type',
-        )
+        fields = UserCreationForm.Meta.fields + ('email',)
 
     def save(self, commit=True):
         user = super().save(commit=False)

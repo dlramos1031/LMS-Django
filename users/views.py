@@ -10,6 +10,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView # Added CBVs
 from django.db.models import Q
+from django.http import JsonResponse
+from django.views import View
 
 # DRF Imports
 from rest_framework import generics, permissions, status, viewsets, serializers
@@ -583,3 +585,29 @@ class UserDeviceViewSet(viewsets.ModelViewSet):
             registration_id=registration_id,
             defaults={'user': self.request.user, 'is_active': True}
         )
+
+# === API Views for Availability Checks ===
+
+class CheckUsernameAvailabilityAPIView(View):
+    """
+    API view to check if a username is already taken.
+    Expects a GET request with a 'value' query parameter.
+    """
+    def get(self, request, *args, **kwargs):
+        username = request.GET.get('value', None)
+        if username:
+            exists = CustomUser.objects.filter(username__iexact=username).exists()
+            return JsonResponse({'exists': exists})
+        return JsonResponse({'error': 'Username parameter missing'}, status=400)
+
+class CheckEmailAvailabilityAPIView(View):
+    """
+    API view to check if an email is already in use.
+    Expects a GET request with a 'value' query parameter.
+    """
+    def get(self, request, *args, **kwargs):
+        email = request.GET.get('value', None)
+        if email:
+            exists = CustomUser.objects.filter(email__iexact=email).exists()
+            return JsonResponse({'exists': exists})
+        return JsonResponse({'error': 'Email parameter missing'}, status=400)
