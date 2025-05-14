@@ -1,0 +1,145 @@
+/* static/css/auth_styles.css */
+
+/* --- Page Body and Background --- */
+body.auth-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  padding-top: 56px; 
+  padding-bottom: 20px;
+  position: relative; 
+  background-color: #f0f2f5;
+}
+
+body.auth-page::before {
+  content: "";
+  position: fixed; 
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("../images/library_bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; 
+  filter: blur(5px); 
+  -webkit-filter: blur(5px); 
+  z-index: -1; 
+  transform: scale(1.05); 
+}
+
+/* --- Authentication Card --- */
+.auth-card {
+  background-color: rgba(255, 255, 255, 0.97); 
+  border-radius: 15px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); 
+  padding: 2.5rem; 
+  width: 100%;
+  max-width: 480px;
+  border: none; 
+  position: relative; 
+  z-index: 1;
+}
+
+.auth-card .card-title {
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Form Controls (Inputs) --- */
+.auth-card .form-control {
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  height: calc(1.5em + 1.3rem + 2px); 
+  border: 1px solid #ced4da;
+  box-sizing: border-box; 
+  width: 100%; 
+  transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+  line-height: 1.5;
+}
+
+.auth-card .form-control:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* --- Buttons --- */
+.auth-card .btn {
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  height: calc(1.5em + 1.3rem + 2px); 
+  display: inline-flex; 
+  align-items: center;
+  justify-content: center;
+  line-height: 1.5;
+}
+
+.auth-card .btn-primary {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.auth-card .btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+}
+
+/* --- Input Groups (e.g., Password with Toggle) --- */
+.auth-card .input-group {
+  display: flex;
+  align-items: stretch; 
+  width: 100%; 
+  position: relative;
+}
+
+.auth-card .input-group .form-control {
+  width: auto;      
+  flex-grow: 1;     
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.auth-card .input-group .btn {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 0; 
+  border-color: #ced4da;
+  flex-shrink: 0; 
+}
+
+.auth-card .input-group .btn:hover,
+.auth-card .input-group .btn:focus {
+  background-color: #e9ecef;
+}
+
+/* --- Helper Links --- */
+.auth-card .auth-links {
+  font-size: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.auth-card .auth-links a {
+  text-decoration: none;
+  color: #0d6efd;
+}
+
+.auth-card .auth-links a:hover {
+  text-decoration: underline;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 576px) {
+  body.auth-page {
+      padding-top: 20px;
+  }
+  .auth-card {
+      margin: 1rem;
+      padding: 1.5rem;
+  }
+}

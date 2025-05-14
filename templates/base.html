@@ -5,9 +5,18 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Library Management System{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/inter_font.css' %}">
     <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
     {% bootstrap_css %}
     {% bootstrap_javascript %}
+    <link rel="stylesheet" href="{% static 'css/auth_styles.css' %}">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            padding-top: 70px;
+        }
+    </style>
+    {% block page_specific_styles %}{% endblock %}
 </head>
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -22,9 +31,7 @@
   
       <div class="collapse navbar-collapse" id="mainNavbarContent">
           {% block site_nav_items %}
-              {# This block will be overridden by portal_base.html and dashboard_base.html if needed #}
               <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                  {# Default public navigation items if any, e.g., a link to catalog for guests #}
                   {% if not user.is_authenticated %}
                       <li class="nav-item">
                           <a class="nav-link" href="{% url 'books:portal_catalog' %}">View Catalog</a>
@@ -72,11 +79,12 @@
     </div>
   </nav>
   
-  <main class="{% block main_container_class %}container mt-4 pt-5{% endblock %}"> {# Added pt-5 for fixed-top navbar #}
+  <main class="{% block main_container_class %}container mt-4 pt-5{% endblock %}"> {# Original: container mt-4 pt-5. pt-5 is for fixed-top navbar. #}
       {% block content_body %}
           {# Content from child templates will go here #}
       {% endblock content_body %}
   </main>
 
+  {% block page_specific_scripts %}{% endblock %}
 </body>
 </html>

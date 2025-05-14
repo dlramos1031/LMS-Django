@@ -1,64 +1,92 @@
-{% extends 'base.html' %}
+{% extends "minimal_base.html" %} {# Changed from base.html to minimal_base.html #}
 {% load static %}
-{% load bootstrap5 %} {# Assuming you are using django-bootstrap5 for form rendering or messages #}
+{% load bootstrap5 %}
 
 {% block title %}Login - LMS{% endblock %}
 
-{% block content_body %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <h3 class="card-title text-center mb-4">Login to Your Account</h3>
+{% block auth_content %} {# This block is defined in minimal_base.html #}
+<div class="auth-card">
+    <div class="text-center mb-4">
+        {# You can use a different icon for portal login if you wish #}
+        <i class="bi bi-box-arrow-in-right h1 text-primary"></i> 
+    </div>
+    <h3 class="card-title text-center mb-2">Borrower Portal Login</h3>
+    <p class="text-center text-muted mb-4">Access your library account</p>
 
-                    {% if form.non_field_errors %}
-                        <div class="alert alert-danger">
-                            {% for error in form.non_field_errors %}
-                                <p class="mb-0">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    {% bootstrap_messages %} {# Display general messages #}
-
-
-                    <form method="post" action="{% url 'users:login' %}" novalidate>
-                        {% csrf_token %}
-
-                        <div class="mb-3">
-                            <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label|default:"Username" }}</label>
-                            {% bootstrap_field form.username show_label=False placeholder="Enter your username" %}
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label|default:"Password" }}</label>
-                            <div class="input-group">
-                                {% bootstrap_field form.password show_label=False placeholder="Enter your password" wrapper_class="" %}
-                                <button class="btn btn-outline-secondary" type="button" id="togglePasswordBtn" onclick="togglePasswordVisibility('{{ form.password.id_for_label }}', 'eye-icon-login')">
-                                    <i id="eye-icon-login" class="bi bi-eye-slash"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="d-grid mb-3">
-                            <button type="submit" class="btn btn-primary btn-block">Login</button>
-                        </div>
-
-                        <div class="text-center">
-                            <a href="{% url 'users:password_change' %}" class="text-decoration-none">Forgot Password?</a>
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer text-center py-3">
-                    <small class="text-muted">
-                        Don't have an account? <a href="{% url 'users:register' %}" class="text-decoration-none">Register here</a>
-                    </small>
-                </div>
-            </div>
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {% for error in form.non_field_errors %}
+                <p class="mb-0">{{ error }}</p>
+            {% endfor %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+    {% endif %}
+    {% bootstrap_messages %}
+
+    <form method="post" action="{% url 'users:login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}" novalidate>
+        {% csrf_token %}
+
+        {# Manual rendering for Username field #}
+        <div class="mb-3">
+            <label for="{{ form.username.id_for_label }}" class="form-label visually-hidden">{{ form.username.label|default:"Username" }}</label>
+            <input type="text"
+                   name="{{ form.username.name }}"
+                   id="{{ form.username.id_for_label }}"
+                   class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                   placeholder="Username"
+                   value="{{ form.username.value|default:'' }}"
+                   required>
+            {% if form.username.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.username.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        {# Manual rendering for Password field #}
+        <div class="mb-3">
+            <label for="{{ form.password.id_for_label }}" class="form-label visually-hidden">{{ form.password.label|default:"Password" }}</label>
+            <div class="input-group">
+                <input type="password"
+                       name="{{ form.password.name }}"
+                       id="{{ form.password.id_for_label }}"
+                       class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                       placeholder="Password"
+                       required>
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('{{ form.password.id_for_label }}', 'eye-icon-portal-login')">
+                    <i id="eye-icon-portal-login" class="bi bi-eye-slash"></i>
+                </button>
+            </div>
+            {% if form.password.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for error in form.password.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="d-grid mb-3 mt-4">
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
+        </div>
+
+        <div class="text-center auth-links">
+            {# Link will be updated in Phase 3 to point to password_reset #}
+            <a href="{% url 'users:password_change' %}" class="text-decoration-none">Forgot Password?</a>
+        </div>
+    </form>
+
+    <div class="text-center auth-links mt-3">
+        <p class="mb-0">Don't have an account? <a href="{% url 'users:register' %}">Register here</a></p>
+        {# Link to staff login will be added in Step 1.2 #}
+        {# <p class="mt-2">Are you staff? <a href="{% url 'users:staff_login' %}">Staff Login</a></p> #}
     </div>
 </div>
+{% endblock auth_content %}
 
+{% block page_specific_scripts %}
 <script>
 function togglePasswordVisibility(passwordFieldId, iconId) {
   const passwordInput = document.getElementById(passwordFieldId);
@@ -76,4 +104,4 @@ function togglePasswordVisibility(passwordFieldId, iconId) {
   }
 }
 </script>
-{% endblock content_body %}
+{% endblock page_specific_scripts %}
