@@ -91,7 +91,7 @@
                     </div>
                      <i class="bi bi-exclamation-triangle-fill h1 opacity-75"></i>
                 </div>
-                <a href="{% url 'books:dashboard_active_loans' %}" class="text-white stretched-link">View Overdue Loans &raquo;</a> {# Link to active loans, can filter there #}
+                <a href="{% url 'books:dashboard_active_loans' %}?status_filter=OVERDUE" class="text-white stretched-link">View Overdue Loans &raquo;</a> {# Link to active loans, can filter there #}
             </div>
         </div>
     </div>

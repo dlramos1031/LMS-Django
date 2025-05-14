@@ -27,7 +27,7 @@
         {% if user.is_authenticated %}
             {% if view_context == 'portal' and not user.is_staff %} {# Borrower context #}
                 {% if has_active_or_pending_request %}
-                    <button class="btn btn-secondary w-100 mb-2" disabled><i class="bi bi-clock-history"></i> Request Pending / Loan Active</button>
+                    <button class="btn btn-secondary w-100 mb-2" disabled><i class="bi bi-clock-history"></i> Request Pending / Borrowing Active</button>
                 {% elif can_borrow_this_book %}
                     <button class="btn btn-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#borrowBookModal"><i class="bi bi-book-half"></i> Request to Borrow</button>
                 {% else %}

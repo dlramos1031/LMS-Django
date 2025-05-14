@@ -17,24 +17,72 @@
 {% endblock %}
 
 {% block dashboard_content_main %}
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data"> {# Ensure enctype #}
     {% csrf_token %}
     <div class="card shadow-sm">
         <div class="card-header">
-            <h5 class="mb-0">User Account Information</h5>
+            <h5 class="mb-0">Borrower Account Information</h5>
         </div>
         <div class="card-body">
-            {% bootstrap_form form layout='horizontal' %}
+            {# Display current profile picture if editing and picture exists #}
+            {# Assuming StaffBorrowerChangeForm includes 'profile_picture' field #}
+            {% if form.instance.pk and form.instance.profile_picture %}
+            <div class="mb-3 row align-items-center">
+                <label class="col-sm-2 col-form-label text-sm-end">Current Picture:</label>
+                <div class="col-sm-3">
+                    <img src="{{ form.instance.profile_picture.url }}" alt="Current profile picture for {{ form.instance.username }}" 
+                         class="img-thumbnail rounded-circle" 
+                         style="width: 120px; height: 120px; object-fit: cover;">
+                </div>
+                <div class="col-sm-7">
+                    {% bootstrap_field form.profile_picture layout='horizontal' sr_only_label=True label_class="col-sm-0" field_class="col-sm-12" %}
+                    <small class="form-text text-muted">
+                        To change the picture, choose a new file. To remove it, use the 'Clear' checkbox.
+                    </small>
+                </div>
+            </div>
+            {% else %}
+                {# If creating or no current picture, render the field normally. #}
+                {# Ensure 'profile_picture' is in StaffBorrowerCreateForm if you want it on creation #}
+                {% if 'profile_picture' in form.fields %}
+                    {% bootstrap_field form.profile_picture layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+                {% endif %}
+            {% endif %}
+
+            {% comment %} Render other fields using bootstrap_form or individually {% endcomment %}
+            {% bootstrap_field form.username layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.first_name layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.last_name layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.middle_initial layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.suffix layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.email layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.is_active layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
             
-            {% if form_mode == 'edit' %}
-                <hr>
-                <p class="text-muted small">To change the password for this user, please use the Django admin interface or a dedicated password reset flow for security reasons. This form does not handle direct password changes for existing users by staff.</p>
+            <hr class="my-3">
+            <h6 class="mb-3">Library Specific Information</h6>
+            {% bootstrap_field form.borrower_id_label layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.borrower_id_value layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.borrower_type layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.physical_address layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.birth_date layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.phone_number layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            
+            {% if form.instance.pk %} {# For edit mode #}
+                <hr class="my-3">
+                <p class="text-muted small">
+                    Password changes for existing users by staff should be handled via a dedicated password reset flow or directly in the Django admin interface for security reasons, if not included in this form's capabilities.
+                </p>
+            {% else %} {# For create mode (StaffBorrowerCreateForm) #}
+                <hr class="my-3">
+                <h6 class="mb-3">Set Initial Password</h6>
+                {% bootstrap_field form.password1 layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+                {% bootstrap_field form.password2 layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
             {% endif %}
         </div>
         <div class="card-footer text-end">
             <button type="submit" class="btn btn-primary">
-                <i class="bi {% if form_mode == 'create' %}bi-plus-lg{% else %}bi-check-lg{% endif %}"></i>
-                {% if form_mode == 'create' %}Create User{% else %}Save Changes{% endif %}
+                <i class="bi {% if not form.instance.pk %}bi-plus-lg{% else %}bi-check-lg{% endif %}"></i>
+                {% if not form.instance.pk %}Create Borrower{% else %}Save Changes{% endif %}
             </button>
         </div>
     </div>

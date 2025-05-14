@@ -17,23 +17,64 @@
 {% endblock %}
 
 {% block dashboard_content_main %}
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data"> {# Ensure enctype #}
     {% csrf_token %}
     <div class="card shadow-sm">
         <div class="card-header">
             <h5 class="mb-0">Staff Account Details</h5>
         </div>
         <div class="card-body">
-            {% comment %}
-            The AdminStaffCreateForm and AdminStaffChangeForm will control which fields are shown
-            and how the 'role', 'is_staff', 'is_superuser' fields behave.
-            {% endcomment %}
-            {% bootstrap_form form layout='horizontal' %}
+            {# Display current profile picture if editing and picture exists #}
+            {# Assuming AdminStaffChangeForm includes 'profile_picture' field #}
+            {% if form.instance.pk and form.instance.profile_picture %}
+            <div class="mb-3 row align-items-center">
+                <label class="col-sm-2 col-form-label text-sm-end">Current Picture:</label>
+                <div class="col-sm-3">
+                    <img src="{{ form.instance.profile_picture.url }}" alt="Current profile picture for {{ form.instance.username }}" 
+                         class="img-thumbnail rounded-circle" 
+                         style="width: 120px; height: 120px; object-fit: cover;">
+                </div>
+                <div class="col-sm-7">
+                    {% bootstrap_field form.profile_picture layout='horizontal' sr_only_label=True label_class="col-sm-0" field_class="col-sm-12" %}
+                     <small class="form-text text-muted">
+                        To change the picture, choose a new file. To remove it, use the 'Clear' checkbox.
+                    </small>
+                </div>
+            </div>
+            {% else %}
+                 {# If creating or no current picture, render the field normally. #}
+                 {# Ensure 'profile_picture' is in AdminStaffCreateForm if you want it on creation #}
+                 {% if 'profile_picture' in form.fields %}
+                    {% bootstrap_field form.profile_picture layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+                 {% endif %}
+            {% endif %}
+
+            {% comment %} Render other fields using bootstrap_form or individually {% endcomment %}
+            {% bootstrap_field form.username layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.first_name layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.last_name layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.middle_initial layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.suffix layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.email layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            <hr class="my-3">
+            <h6 class="mb-3">Permissions & Status</h6>
+            {% bootstrap_field form.role layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.is_active layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.is_staff layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% bootstrap_field form.is_superuser layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+
+            {% if not form.instance.pk %} {# For create mode (AdminStaffCreateForm) #}
+                <hr class="my-3">
+                <h6 class="mb-3">Set Initial Password</h6>
+                {% bootstrap_field form.password1 layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+                {% bootstrap_field form.password2 layout='horizontal' label_class="col-sm-2 text-sm-end" field_class="col-sm-10" %}
+            {% endif %}
+
         </div>
         <div class="card-footer text-end">
             <button type="submit" class="btn btn-primary">
-                <i class="bi {% if form_mode == 'create' %}bi-person-plus-fill{% else %}bi-check-lg{% endif %}"></i>
-                {% if form_mode == 'create' %}Create Staff Member{% else %}Save Changes{% endif %}
+                <i class="bi {% if not form.instance.pk %}bi-person-plus-fill{% else %}bi-check-lg{% endif %}"></i>
+                {% if not form.instance.pk %}Create Staff Member{% else %}Save Changes{% endif %}
             </button>
         </div>
     </div>

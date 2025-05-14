@@ -8,10 +8,12 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <h1 class="mb-4">Edit Your Profile</h1>
             <div class="card shadow-sm">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit Your Profile</h4>
+                </div>
                 <div class="card-body p-4">
-                    <form method="post" enctype="multipart/form-data"> {# Important: enctype for file uploads #}
+                    <form method="post" enctype="multipart/form-data"> {# enctype is correctly here #}
                         {% csrf_token %}
 
                         {% if form.non_field_errors %}
@@ -23,49 +25,57 @@
                         {% endif %}
                         {% bootstrap_messages %}
 
-                        <div class="row">
-                            <div class="col-md-4 text-center mb-3 mb-md-0">
+                        {# Profile Picture Section - Placed prominently #}
+                        <div class="row mb-4 align-items-center">
+                            <div class="col-md-3 text-center">
+                                <label for="{{ form.profile_picture.id_for_label }}" class="form-label d-block mb-2">Current Picture:</label>
                                 {% if form.instance.profile_picture %}
                                     <img src="{{ form.instance.profile_picture.url }}" alt="Current Profile Picture"
-                                         class="img-thumbnail rounded-circle mb-2" style="width: 150px; height: 150px; object-fit: cover;">
+                                         class="img-thumbnail rounded-circle mb-2" style="width: 120px; height: 120px; object-fit: cover;">
                                 {% else %}
-                                    <div class="d-flex justify-content-center align-items-center rounded-circle bg-secondary text-light mb-2"
-                                         style="width: 150px; height: 150px;">
-                                        <i class="bi bi-person-fill" style="font-size: 5rem;"></i>
+                                    <div class="d-flex justify-content-center align-items-center rounded-circle bg-secondary text-light mb-2 mx-auto"
+                                         style="width: 120px; height: 120px;">
+                                        <i class="bi bi-person-fill" style="font-size: 4rem;"></i>
                                     </div>
                                 {% endif %}
-                                {% bootstrap_field form.profile_picture show_label=True layout='vertical' %}
                             </div>
+                            <div class="col-md-9">
+                                {% bootstrap_field form.profile_picture layout='vertical' sr_class_offset="" wrapper_class="" %}
+                                <small class="form-text text-muted">
+                                    To change your picture, choose a new file. To remove it, use the "Clear" checkbox (if available).
+                                </small>
+                            </div>
+                        </div>
+                        <hr>
 
-                            <div class="col-md-8">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        {% bootstrap_field form.first_name layout='vertical' %}
-                                    </div>
-                                    <div class="col-md-6">
-                                        {% bootstrap_field form.last_name layout='vertical' %}
-                                    </div>
-                                    <div class="col-md-6">
-                                        {% bootstrap_field form.middle_initial layout='vertical' %}
-                                    </div>
-                                    <div class="col-md-6">
-                                        {% bootstrap_field form.suffix layout='vertical' %}
-                                    </div>
-                                    <div class="col-12">
-                                        {% bootstrap_field form.email layout='vertical' %}
-                                    </div>
-                                     <div class="col-md-6">
-                                        {% bootstrap_field form.phone_number layout='vertical' %}
-                                    </div>
-                                    <div class="col-md-6">
-                                        {% bootstrap_field form.birth_date layout='vertical' %}
-                                    </div>
-                                </div>
+                        {# Personal Information Section #}
+                        <h5 class="mb-3">Personal Information</h5>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {% bootstrap_field form.first_name layout='vertical' %}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form.last_name layout='vertical' %}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form.middle_initial layout='vertical' %}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form.suffix layout='vertical' %}
+                            </div>
+                            <div class="col-12">
+                                {% bootstrap_field form.email layout='vertical' %}
+                            </div>
+                             <div class="col-md-6">
+                                {% bootstrap_field form.phone_number layout='vertical' %}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form.birth_date layout='vertical' %}
                             </div>
                         </div>
                         
                         <hr class="my-4">
-                        <h5>Library Specific Information</h5>
+                        <h5 class="mb-3">Library Specific Information</h5>
                          <div class="row g-3">
                             <div class="col-md-6">
                                 {% bootstrap_field form.borrower_id_value layout='vertical' %}
@@ -91,5 +101,5 @@
             </div>
         </div>
     </div>
-</div>
+</div>  
 {% endblock portal_content %}

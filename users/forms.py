@@ -141,10 +141,26 @@ class StaffBaseUserForm(forms.ModelForm):
             'email', 'is_active',
             'borrower_id_label', 'borrower_id_value', 'borrower_type',
             'physical_address', 'birth_date', 'phone_number',
+            'profile_picture'  # Added profile_picture here
         ]
         widgets = {
-            'birth_date': forms.DateInput(attrs={'type': 'date'}),
-            'physical_address': forms.Textarea(attrs={'rows': 3}),
+            'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'physical_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}), # Added widget
+            # Add other common widgets here if needed for consistency
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'middle_initial': forms.TextInput(attrs={'class': 'form-control'}),
+            'suffix': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'borrower_id_label': forms.TextInput(attrs={'class': 'form-control'}),
+            'borrower_id_value': forms.TextInput(attrs={'class': 'form-control'}),
+            'borrower_type': forms.Select(attrs={'class': 'form-select'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        help_texts = {
+            'profile_picture': _('Upload a new profile picture. Clear to remove existing picture.'),
         }
 
     def __init__(self, *args, **kwargs):
@@ -152,7 +168,7 @@ class StaffBaseUserForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
 
-class StaffBorrowerCreateForm(UserCreationForm): # Using UserCreationForm for password handling
+class StaffBorrowerCreateForm(UserCreationForm):
     """Form for Staff (Librarians/Admins) to create new BORROWER accounts."""
     first_name = forms.CharField(max_length=150, required=True)
     last_name = forms.CharField(max_length=150, required=True)
@@ -166,6 +182,7 @@ class StaffBorrowerCreateForm(UserCreationForm): # Using UserCreationForm for pa
     birth_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
     phone_number = forms.CharField(max_length=20, required=False)
     is_active = forms.BooleanField(required=False, initial=True)
+    profile_picture = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
 
     class Meta(UserCreationForm.Meta):
@@ -173,7 +190,7 @@ class StaffBorrowerCreateForm(UserCreationForm): # Using UserCreationForm for pa
         fields = UserCreationForm.Meta.fields + (
             'first_name', 'last_name', 'middle_initial', 'suffix', 'email',
             'borrower_id_label', 'borrower_id_value', 'borrower_type',
-            'physical_address', 'birth_date', 'phone_number', 'is_active'
+            'physical_address', 'birth_date', 'phone_number', 'is_active', 'profile_picture'
         )
 
     def __init__(self, *args, **kwargs):
@@ -193,36 +210,43 @@ class StaffBorrowerCreateForm(UserCreationForm): # Using UserCreationForm for pa
 class StaffBorrowerChangeForm(StaffBaseUserForm):
     """Form for Staff (Librarians/Admins) to edit existing BORROWER accounts."""
     class Meta(StaffBaseUserForm.Meta):
-        # Inherits fields from StaffBaseUserForm
-        # Role is not editable here for borrowers; it's fixed.
-        pass
+        fields = StaffBaseUserForm.Meta.fields
+        widgets = StaffBaseUserForm.Meta.widgets
+        help_texts = StaffBaseUserForm.Meta.help_texts
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Ensure that for a borrower, sensitive fields are not shown or are disabled
-        # if the logged-in user is a Librarian (not Admin)
         if self.requesting_user and self.requesting_user.role == 'LIBRARIAN' and not self.requesting_user.is_superuser:
-            # Librarians might have restricted fields they can edit on a borrower
-            # For now, assuming they can edit all fields listed in StaffBaseUserForm for a BORROWER
             pass
         if self.instance and self.instance.pk:
             self.fields['username'].disabled = True
+            if self.instance.role == 'BORROWER' and self.instance.borrower_id_value:
+                 self.fields['borrower_id_value'].disabled = True
+                 self.fields['borrower_id_value'].help_text = _("Borrower ID cannot be changed here. Contact support if needed.")
+
 
 class AdminStaffCreateForm(UserCreationForm):
     """Form for ADMINS ONLY to create new STAFF accounts (Librarian or Admin)."""
     first_name = forms.CharField(max_length=150, required=True)
     last_name = forms.CharField(max_length=150, required=True)
+    middle_initial = forms.CharField(max_length=10, required=False)
+    suffix = forms.CharField(max_length=10, required=False)
     email = forms.EmailField(required=True)
     role = forms.ChoiceField(choices=[
         ('LIBRARIAN', _('Librarian')),
         ('ADMIN', _('Administrator')),
     ], required=True)
     is_active = forms.BooleanField(required=False, initial=True)
-    # is_staff and is_superuser will be set based on role in the view/form save
+    is_staff = forms.BooleanField(required=False)
+    is_superuser = forms.BooleanField(required=False)
+    profile_picture = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
     class Meta(UserCreationForm.Meta):
         model = CustomUser
-        fields = UserCreationForm.Meta.fields + ('first_name', 'last_name', 'email', 'role', 'is_active')
+        fields = UserCreationForm.Meta.fields + (
+            'first_name', 'last_name', 'middle_initial', 'suffix', 'email', 'role', 'is_active', 'profile_picture',
+            'is_staff', 'is_superuser'
+        )
     
     def __init__(self, *args, **kwargs):
         self.requesting_user = kwargs.pop('requesting_user', None)
@@ -251,33 +275,26 @@ class AdminStaffChangeForm(StaffBaseUserForm):
     ], required=True)
     is_staff = forms.BooleanField(required=False)
     is_superuser = forms.BooleanField(required=False)
-    profile_picture = forms.ImageField(required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
-
-    class Meta:
+    class Meta(StaffBaseUserForm.Meta):
         model = CustomUser
         fields = [
             'username', 'first_name', 'last_name', 'middle_initial', 'suffix',
-            'email', 'is_active',
-            'role', 'is_staff', 'is_superuser',
-            'profile_picture'
+            'email', 'is_active', 'profile_picture',
+            'role', 'is_staff', 'is_superuser'
         ]
-        widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'middle_initial': forms.TextInput(attrs={'class': 'form-control'}),
-            'suffix': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        }
+        widgets = StaffBaseUserForm.Meta.widgets.copy()
+        widgets.update({
+            'role': forms.Select(attrs={'class': 'form-select'}),
+            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        })
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields['username'].disabled = True
 
-            # Prevent admin from accidentally de-admining/de-staffing themselves if they are the only one
             if self.requesting_user and self.instance.pk == self.requesting_user.pk:
                 self.fields['role'].disabled = True
                 self.fields['is_active'].disabled = True
@@ -285,10 +302,15 @@ class AdminStaffChangeForm(StaffBaseUserForm):
                 self.fields['is_superuser'].disabled = True
                 self.fields['role'].help_text = _("You cannot change your own core administrative status.")
 
-            # Only superusers can toggle is_superuser flag for others
             if not (self.requesting_user and self.requesting_user.is_superuser):
                  self.fields['is_superuser'].disabled = True
-                 self.fields['role'].choices = [('LIBRARIAN', _('Librarian'))] # Cannot promote to ADMIN
+                 if self.instance.role == 'ADMIN':
+                     self.fields['role'].disabled = True
+                 else:
+                    self.fields['role'].choices = [('LIBRARIAN', _('Librarian'))]
+                    if 'ADMIN' in dict(self.fields['role'].choices):
+                        self.fields['role'].choices = [(val, disp) for val, disp in self.fields['role'].choices if val != 'ADMIN']
+
 
     def clean(self):
         cleaned_data = super().clean()
@@ -297,14 +319,14 @@ class AdminStaffChangeForm(StaffBaseUserForm):
         is_superuser = cleaned_data.get('is_superuser')
 
         if role == 'ADMIN':
-            if not is_staff:
+            if not self.fields['is_staff'].disabled and not is_staff:
                 self.add_error('is_staff', _("Administrators must also be staff members."))
-            if not is_superuser:
+            if not self.fields['is_superuser'].disabled and not is_superuser:
                 self.add_error('is_superuser', _("Administrators must also be superusers."))
         elif role == 'LIBRARIAN':
-            if not is_staff:
+            if not self.fields['is_staff'].disabled and not is_staff:
                 self.add_error('is_staff', _("Librarians must also be staff members."))
-            if is_superuser: # Librarians cannot be superusers via this form's logic
+            if not self.fields['is_superuser'].disabled and is_superuser:
                 self.add_error('is_superuser', _("Librarians cannot be superusers. Assign Admin role for superuser status."))
         return cleaned_data
     

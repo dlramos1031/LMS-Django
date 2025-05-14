@@ -15,18 +15,19 @@
 
 {% block dashboard_content_main %}
     <form method="get" class="row g-3 align-items-center mb-4 p-3 bg-light border rounded shadow-sm">
-        <div class="col-md-8">
+        <div class="col-md-6">
             <input type="text" name="search" class="form-control form-control-sm" placeholder="Search Borrower, Book Title, Copy ID, ISBN..." value="{{ current_search|default:'' }}">
         </div>
-        <div class="col-md-2">
+        <div class="col-md-4">
             <select name="status_filter" class="form-select form-select-sm">
                 <option value="">All Active & Overdue</option>
-                <option value="ACTIVE" {% if current_status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
-                <option value="OVERDUE" {% if current_status_filter == 'OVERDUE' %}selected{% endif %}>Overdue</option>
+                {% for value, display in status_filter_choices %}
+                    <option value="{{ value }}" {% if value == current_status_filter %}selected{% endif %}>{{ display }}</option>
+                {% endfor %}
             </select>
         </div>
-        <div class="col-md-2"> {# Adjust if status filter is added #}
-            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Search</button>
+        <div class="col-md-2">
+            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-funnel-fill"></i> Filter</button>
         </div>
     </form>
 
@@ -47,7 +48,7 @@
             </thead>
             <tbody>
                 {% for loan in active_loans %}
-                <tr class="{% if loan.due_date.date < now_date and loan.status == 'ACTIVE' %}table-danger{% elif loan.status == 'OVERDUE' %}table-danger{% endif %}"> {# Highlight overdue loans #}
+                <tr class="{% if loan.status == 'OVERDUE' %}table-danger{% elif loan.due_date.date < now_date and loan.status == 'ACTIVE' %}table-warning{% endif %}"> {# Highlight overdue and potentially overdue (active but past due) #}
                     <td><a href="{% url 'books:dashboard_borrowing_detail' borrowing_id=loan.id %}">#{{ loan.id }}</a></td>
                     <td>
                         <a href="{% url 'users:dashboard_borrower_detail' pk=loan.borrower.pk %}">{{ loan.borrower.username }}</a>
@@ -59,10 +60,10 @@
                     <td>{{ loan.issue_date|date:"Y-m-d H:i" }}</td>
                     <td>{{ loan.due_date|date:"Y-m-d" }}</td>
                     <td class="text-center">
-                        {% if loan.due_date.date < now_date and loan.status == 'ACTIVE' %}
-                            <span class="badge bg-danger">OVERDUE (System: Active)</span>
-                        {% elif loan.status == 'OVERDUE' %}
+                        {% if loan.status == 'OVERDUE' %}
                             <span class="badge bg-danger">{{ loan.get_status_display }}</span>
+                        {% elif loan.due_date.date < now_date and loan.status == 'ACTIVE' %}
+                            <span class="badge bg-warning text-dark">ACTIVE (Past Due)</span> {# Indicate if status hasn't updated to OVERDUE yet #}
                         {% elif loan.status == 'ACTIVE' %}
                              <span class="badge bg-success">{{ loan.get_status_display }}</span>
                         {% else %}
@@ -70,10 +71,13 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
+                         <a href="{% url 'books:dashboard_borrowing_detail' borrowing_id=loan.id %}" class="btn btn-sm btn-outline-primary py-0 px-1 me-1" title="View Details">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
                         <form method="post" action="{% url 'books:dashboard_mark_loan_returned' borrowing_id=loan.id %}" class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-info py-0 px-1" title="Mark as Returned">
-                                <i class="bi bi-arrow-return-left"></i> Mark Returned
+                                <i class="bi bi-arrow-return-left"></i>
                             </button>
                         </form>
                     </td>

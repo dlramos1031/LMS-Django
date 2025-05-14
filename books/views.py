@@ -1231,18 +1231,17 @@ class StaffActiveLoansView(StaffRequiredMixin, ListView):
     Ordered by due date to prioritize those due soonest or already overdue.
     """
     model = Borrowing
-    template_name = 'books/dashboard/circulation/active_loans.html' # You've created this empty file
+    template_name = 'books/dashboard/circulation/active_loans.html'
     context_object_name = 'active_loans'
     paginate_by = 10
 
     def get_queryset(self):
         queryset = Borrowing.objects.filter(status__in=['ACTIVE', 'OVERDUE']) \
                                     .select_related('borrower', 'book_copy__book') \
-                                    .order_by('due_date') # Show soonest due/most overdue first
+                                    .order_by('due_date')
 
         search_term = self.request.GET.get('search', '').strip()
-        # Optional: Filter by 'OVERDUE' status explicitly if needed via a dropdown
-        # status_filter = self.request.GET.get('status_filter', '').strip()
+        status_filter = self.request.GET.get('status_filter', '').strip().upper()
 
         if search_term:
             queryset = queryset.filter(
@@ -1253,19 +1252,28 @@ class StaffActiveLoansView(StaffRequiredMixin, ListView):
                 Q(book_copy__copy_id__icontains=search_term) |
                 Q(book_copy__book__isbn__icontains=search_term)
             )
-        # if status_filter == 'OVERDUE':
-        #     queryset = queryset.filter(status='OVERDUE', due_date__date__lt=timezone.now().date())
-        # elif status_filter == 'ACTIVE_NOT_OVERDUE':
-        #     queryset = queryset.filter(status='ACTIVE', due_date__date__gte=timezone.now().date())
+
+        if status_filter:
+            if status_filter == 'OVERDUE':
+                queryset = queryset.filter(status='OVERDUE')
+            elif status_filter == 'ACTIVE_NOT_OVERDUE':
+                queryset = queryset.filter(status='ACTIVE', due_date__gte=timezone.now().date())
+            elif status_filter == 'ACTIVE':
+                queryset = queryset.filter(status='ACTIVE')
             
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['page_title'] = _('Active & Overdue Loans')
-        context['now_date'] = timezone.now().date() # For easy overdue comparison in template
+        context['now_date'] = timezone.now().date()
         context['current_search'] = self.request.GET.get('search', '')
-        # context['current_status_filter'] = self.request.GET.get('status_filter', '')
+        
+        context['status_filter_choices'] = [
+            ('ACTIVE', _('Active')),
+            ('OVERDUE', _('Overdue')),
+        ]
+        context['current_status_filter'] = self.request.GET.get('status_filter', '').upper()
         
         query_params = self.request.GET.copy()
         query_params.pop('page', None)
