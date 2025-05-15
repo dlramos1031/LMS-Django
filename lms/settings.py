@@ -30,7 +30,7 @@ DEBUG = True
 # 10.0.2.2 = Android Emulator
 # 127.0.0.1 = Website (e.g. https://127.0.0.1:8000/login/)
 # 192.168.197.211 = Actual Phone (Wireless LAN Adapter Wi-Fi) 
-ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1', '192.168.197.211', '192.168.137.76']
+ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1', 'localhost']
 
 # Application definition
 

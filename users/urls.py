@@ -1,6 +1,6 @@
-from django.urls import path
+from django.urls import path, reverse_lazy
 from . import views
-# from django.contrib.auth import views as auth_views # If using built-in views for password reset
+from django.contrib.auth import views as auth_views
 
 app_name = 'users'
 
@@ -10,8 +10,6 @@ urlpatterns = [
     path('login/', views.user_login_view, name='login'),
     path('logout/', views.user_logout_view, name='logout'),
     path('password_change/', views.change_password_view, name='password_change'),
-
-    path('staff_login/', views.staff_login_view, name='staff_login'),
     
     # --- Borrower Profile and Borrowing URLs ---
     path('profile/', views.user_profile_view, name='my_profile'),
@@ -19,12 +17,37 @@ urlpatterns = [
     path('my-borrowings/', views.my_borrowings_view, name='my_borrowings'),
     path('my-reservations/', views.my_reservations_view, name='my_reservations'),
 
-    # Example for Django's built-in password reset (ensure templates are in registration/ directory)
-    # path('password_reset/', auth_views.PasswordResetView.as_view(template_name='users/registration/password_reset_form.html', email_template_name='users/registration/password_reset_email.html', subject_template_name='users/registration/password_reset_subject.txt', success_url=reverse_lazy('users:password_reset_done')), name='password_reset'),
-    # path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='users/registration/password_reset_done.html'), name='password_reset_done'),
-    # path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='users/registration/password_reset_confirm.html', success_url=reverse_lazy('users:password_reset_complete')), name='password_reset_confirm'),
-    # path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='users/registration/password_reset_complete.html'), name='password_reset_complete'),
-    # ... other password reset views from django.contrib.auth.urls ...
+    # --- Password Reset URLs (for users who forgot their password) ---
+    path('password_reset/', 
+         auth_views.PasswordResetView.as_view(
+             template_name='users/registration/password_reset_form.html',
+             email_template_name='users/registration/password_reset_email.html',
+             subject_template_name='users/registration/password_reset_subject.txt',
+             success_url=reverse_lazy('users:password_reset_done') # Redirect after form submission
+         ), 
+         name='password_reset'),
+
+    path('password_reset/done/', 
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='users/registration/password_reset_done.html'
+         ), 
+         name='password_reset_done'),
+
+    path('reset/<uidb64>/<token>/', 
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='users/registration/password_reset_confirm.html',
+             success_url=reverse_lazy('users:password_reset_complete')
+         ), 
+         name='password_reset_confirm'),
+
+    path('reset/done/', 
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='users/registration/password_reset_complete.html'
+         ), 
+         name='password_reset_complete'),
+
+    # --- Staff Dashboard: Login Page URL ---
+    path('dashboard/login/', views.staff_login_view, name='staff_login'),
 
     # --- Staff Dashboard: Borrower Management URLs ---
     path('dashboard/borrowers/', views.StaffBorrowerListView.as_view(), name='dashboard_borrower_list'),
