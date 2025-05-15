@@ -71,9 +71,12 @@
         </div>
 
         <div class="d-grid mb-3 mt-4">
-            <button type="submit" class="btn btn-primary btn-block">Staff Login</button>
+            <button type="submit" class="btn btn-primary btn-block">Login</button>
         </div>
     </form>
+    <div class="text-center auth-links mt-3 pt-3 border-top">
+        <p class="mb-0">Not staff? <a href="{% url 'users:login' %}">Portal Login</a></p>
+    </div>
 </div>
 {% endblock auth_content %}
 

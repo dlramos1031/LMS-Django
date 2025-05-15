@@ -86,11 +86,13 @@ def user_login_view(request):
             password = form.cleaned_data.get('password')
             user = authenticate(request, username=username, password=password)
             if user is not None:
-                login(request, user)
-                messages.success(request, _('Login successful.'))
                 if is_staff_user(user):
-                    return redirect('books:dashboard_home')
+                    messages.error(request, _("Staff accounts must log in via the Staff Login Page."))
+                    logout(request) 
+                    return redirect('users:staff_login')
                 else:
+                    login(request, user)
+                    messages.success(request, _('Login successful.'))
                     return redirect('books:portal_catalog')
             else:
                 messages.error(request, _('Invalid username or password.'))
@@ -100,9 +102,13 @@ def user_login_view(request):
 
 @login_required
 def user_logout_view(request):
+    user_role = request.user.role
     logout(request)
     messages.info(request, _('You have been successfully logged out.'))
-    return redirect('users:login')
+    if user_role == 'BORROWER':
+        return redirect('users:login')
+    else:
+        return redirect('users:staff_login')
 
 
 @login_required
@@ -200,10 +206,33 @@ def my_reservations_view(request):
 def staff_login_view(request):
     if request.user.is_authenticated and is_staff_user(request.user):
         return redirect('books:dashboard_home')
-    elif request.user.is_authenticated: # A logged-in borrower trying to access staff login
-        logout(request) # Log them out first or redirect them to portal
-        messages.info(request, "You have been logged out. Please log in with staff credentials.")
+    elif request.user.is_authenticated: 
+        logout(request) 
+        messages.info(request, _("You have been logged out. This login is for staff accounts only."))
         return redirect('users:staff_login')
+
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            if user is not None:
+                if is_staff_user(user):
+                    login(request, user)
+                    messages.success(request, _('Staff login successful.'))
+                    return redirect(request.GET.get('next', 'books:dashboard_home'))
+                else:
+                    messages.error(request, _("This login page is for staff accounts only. Borrower accounts should use the Portal Login."))
+                    return redirect('users:login')
+            else:
+                messages.error(request, _('Invalid staff credentials.'))
+    else:
+        form = AuthenticationForm()
+    
+    context = {
+        'form': form,
+        'page_title': _('Staff Login'),
+    }
+    return render(request, 'users/registration/staff_login.html', context)
 
 
     if request.method == 'POST':
