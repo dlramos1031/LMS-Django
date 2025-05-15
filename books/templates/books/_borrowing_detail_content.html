@@ -31,8 +31,6 @@
                                     {{ book.title }}
                                 </a>
                             </h6>
-                            <p class="card-text mb-1"><small class="text-muted"><strong>ISBN:</strong> {{ book.isbn }}</small></p>
-                            <p class="card-text mb-1"><small class="text-muted"><strong>Copy ID:</strong> {{ book_copy.copy_id }}</small></p>
                             <p class="card-text mb-0"><small class="text-muted">
                                 <strong>Authors:</strong>
                                 {% for author in book.authors.all %}
@@ -41,6 +39,16 @@
                                     N/A
                                 {% endfor %}
                             </small></p>
+                            <p class="card-text mb-2"><small class="text-muted">
+                                <strong>Categories:</strong>
+                                {% for category in book.categories.all %}
+                                    {{ category.name }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    N/A
+                                {% endfor %}
+                            </small></p>
+                            <p class="card-text mb-0"><small class="text-muted"><strong>ISBN:</strong> {{ book.isbn }}</small></p>
+                            <p class="card-text mb-0"><small class="text-muted"><strong>Copy ID:</strong> {{ book_copy.copy_id }}</small></p>
                         </div>
                     </div>
                 </div>
@@ -74,7 +82,6 @@
                             {% if borrower_profile.borrower_id_value %}
                             <p class="card-text mb-1"><small class="text-muted"><strong>{{ borrower_profile.borrower_id_label|default:"Library ID" }}:</strong> {{ borrower_profile.borrower_id_value }}</small></p>
                             {% endif %}
-                             <p class="card-text mb-0"><small class="text-muted"><strong>Role:</strong> {{ borrower_profile.get_role_display }}</small></p>
                         </div>
                     </div>
                 </div>
@@ -160,6 +167,12 @@
                                 <i class="bi bi-x-lg me-1"></i> Reject Request
                             </button>
                         </form>
+                        {% endif %}
+
+                        {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
+                        <a href="{% url 'books:dashboard_mark_loan_lost' borrowing_id=borrowing.id %}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-journal-x me-1"></i> Mark as Lost
+                        </a>
                         {% endif %}
                         
                         {% if can_mark_returned %}

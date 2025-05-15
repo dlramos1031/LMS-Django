@@ -54,6 +54,7 @@ urlpatterns = [
     path('dashboard/circulation/active-loans/mark-returned/<int:borrowing_id>/', views.staff_mark_loan_returned_view, name='dashboard_mark_loan_returned'),
     path('dashboard/circulation/history/', views.StaffBorrowingHistoryView.as_view(), name='dashboard_borrowing_history'),
 
-    # Borrowing Details (Staff)
+    # Borrowing Management (Staff)
     path('dashboard/borrowing/<int:borrowing_id>/', views.BorrowingDetailView.as_view(), name='dashboard_borrowing_detail'),
+    path('dashboard/borrowing/mark-lost/<int:borrowing_id>/', views.staff_mark_loan_lost_view, name='dashboard_mark_loan_lost'),
 ]

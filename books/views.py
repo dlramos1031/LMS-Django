@@ -1467,3 +1467,53 @@ def borrower_cancel_request_view(request, borrowing_id):
     # Redirect back to "My Borrowings" or the borrowing detail page itself
     # If redirecting to detail, ensure it handles the new 'CANCELLED' status gracefully
     return redirect(reverse_lazy('users:my_borrowings'))
+
+@login_required
+@user_passes_test(is_staff_user)
+def staff_mark_loan_lost_view(request, borrowing_id):
+    """
+    Allows staff to mark an active or overdue loan as 'LOST_BY_BORROWER'.
+    Updates the BookCopy status to 'Lost'.
+    Shows a confirmation page before action.
+    """
+    loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
+    book_copy_instance = loan.book_copy
+
+    if request.method == 'POST':
+        # Process the "Mark as Lost" action
+        loan.status = 'LOST_BY_BORROWER'
+        loan.return_date = timezone.now() # Mark a "return" date as the date it was declared lost
+        
+        # Optional: Fine for lost book. This could be a fixed amount or based on book value.
+        # For now, let's assume a standard fine, or it could be set manually later.
+        # Example: loan.fine_amount = book_copy_instance.book.replacement_cost or settings.DEFAULT_LOST_BOOK_FINE
+        # You would need to add 'replacement_cost' to your Book model or a setting for DEFAULT_LOST_BOOK_FINE.
+        # For simplicity here, we'll just note it. A fine can be added manually or via another interface.
+        # If you have a standard fine for lost books:
+        # loan.fine_amount = settings.LOST_BOOK_FINE_AMOUNT  # Example: 25.00 (Decimal)
+
+        loan.save()
+
+        book_copy_instance.status = 'Lost'
+        book_copy_instance.save(update_fields=['status'])
+
+        # Notify the borrower
+        Notification.objects.create(
+            recipient=loan.borrower,
+            notification_type='GENERAL_ANNOUNCEMENT', # Or a more specific type like 'BOOK_LOST_NOTICE'
+            message=_(f"The book '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) that you borrowed has been marked as lost. Please contact the library regarding replacement or fines.")
+        )
+
+        messages.success(request, _(f"Loan for '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) has been marked as 'Lost by Borrower'. The book copy status is now 'Lost'."))
+        
+        # Redirect to the borrowing history or active loans page
+        return redirect('books:dashboard_borrowing_history') 
+
+    # If GET request, show confirmation page
+    context = {
+        'loan': loan,
+        'book_copy': book_copy_instance,
+        'book': book_copy_instance.book,
+        'page_title': _('Confirm Mark as Lost'),
+    }
+    return render(request, 'books/dashboard/circulation/borrowing_confirm_lost.html', context)
