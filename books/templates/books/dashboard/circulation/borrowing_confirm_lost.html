@@ -39,8 +39,9 @@
                     <ul>
                         <li>The status of this borrowing record will be changed to <strong>'Lost by Borrower'</strong>.</li>
                         <li>The status of Book Copy <strong>{{ book_copy.copy_id }}</strong> will be changed to <strong>'Lost'</strong>.</li>
+                        <li>A standard fine of <strong>${{ default_lost_fine|floatformat:2 }}</strong> will be applied to the borrower's account for the lost book.</li>
                         <li>The borrower, {{ loan.borrower.username }}, will be notified.</li>
-                        <li>Any applicable library policies regarding fines or replacement costs for lost items should be communicated to the borrower separately if not automatically applied by the system.</li>
+                        <li>Further library policies regarding replacement costs should be communicated separately if applicable.</li>
                     </ul>
                 </div>
 
@@ -53,7 +54,7 @@
                             <i class="bi bi-x-lg me-1"></i> No, Cancel
                         </a>
                         <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-journal-x me-1"></i> Yes, Mark as Lost
+                            <i class="bi bi-journal-x me-1"></i> Yes, Mark as Lost & Apply Fine
                         </button>
                     </div>
                 </form>

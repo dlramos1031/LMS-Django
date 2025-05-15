@@ -15,6 +15,9 @@ from time import time
 from uuid import uuid4
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.core.exceptions import PermissionDenied
+from django.conf import settings
+from decimal import Decimal
+from datetime import date
 
 # DRF Imports
 from rest_framework import viewsets, permissions, status, generics, serializers, filters
@@ -1173,57 +1176,6 @@ def staff_reject_request_view(request, borrowing_id):
     messages.info(request, _(f"Request for '{borrowing_request.book_copy.book.title}' rejected."))
     return redirect('books:dashboard_pending_requests')
 
-@user_passes_test(is_staff_user)
-@require_POST
-def staff_mark_loan_returned_view(request, borrowing_id):
-    """
-    Processes a book return by staff. Updates borrowing record and book copy status.
-    Calculates fines if applicable.
-    """
-    if not is_staff_user(request.user):
-        messages.error(request, _("You do not have permission to perform this action."))
-        return redirect('books:dashboard_home')
-
-    loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
-    book_copy_instance = loan.book_copy
-
-    loan.actual_return_date = timezone.now()
-
-    fine_amount_calculated = 0
-    if loan.due_date.date() < loan.actual_return_date.date():
-        loan.status = 'RETURNED_LATE'
-        overdue_days = (loan.actual_return_date.date() - loan.due_date.date()).days
-        if overdue_days > 0:
-            FINE_RATE_PER_DAY = 1.00 # Example: $1.00 per day
-            fine_amount_calculated = overdue_days * FINE_RATE_PER_DAY
-            loan.fine_amount = fine_amount_calculated
-    else:
-        loan.status = 'RETURNED'
-        loan.fine_amount = 0
-
-    loan.save()
-
-    book_copy_instance.status = 'Available'
-    book_copy_instance.save(update_fields=['status'])
-
-    # Create Notification
-    return_message = _(f"Book '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) has been successfully returned.")
-    notification_type = 'RETURN_CONFIRMED'
-    if loan.status == 'RETURNED_LATE' and fine_amount_calculated > 0:
-        fine_message = _(f" A fine of ${fine_amount_calculated:.2f} has been applied for late return.")
-        return_message += fine_message
-        notification_type = 'FINE_ISSUED' # Or have a separate notification for fines
-
-    Notification.objects.create(
-        recipient=loan.borrower,
-        notification_type=notification_type,
-        message=return_message
-    )
-    messages.success(request, return_message)
-    
-    return redirect('books:dashboard_active_loans')
-
-
 
 class StaffActiveLoansView(StaffRequiredMixin, ListView):
     """
@@ -1279,31 +1231,6 @@ class StaffActiveLoansView(StaffRequiredMixin, ListView):
         query_params.pop('page', None)
         context['other_query_params'] = query_params.urlencode()
         return context
-
-@login_required
-@user_passes_test(is_staff_user)
-def staff_mark_loan_returned_view(request, borrowing_id):
-    """Staff action to mark an active/overdue loan as returned."""
-    loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
-    book_copy = loan.book_copy
-
-    loan.return_date = timezone.now()
-    loan.status = 'RETURNED_LATE' if loan.due_date < timezone.now().date() else 'RETURNED'
-    # TODO: Implement actual fine calculation based on library policy
-    # if loan.status == 'RETURNED_LATE':
-    #     overdue_duration = timezone.now() - loan.due_date
-    #     loan.fine_amount = calculate_fine(overdue_duration) # Implement calculate_fine
-    loan.save()
-
-    book_copy.status = 'Available'
-    book_copy.save()
-    Notification.objects.create(
-        recipient=loan.borrower,
-        notification_type='RETURN_CONFIRMED',
-        message=f"Your loan for '{book_copy.book.title}' has been processed as returned."
-    )
-    messages.success(request, _(f"Loan for '{book_copy.book.title}' marked as returned."))
-    return redirect('books:dashboard_active_loans')
 
 class StaffBorrowingHistoryView(StaffRequiredMixin, ListView):
     """
@@ -1470,50 +1397,118 @@ def borrower_cancel_request_view(request, borrowing_id):
 
 @login_required
 @user_passes_test(is_staff_user)
+@require_POST
+def staff_mark_loan_returned_view(request, borrowing_id):
+    """
+    Processes a book return by staff. Updates borrowing record and book copy status.
+    Calculates fines for late returns.
+    """
+    if not is_staff_user(request.user): # Should be caught by decorator, but good practice
+        messages.error(request, _("You do not have permission to perform this action."))
+        return redirect('books:dashboard_home')
+
+    loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
+    book_copy_instance = loan.book_copy
+
+    loan.actual_return_date = timezone.now() # Set the actual return time
+
+    fine_amount_calculated = Decimal('0.00')
+    fine_message_segment = ""
+
+    # Check if the book is returned late
+    # Ensure due_date is a date object for comparison with actual_return_date.date()
+    if isinstance(loan.due_date, datetime): # If due_date is datetime object
+        due_date_as_date = loan.due_date.date()
+    else: # If due_date is already a date object
+        due_date_as_date = loan.due_date
+
+    if loan.actual_return_date.date() > due_date_as_date:
+        loan.status = 'RETURNED_LATE'
+        overdue_days = (loan.actual_return_date.date() - due_date_as_date).days
+        if overdue_days > 0:
+            # Use Decimal for currency calculations
+            fine_rate = Decimal(str(settings.FINE_RATE_PER_DAY_OVERDUE))
+            fine_amount_calculated = Decimal(overdue_days) * fine_rate
+            loan.fine_amount = fine_amount_calculated
+            fine_message_segment = _(f" A fine of ${fine_amount_calculated:.2f} has been applied for {overdue_days} day(s) overdue.")
+        else: # Should not happen if actual_return_date.date() > due_date_as_date, but good for safety
+            loan.fine_amount = Decimal('0.00')
+    else:
+        loan.status = 'RETURNED'
+        loan.fine_amount = Decimal('0.00')
+
+    loan.save()
+
+    book_copy_instance.status = 'Available'
+    book_copy_instance.save(update_fields=['status'])
+
+    # Create Notification
+    return_message_base = _(f"Book '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) has been successfully returned.")
+    full_notification_message = return_message_base + fine_message_segment
+    
+    notification_type = 'RETURN_CONFIRMED'
+    if loan.status == 'RETURNED_LATE' and fine_amount_calculated > 0:
+        notification_type = 'FINE_ISSUED' 
+
+    Notification.objects.create(
+        recipient=loan.borrower,
+        notification_type=notification_type,
+        message=full_notification_message
+    )
+    messages.success(request, full_notification_message)
+    
+    # Redirect to active loans, or perhaps borrowing history if preferred
+    return redirect('books:dashboard_active_loans')
+
+
+@login_required
+@user_passes_test(is_staff_user) 
 def staff_mark_loan_lost_view(request, borrowing_id):
     """
     Allows staff to mark an active or overdue loan as 'LOST_BY_BORROWER'.
-    Updates the BookCopy status to 'Lost'.
+    Updates the BookCopy status to 'Lost' and applies a standard lost book fine.
     Shows a confirmation page before action.
     """
     loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
     book_copy_instance = loan.book_copy
 
     if request.method == 'POST':
-        # Process the "Mark as Lost" action
         loan.status = 'LOST_BY_BORROWER'
         loan.return_date = timezone.now() # Mark a "return" date as the date it was declared lost
         
-        # Optional: Fine for lost book. This could be a fixed amount or based on book value.
-        # For now, let's assume a standard fine, or it could be set manually later.
-        # Example: loan.fine_amount = book_copy_instance.book.replacement_cost or settings.DEFAULT_LOST_BOOK_FINE
-        # You would need to add 'replacement_cost' to your Book model or a setting for DEFAULT_LOST_BOOK_FINE.
-        # For simplicity here, we'll just note it. A fine can be added manually or via another interface.
-        # If you have a standard fine for lost books:
-        # loan.fine_amount = settings.LOST_BOOK_FINE_AMOUNT  # Example: 25.00 (Decimal)
-
+        # Apply the default lost book fine from settings
+        lost_book_fine = Decimal(str(settings.DEFAULT_LOST_BOOK_FINE_AMOUNT))
+        loan.fine_amount = lost_book_fine
         loan.save()
 
         book_copy_instance.status = 'Lost'
         book_copy_instance.save(update_fields=['status'])
 
         # Notify the borrower
+        notification_message = _(
+            f"The book '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) "
+            f"that you borrowed has been marked as lost. "
+            f"A fine of ${lost_book_fine:.2f} has been applied. "
+            f"Please contact the library."
+        )
         Notification.objects.create(
             recipient=loan.borrower,
-            notification_type='GENERAL_ANNOUNCEMENT', # Or a more specific type like 'BOOK_LOST_NOTICE'
-            message=_(f"The book '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) that you borrowed has been marked as lost. Please contact the library regarding replacement or fines.")
+            notification_type='FINE_ISSUED', # Or a more specific 'BOOK_LOST_FINE'
+            message=notification_message
         )
 
-        messages.success(request, _(f"Loan for '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) has been marked as 'Lost by Borrower'. The book copy status is now 'Lost'."))
+        messages.success(request, _(
+            f"Loan for '{book_copy_instance.book.title}' (Copy: {book_copy_instance.copy_id}) has been marked as 'Lost by Borrower'. "
+            f"The book copy status is now 'Lost'. A fine of ${lost_book_fine:.2f} has been applied."
+        ))
         
-        # Redirect to the borrowing history or active loans page
         return redirect('books:dashboard_borrowing_history') 
 
-    # If GET request, show confirmation page
     context = {
         'loan': loan,
         'book_copy': book_copy_instance,
         'book': book_copy_instance.book,
         'page_title': _('Confirm Mark as Lost'),
+        'default_lost_fine': Decimal(str(settings.DEFAULT_LOST_BOOK_FINE_AMOUNT)) # Pass fine to template
     }
     return render(request, 'books/dashboard/circulation/borrowing_confirm_lost.html', context)

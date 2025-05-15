@@ -24,26 +24,28 @@
                                 <small class="text-muted">(Copy: {{ borrowing.book_copy.copy_id }})</small>
                             </h6>
                             <small class="text-muted">
-                                {% if borrowing.status == 'REQUESTED' %}
-                                    Requested: {{ borrowing.request_date|date:"M d, Y" }}
+                                {% if borrowing.status == 'LOST_BY_BORROWER' and borrowing.return_date %}
+                                    Declared Lost: {{ borrowing.return_date|date:"M d, Y" }}
+                                {% elif borrowing.return_date %}
+                                    Returned: {{ borrowing.return_date|date:"M d, Y" }}
                                 {% elif borrowing.issue_date %}
-                                    Issued: {{ borrowing.issue_date|date:"M d, Y" }}
+                                     Issued: {{ borrowing.issue_date|date:"M d, Y" }}
+                                {% else %}
+                                    Requested: {{ borrowing.request_date|date:"M d, Y" }}
                                 {% endif %}
                             </small>
                         </div>
                         <p class="mb-1">
                             Status: 
-                            <span class="fw-bold
-                                {% if borrowing.status == 'ACTIVE' %}text-success
-                                {% elif borrowing.status == 'OVERDUE'%}text-danger
-                                {% elif borrowing.status == 'REQUESTED'%}text-warning
+                            <span class="fw-bold 
+                                {% if borrowing.status == 'RETURNED_LATE' %}text-danger
+                                {% elif borrowing.status == 'RETURNED' %}text-primary 
+                                {% elif borrowing.status == 'LOST_BY_BORROWER' %}text-dark
                                 {% else %}text-secondary{% endif %}">
                                 {{ borrowing.get_status_display }}
                             </span>
-                            {% if borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
-                                - Due: {{ borrowing.due_date|date:"F j, Y" }}
-                            {% elif borrowing.status == 'REQUESTED' %}
-                                - Preferred Due: {{ borrowing.due_date|date:"F j, Y" }}
+                            {% if borrowing.status == 'RETURNED' or borrowing.status == 'RETURNED_LATE' or borrowing.status == 'LOST_BY_BORROWER' %}
+                                - Original Due: {{ borrowing.due_date|date:"F j, Y" }}
                             {% endif %}
                         </p>
                         {% if borrowing.notes_by_librarian %}
@@ -90,7 +92,7 @@
                             {% endif %}
                         </p>
                         {% if borrowing.fine_amount > 0 %}
-                            <p class="mb-1 text-danger">Fine Incurred: ${{ borrowing.fine_amount|floatformat:2 }}</p>
+                            <p class="mb-1 text-danger fw-bold">Fine Incurred: ${{ borrowing.fine_amount|floatformat:2 }}</p>
                         {% endif %}
                          {% if borrowing.notes_by_librarian %}
                             <small class="text-muted fst-italic">Librarian Note: {{ borrowing.notes_by_librarian }}</small>

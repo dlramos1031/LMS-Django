@@ -42,8 +42,8 @@
                     <th>Copy ID</th>
                     <th>Requested</th>
                     <th>Issued</th>
-                    <th>Due</th>
-                    <th>Returned</th>
+                    <th>Original Due</th>
+                    <th>Returned/ Lost On</th>
                     <th>Status</th>
                     <th class="text-end">Fine</th>
                 </tr>
@@ -76,7 +76,7 @@
                     </td>
                     <td class="text-end">
                         {% if borrowing.fine_amount > 0 %}
-                            ${{ borrowing.fine_amount|floatformat:2 }}
+                            <span class="text-danger fw-bold">${{ borrowing.fine_amount|floatformat:2 }}</span>
                         {% else %}
                             -
                         {% endif %}

@@ -171,8 +171,13 @@ SITE_ID = 1
 
 MEDIA_URL = '/media/'
 
-LOGIN_URL = '/login/'
+LOGIN_URL = 'users:login'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Library Policy
+DEFAULT_LOAN_DURATION_DAYS = 14         # Default loan period in days
+FINE_RATE_PER_DAY_OVERDUE = 1.00        # Example: 1.00 currency unit per day
+DEFAULT_LOST_BOOK_FINE_AMOUNT = 25.00   # Example: 25.00 currency units for a lost book

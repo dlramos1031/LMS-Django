@@ -122,13 +122,15 @@
                         <dd class="col-sm-8">{{ borrowing.due_date|date:"F d, Y"|default:"N/A" }}</dd>
 
                         {% if borrowing.return_date %}
-                        <dt class="col-sm-4">Returned On:</dt>
-                        <dd class="col-sm-8">{{ borrowing.return_date|date:"F d, Y, P" }}</dd>
-                        {% endif %}
-
-                        {% if borrowing.fine_amount > 0 %}
-                        <dt class="col-sm-4 text-danger">Fine Incurred:</dt>
-                        <dd class="col-sm-8 text-danger fw-bold">${{ borrowing.fine_amount|floatformat:2 }}</dd>
+                            {% if borrowing.fine_amount > 0 %}
+                            <dt class="col-sm-4">Declared Lost On:</dt>
+                            <dd class="col-sm-8">{{ borrowing.return_date|date:"F d, Y, P" }}</dd>
+                            <dt class="col-sm-4 text-danger">Fine Incurred:</dt>
+                            <dd class="col-sm-8 text-danger fw-bold">${{ borrowing.fine_amount|floatformat:2 }}</dd>
+                            {% else %}
+                            <dt class="col-sm-4">Returned On:</dt>
+                            <dd class="col-sm-8">{{ borrowing.return_date|date:"F d, Y, P" }}</dd>
+                            {% endif %}
                         {% endif %}
 
                         {% if borrowing.notes_by_librarian %}
