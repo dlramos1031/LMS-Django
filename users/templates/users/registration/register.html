@@ -1,14 +1,14 @@
-{% extends "base.html" %} {# Extends the main base template with the navbar #}
+{% extends "base.html" %}
 {% load static %}
 {% load bootstrap5 %}
 
 {% block title %}Register - LMS Portal{% endblock %}
 
-{% block body_class %}auth-page-base auth-page-portal{% endblock %} {# Apply portal auth body classes #}
+{% block body_class %}auth-page-base auth-page-portal{% endblock %}
 
 {% block content_body %}
 <div class="auth-page-content-wrapper">
-    <div class="auth-card"> {# Apply the styled card #}
+    <div class="auth-card">
         <div class="text-center mb-4">
             <i class="bi bi-person-plus-fill h1 text-primary"></i>
         </div>
@@ -28,60 +28,68 @@
             {% csrf_token %}
 
             <div class="row g-3">
-                {# Username #}
+                {# Username field #}
                 <div class="col-12">
                     <label for="{{ form.username.id_for_label }}" class="form-label visually-hidden">{{ form.username.label }}</label>
                     <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}"
                            class="form-control {% if form.username.errors %}is-invalid{% endif %}"
-                           placeholder="Username" value="{{ form.username.value|default:'' }}" required>
-                    <div id="username-feedback" class="form-text text-danger mt-1"></div> {# For JS validation message #}
+                           placeholder="Username" value="{{ form.username.value|default:'' }}" required
+                           aria-describedby="username-js-feedback {% if form.username.errors %}username-django-errors{% endif %}">
+                    
                     {% if form.username.errors %}
-                        <div class="invalid-feedback d-block">
+                        <div id="username-django-errors" class="invalid-feedback d-block">
                             {% for error in form.username.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
+                    <div id="username-js-feedback" class="form-text mt-1"></div>
                 </div>
 
-                {# Email #}
+                {# Email field #}
                 <div class="col-12">
                     <label for="{{ form.email.id_for_label }}" class="form-label visually-hidden">{{ form.email.label }}</label>
                     <input type="email" name="{{ form.email.name }}" id="{{ form.email.id_for_label }}"
                            class="form-control {% if form.email.errors %}is-invalid{% endif %}"
-                           placeholder="Email Address" value="{{ form.email.value|default:'' }}" required>
-                    <div id="email-feedback" class="form-text text-danger mt-1"></div> {# For JS validation message #}
+                           placeholder="Email Address" value="{{ form.email.value|default:'' }}" required
+                           aria-describedby="email-js-feedback {% if form.email.errors %}email-django-errors{% endif %}">
+                    
                     {% if form.email.errors %}
-                        <div class="invalid-feedback d-block">
+                        <div id="email-django-errors" class="invalid-feedback d-block">
                             {% for error in form.email.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
+                    <div id="email-js-feedback" class="form-text mt-1"></div>
                 </div>
 
-                {# Password 1 #}
+                {# Password field #}
                 <div class="col-md-6">
                     <label for="{{ form.password1.id_for_label }}" class="form-label visually-hidden">{{ form.password1.label }}</label>
                     <input type="password" name="{{ form.password1.name }}" id="{{ form.password1.id_for_label }}"
                            class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
-                           placeholder="Password" required>
-                    <div id="password-strength" class="form-text mt-1"></div> {# For JS password strength #}
+                           placeholder="Password" required
+                           aria-describedby="password-strength {% if form.password1.errors %}password1-django-errors{% endif %}">
+                    
                     {% if form.password1.errors %}
-                        <div class="invalid-feedback d-block">
+                        <div id="password1-django-errors" class="invalid-feedback d-block">
                             {% for error in form.password1.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
+                    <div id="password-strength" class="form-text mt-1"></div>
                 </div>
 
-                {# Password 2 #}
+                {# Confirm Password field #}
                 <div class="col-md-6">
                     <label for="{{ form.password2.id_for_label }}" class="form-label visually-hidden">{{ form.password2.label }}</label>
                     <input type="password" name="{{ form.password2.name }}" id="{{ form.password2.id_for_label }}"
                            class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
-                           placeholder="Confirm Password" required>
-                    <div id="password-match" class="form-text mt-1"></div> {# For JS password match #}
+                           placeholder="Confirm Password" required
+                           aria-describedby="password-match {% if form.password2.errors %}password2-django-errors{% endif %}">
+
                     {% if form.password2.errors %}
-                        <div class="invalid-feedback d-block">
+                        <div id="password2-django-errors" class="invalid-feedback d-block">
                             {% for error in form.password2.errors %}{{ error }}{% endfor %}
                         </div>
                     {% endif %}
+                    <div id="password-match" class="form-text mt-1"></div>
                 </div>
             </div>
 
@@ -100,27 +108,39 @@
 {% endblock content_body %}
 
 {% block page_specific_scripts %}
-{# Your existing JavaScript for registration form validation #}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("register-form");
-    if (!form) return; // Exit if form not found
+    if (!form) return;
 
-    // Helper to safely get form elements
     const getEl = (name) => form.elements.namedItem(name);
 
     const usernameInput = getEl("username");
     const emailInput = getEl("email");
-    const passwordInput = getEl("password1"); // Corrected to password1
-    const confirmPasswordInput = getEl("password2"); // Corrected to password2
+    const passwordInput = getEl("password1");
+    const confirmPasswordInput = getEl("password2");
     
-    const usernameFeedback = document.getElementById("username-feedback");
-    const emailFeedback = document.getElementById("email-feedback");
+    const usernameJsFeedback = document.getElementById("username-js-feedback");
+    const emailJsFeedback = document.getElementById("email-js-feedback");
     const strengthText = document.getElementById("password-strength");
     const matchText = document.getElementById("password-match");
-    // const registerBtn = document.getElementById("register-btn"); // Not used in this script version
 
+    // Function: Clear Django error messages
+    function clearDjangoError(fieldId) {
+        const djangoErrorEl = document.getElementById(fieldId + "-django-errors");
+        if (djangoErrorEl) {
+            djangoErrorEl.innerHTML = "";
+            djangoErrorEl.classList.remove("d-block");
+            djangoErrorEl.classList.add("d-none");
+        }
+        const inputEl = getEl(fieldId);
+        if (inputEl) {
+        }
+    }
+    
+    // Function: Update password strength indicator
     function updatePasswordStrength(pass) {
+      clearDjangoError("password1");
       if (!strengthText) return;
       let strength = 0;
       if (pass.length >= 8) strength++;
@@ -134,60 +154,66 @@ document.addEventListener("DOMContentLoaded", function () {
       else if (strength === 3) { strengthLabel = "Strong"; strengthColor = "text-success"; }
       else if (strength === 2) { strengthLabel = "Moderate"; strengthColor = "text-warning"; }
       
-      strengthText.textContent = "Strength: " + strengthLabel;
+      strengthText.textContent = strengthLabel;
       strengthText.className = `form-text mt-1 ${strengthColor}`;
     }
 
+    // Function: Check if passwords match
     function checkPasswordMatch() {
+      clearDjangoError("password2");
       if (!matchText || !passwordInput || !confirmPasswordInput) return;
+      
+      matchText.textContent = "";
+      matchText.className = "form-text mt-1";
+      confirmPasswordInput.classList.remove("is-valid", "is-invalid");
+
       if (passwordInput.value === confirmPasswordInput.value && confirmPasswordInput.value.length > 0) {
         matchText.textContent = "Passwords match ✅";
-        matchText.className = "form-text mt-1 text-success";
-        confirmPasswordInput.classList.remove("is-invalid");
+        matchText.classList.add("text-success");
         confirmPasswordInput.classList.add("is-valid");
       } else if (confirmPasswordInput.value.length > 0) {
         matchText.textContent = "Passwords do not match ❌";
-        matchText.className = "form-text mt-1 text-danger";
-        confirmPasswordInput.classList.remove("is-valid");
+        matchText.classList.add("text-danger");
         confirmPasswordInput.classList.add("is-invalid");
-      } else {
-        matchText.textContent = "";
-        confirmPasswordInput.classList.remove("is-valid", "is-invalid");
       }
     }
 
+    // Function: Check username/email availability
     async function checkAvailability(field, endpoint, feedbackElement) {
+        clearDjangoError(field.name);
+
         if (!field || !feedbackElement) return;
         const value = field.value.trim();
-        if (!value) {
-            field.classList.remove("is-valid", "is-invalid");
-            feedbackElement.textContent = "";
-            return;
-        }
+        
+        feedbackElement.textContent = "";
+        feedbackElement.className = "form-text mt-1";
+        field.classList.remove("is-valid", "is-invalid");
+
+        if (!value) return;
+
         try {
             const response = await fetch(`${endpoint}?value=${encodeURIComponent(value)}`);
             if (!response.ok) {
                 console.error("Availability check network error:", response.statusText);
                 feedbackElement.textContent = "Could not verify. Server error.";
+                feedbackElement.classList.add("text-danger");
                 field.classList.add("is-invalid");
-                field.classList.remove("is-valid");
                 return;
             }
             const data = await response.json();
             if (data.exists) {
                 field.classList.add("is-invalid");
-                field.classList.remove("is-valid");
-                feedbackElement.textContent = `${field.placeholder || field.name} is already taken.`;
+                feedbackElement.textContent = `${field.placeholder || field.name.replace("_", " ")} is already taken.`;
+                feedbackElement.classList.add("text-danger");
             } else {
                 field.classList.add("is-valid");
-                field.classList.remove("is-invalid");
                 feedbackElement.textContent = "";
             }
         } catch (error) {
             console.error("Availability check error:", error);
             feedbackElement.textContent = "Could not verify. Please try again.";
+            feedbackElement.classList.add("text-danger");
             field.classList.add("is-invalid");
-            field.classList.remove("is-valid");
         }
     }
     
@@ -195,21 +221,33 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if(usernameInput) {
         usernameInput.addEventListener("input", () => {
+            clearDjangoError(usernameInput.name);
             clearTimeout(usernameTimeout);
-            // Assuming your API is at /api/auth/check-username/
-            usernameTimeout = setTimeout(() => checkAvailability(usernameInput, "/api/auth/check-username/", usernameFeedback), 500);
+            usernameTimeout = setTimeout(() => checkAvailability(usernameInput, "/api/auth/check-username/", usernameJsFeedback), 500);
         });
     }
     if(emailInput) {
         emailInput.addEventListener("input", () => {
+            clearDjangoError(emailInput.name);
             clearTimeout(emailTimeout);
-            // Assuming your API is at /api/auth/check-email/
-            emailTimeout = setTimeout(() => checkAvailability(emailInput, "/api/auth/check-email/", emailFeedback), 500);
+            emailTimeout = setTimeout(() => checkAvailability(emailInput, "/api/auth/check-email/", emailJsFeedback), 500);
         });
     }
-    if(passwordInput) passwordInput.addEventListener("input", () => updatePasswordStrength(passwordInput.value));
-    if(confirmPasswordInput) confirmPasswordInput.addEventListener("input", checkPasswordMatch);
-
+    if(passwordInput) {
+        passwordInput.addEventListener("input", () => {
+            clearDjangoError(passwordInput.name);
+            updatePasswordStrength(passwordInput.value);
+            if (confirmPasswordInput && confirmPasswordInput.value.length > 0) {
+                checkPasswordMatch();
+            }
+        });
+    }
+    if(confirmPasswordInput) {
+        confirmPasswordInput.addEventListener("input", () => {
+            clearDjangoError(confirmPasswordInput.name);
+            checkPasswordMatch();
+        });
+    }
 });
 </script>
 {% endblock page_specific_scripts %}
