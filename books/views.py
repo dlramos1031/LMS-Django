@@ -39,7 +39,7 @@ from .serializers import (
     BookCopySerializer,
     BookCopyDetailSerializer,
     BorrowingSerializer,
-    NotificationSerializer
+    NotificationSerializer  # Comment
 )
 # Assuming forms will be created in books/forms.py
 from .forms import BookForm, BookCopyForm, CategoryForm, AuthorForm, IssueBookForm, ReturnBookForm, BatchAddBookCopyForm
