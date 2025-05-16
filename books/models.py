@@ -404,6 +404,13 @@ class Notification(models.Model):
         default=False,
         help_text=_("Indicates whether the recipient has read the notification")
     )
+    related_borrowing = models.ForeignKey(
+        Borrowing, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        help_text=_("Link to the specific borrowing record, if applicable")
+    )
     
     # Optional: Link to a relevant object that the notification is about
     # This uses Django's generic relations if the related object can be of different types (e.g., a Borrowing record, a Book).

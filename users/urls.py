@@ -1,6 +1,7 @@
 from django.urls import path, reverse_lazy
 from . import views
 from django.contrib.auth import views as auth_views
+from books.views import my_notifications_view
 
 app_name = 'users'
 
@@ -16,6 +17,7 @@ urlpatterns = [
     path('profile/edit/', views.user_profile_edit_view, name='edit_my_profile'),
     path('my-borrowings/', views.my_borrowings_view, name='my_borrowings'),
     path('my-reservations/', views.my_reservations_view, name='my_reservations'),
+    path('my-notifications/', my_notifications_view, name='my_notifications'),
 
     # --- Password Reset URLs (for users who forgot their password) ---
     path('password_reset/', 

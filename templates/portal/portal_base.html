@@ -5,7 +5,7 @@
 {% block title %}LMS Portal - {% block portal_title %}{% endblock %}{% endblock %}
 
 {% block site_nav_items %}
-    {# Override the site_nav_items from base.html to provide portal-specific navigation #}
+    {# ... (your existing navbar HTML from the uploaded portal_base.html) ... #}
     <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.view_name == 'books:portal_catalog' %}active fw-semibold{% endif %}" href="{% url 'books:portal_catalog' %}">
@@ -20,9 +20,34 @@
         </li>
         {% endif %}
     </ul>
-    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-        {# Copied user authenticated block from base.html, can be an include too #}
+    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center"> {# Added align-items-center for better vertical alignment if needed #}
         {% if user.is_authenticated %}
+            {% if user.role == 'BORROWER' and not user.is_staff %}
+            <li class="nav-item dropdown me-2">
+                <a class="nav-link" href="#" id="notificationDropdownToggle" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+                    <i class="bi bi-bell-fill position-relative">
+                        <span id="notification-unread-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6em; display: none;">
+                            <span id="notification-unread-count">0</span>
+                        </span>
+                    </i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="notificationDropdownToggle" id="notification-dropdown-list" style="width: 350px;">
+                    <li class="px-3 py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="dropdown-header p-0 m-0">Notifications</h6>
+                        <button type="button" id="mark-all-dropdown-notifications-read" class="btn btn-link btn-sm text-decoration-none p-0" style="display: none;">Mark all as read</button>
+                    </li>
+                    <li><hr class="dropdown-divider my-0"></li>
+                    <div id="notification-items-container" style="max-height: 400px; overflow-y: auto;">
+                        {# Notification items will be loaded here by JavaScript #}
+                        <li class="text-center p-3 text-muted" id="loading-notifications-message" style="display: none;">Loading...</li>
+                        <li class="text-center p-3 text-muted" id="no-notifications-message">No new notifications.</li>
+                    </div>
+                    <li><hr class="dropdown-divider my-0"></li>
+                    <li><a class="dropdown-item text-center" href="{% url 'users:my_notifications' %}">View All Notifications</a></li> {# We'll create this URL and page later #}
+                </ul>
+            </li>
+            {% endif %}
+
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle {% if 'my_profile' in request.resolver_match.view_name or 'edit_my_profile' in request.resolver_match.view_name or 'password_change' in request.resolver_match.view_name %}active fw-semibold{% endif %}" href="#" id="userProfileDropdownPortal" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                     {% if user.profile_picture %}
@@ -33,12 +58,12 @@
                     {{ user.first_name|default:user.username }}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userProfileDropdownPortal">
-                    {% if user.role == 'BORROWER' and not user.is_staff %} {# Only show profile links relevant to borrower portal context #}
+                    {% if user.role == 'BORROWER' and not user.is_staff %}
                         <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:my_profile' %}active{% endif %}" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>View Profile</a></li>
                         <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:edit_my_profile' %}active{% endif %}" href="{% url 'users:edit_my_profile' %}"><i class="bi bi-pencil-square me-2"></i>Edit Profile</a></li>
                         <li><a class="dropdown-item {% if request.resolver_match.view_name == 'users:password_change' %}active{% endif %}" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
                         <li><hr class="dropdown-divider"></li>
-                    {% elif user.is_staff %} {# Staff might have a link to their dashboard profile if different #}
+                    {% elif user.is_staff %}
                          <li><a class="dropdown-item" href="{% url 'users:my_profile' %}"><i class="bi bi-person-lines-fill me-2"></i>View My Staff Profile</a></li>
                          <li><a class="dropdown-item" href="{% url 'users:password_change' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
                          <li><hr class="dropdown-divider"></li>
@@ -64,10 +89,10 @@
     </ul>
 {% endblock site_nav_items %}
 
-{% block main_container_class %}container py-3 mt-5 pt-3{% endblock %} {# Override to adjust padding/margins for portal #}
+{% block main_container_class %}container py-3 mt-5 pt-3{% endblock %}
 
-{% block content_body %} {# This block from base.html will be filled by portal specific content #}
-    <div class="portal-main-content"> {# Optional wrapper for portal specific styling #}
+{% block content_body %}
+    <div class="portal-main-content">
         {% bootstrap_messages %}
         {% block portal_content %}
             {# Specific portal page content (catalog.html, book_detail.html, profile.html) will go here #}
@@ -76,6 +101,228 @@
 {% endblock content_body %}
 
 {% block page_footer %}
-    {# Portal can have its own footer or inherit from base.html #}
     {{ block.super }}
 {% endblock page_footer %}
+
+{% block page_specific_scripts %}
+{{ block.super }}
+{% if user.is_authenticated and user.role == 'BORROWER' and not user.is_staff %}
+<script>
+    const USER_AUTH_TOKEN = "{{ request.user.auth_token.key }}";
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const apiBaseUrl = '/api/notifications/'; // Make sure this matches your books.api_urls
+    const notificationDropdownToggle = document.getElementById('notificationDropdownToggle');
+    const notificationUnreadBadge = document.getElementById('notification-unread-badge');
+    const notificationUnreadCountSpan = document.getElementById('notification-unread-count');
+    const notificationItemsContainer = document.getElementById('notification-items-container');
+    const noNewNotificationsMessage = document.getElementById('no-notifications-message'); // Corrected ID
+    const loadingNotificationsMessage = document.getElementById('loading-notifications-message');
+    const markAllDropdownButton = document.getElementById('mark-all-dropdown-notifications-read');
+
+    function getCsrfToken() {
+        const csrfTokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        return csrfTokenInput ? csrfTokenInput.value : '';
+    }
+
+    function fetchUnreadCount() {
+        fetch(apiBaseUrl + 'unread-count/', {
+            method: 'GET',
+            headers: { 
+                'Accept': 'application/json',
+                'Authorization': `Token ${USER_AUTH_TOKEN}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok for unread count');
+            return response.json();
+        })
+        .then(data => {
+            updateNavbarBadgeCount(data.unread_count);
+        })
+        .catch(error => console.error('Error fetching unread count:', error));
+    }
+
+    function updateNavbarBadgeCount(count) {
+        if (notificationUnreadBadge && notificationUnreadCountSpan) {
+            notificationUnreadCountSpan.textContent = count;
+            if (count > 0) {
+                notificationUnreadBadge.style.display = '';
+                if (markAllDropdownButton) markAllDropdownButton.style.display = ''; // Show "Mark all as read" if there are unread items
+            } else {
+                notificationUnreadBadge.style.display = 'none';
+                if (markAllDropdownButton) markAllDropdownButton.style.display = 'none'; // Hide if no unread items
+            }
+        }
+    }
+
+    function formatTimeSince(timestamp) {
+        const now = new Date();
+        const secondsPast = (now.getTime() - new Date(timestamp).getTime()) / 1000;
+
+        if (secondsPast < 60) return parseInt(secondsPast) + 's ago';
+        if (secondsPast < 3600) return parseInt(secondsPast / 60) + 'm ago';
+        if (secondsPast <= 86400) return parseInt(secondsPast / 3600) + 'h ago';
+        
+        const days = parseInt(secondsPast / 86400);
+        if (days < 7) return days + 'd ago';
+        
+        const date = new Date(timestamp);
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    function getNotificationIcon(type) {
+        switch(type) {
+            case 'BORROW_APPROVED': return '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+            case 'BORROW_REJECTED': return '<i class="bi bi-x-circle-fill text-danger me-2"></i>';
+            case 'DUE_REMINDER': return '<i class="bi bi-alarm-fill text-warning me-2"></i>';
+            case 'OVERDUE_ALERT': return '<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>';
+            case 'RETURN_CONFIRMED': return '<i class="bi bi-journal-check text-primary me-2"></i>';
+            case 'FINE_ISSUED': return '<i class="bi bi-cash-coin text-danger me-2"></i>';
+            default: return '<i class="bi bi-info-circle-fill text-info me-2"></i>';
+        }
+    }
+
+    function fetchRecentNotifications() {
+        if (!notificationItemsContainer) return;
+
+        if(loadingNotificationsMessage) loadingNotificationsMessage.style.display = 'block';
+        if(noNewNotificationsMessage) noNewNotificationsMessage.style.display = 'none';
+        
+        // Clear only notification items, keep loading/no message placeholders if needed
+        const itemsToRemove = notificationItemsContainer.querySelectorAll('li:not(#loading-notifications-message):not(#no-notifications-message)');
+        itemsToRemove.forEach(item => item.remove());
+
+        fetch(apiBaseUrl + '?limit=5', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json',
+                'Authorization': `Token ${USER_AUTH_TOKEN}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok for recent notifications');
+            return response.json();
+        })
+        .then(data => {
+            if(loadingNotificationsMessage) loadingNotificationsMessage.style.display = 'none';
+            
+            if (!data.results || data.results.length === 0) {
+                if(noNewNotificationsMessage) noNewNotificationsMessage.style.display = 'block';
+                if (markAllDropdownButton) markAllDropdownButton.style.display = 'none'; // Hide if no items
+                return;
+            }
+
+            data.results.forEach(notification => {
+                const item = document.createElement('li');
+                item.id = `dropdown-notification-item-${notification.id}`;
+                item.className = `dropdown-item py-2 px-3 notification-clickable ${notification.is_read ? '' : 'list-group-item-light fw-normal'}`; // Added 'notification-clickable'
+                item.style.whiteSpace = 'normal'; 
+                item.dataset.notificationId = notification.id; // Store ID for click handling
+
+                item.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <div class="me-2">${getNotificationIcon(notification.notification_type)} ${notification.message}</div>
+                        <small class="text-muted flex-shrink-0">${formatTimeSince(notification.timestamp)}</small>
+                    </div>
+                `;
+                notificationItemsContainer.appendChild(item);
+            });
+            
+            // Add click listeners after items are added to the DOM
+            notificationItemsContainer.querySelectorAll('.notification-clickable').forEach(clickableItem => {
+                clickableItem.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const notificationId = this.dataset.notificationId;
+                    markNotificationAsRead(notificationId, false); // Mark as read, but don't immediately refresh the whole list
+                    
+                    // If you have a related_url in your notification object from the API:
+                    // if (notification.related_url) {
+                    //    window.location.href = notification.related_url;
+                    // }
+                });
+            });
+
+        })
+        .catch(error => {
+            console.error('Error fetching recent notifications:', error);
+            if(loadingNotificationsMessage) loadingNotificationsMessage.style.display = 'none';
+            if(noNewNotificationsMessage) {
+                noNewNotificationsMessage.textContent = 'Could not load notifications.';
+                noNewNotificationsMessage.style.display = 'block';
+            }
+            if (markAllDropdownButton) markAllDropdownButton.style.display = 'none';
+        });
+    }
+
+    function markNotificationAsRead(notificationId, refreshListOnSuccess = false) {
+        fetch(`${apiBaseUrl}${notificationId}/mark-read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${USER_AUTH_TOKEN}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to mark as read');
+            return response.json();
+        })
+        .then(data => {
+            fetchUnreadCount(); // Always update the badge
+            if (refreshListOnSuccess) { // Used by "Mark all as read"
+                fetchRecentNotifications(); 
+            } else {
+                // If not refreshing the whole list, just update the single item's style in the dropdown
+                const itemInDropdown = document.getElementById(`dropdown-notification-item-${notificationId}`);
+                if (itemInDropdown) {
+                    itemInDropdown.classList.remove('list-group-item-light', 'fw-normal');
+                }
+                 // If on the dedicated notifications page, also update the item there (if it exists)
+                const itemOnPage = document.getElementById('notification-item-' + notificationId);
+                if (itemOnPage) {
+                    itemOnPage.classList.remove('list-group-item-light', 'fw-bold');
+                    const button = itemOnPage.querySelector('.mark-single-notification-read');
+                    if (button) button.remove();
+                }
+            }
+        })
+        .catch(error => console.error('Error marking notification as read:', error));
+    }
+
+    if (markAllDropdownButton) {
+        markAllDropdownButton.addEventListener('click', function() {
+            fetch(apiBaseUrl + 'mark-all-read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json',
+                'Authorization': `Token ${USER_AUTH_TOKEN}`
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to mark all as read');
+                return response.json();
+            })
+            .then(data => {
+                fetchUnreadCount(); // Update badge to 0
+                fetchRecentNotifications(); // Refresh the list in the dropdown (all should appear as read)
+            })
+            .catch(error => console.error('Error marking all dropdown notifications as read:', error));
+        });
+    }
+    
+    if (notificationDropdownToggle) {
+        notificationDropdownToggle.addEventListener('show.bs.dropdown', function () {
+            fetchRecentNotifications();
+        });
+        
+        fetchUnreadCount(); // Initial fetch for unread count on page load
+        // Optional: Poll for new notifications periodically
+        // setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds for unread count
+        // setInterval(fetchRecentNotifications, 60000); // Poll for recent notifications (less frequent)
+    }
+});
+</script>
+{% endif %}
+{% endblock page_specific_scripts %}

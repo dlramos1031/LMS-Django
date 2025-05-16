@@ -8,7 +8,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q, F, Count, Case, When, BooleanField
+from django.db.models import Q, F, Count, Case, When, Exists, OuterRef
 from django.urls import reverse_lazy
 from datetime import datetime
 from time import time
@@ -222,6 +222,7 @@ class BorrowingViewSet(viewsets.ModelViewSet):
         )
         return Response(BorrowingSerializer(borrowing_record, context={'request': request}).data)
 
+
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     """API endpoint for user notifications."""
     serializer_class = NotificationSerializer
@@ -233,18 +234,52 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return Notification.objects.filter(recipient=self.request.user).order_by('-timestamp')
 
+    @action(detail=False, methods=['get'], url_path='unread-count', permission_classes=[permissions.IsAuthenticated])
+    def unread_count(self, request):
+        """
+        Returns the count of unread notifications for the currently authenticated user.
+        """
+        count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+        return Response({'unread_count': count}, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['post'], url_path='mark-all-read', permission_classes=[permissions.IsAuthenticated])
     def mark_all_as_read(self, request):
         Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
         return Response({'detail': _('All notifications marked as read.')}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='mark-read', permission_classes=[permissions.IsAuthenticated])
-    def mark_as_read(self, request, pk=None): # Renamed for consistency with how it might be used
+    def mark_as_read(self, request, pk=None):
         notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
         if not notification.is_read:
             notification.is_read = True
             notification.save(update_fields=['is_read'])
         return Response(NotificationSerializer(notification, context={'request': request}).data)
+
+@login_required
+def my_notifications_view(request):
+    # Ensure this view is only for borrowers, or adjust logic as needed
+    if request.user.is_staff or request.user.role != 'BORROWER':
+        messages.error(request, _("This page is for borrowers only."))
+        return redirect('books:portal_catalog') # Or appropriate redirect
+
+    user_notifications = Notification.objects.filter(recipient=request.user).order_by('-timestamp')
+    
+    # Paginate notifications
+    paginator = Paginator(user_notifications, 15) # Show 15 notifications per page
+    page_number = request.GET.get('page')
+    try:
+        notifications_page = paginator.page(page_number)
+    except PageNotAnInteger:
+        notifications_page = paginator.page(1)
+    except EmptyPage:
+        notifications_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'notifications_page': notifications_page,
+        'page_title': _('My Notifications'),
+        'view_context': 'portal', # To maintain portal base template context
+    }
+    return render(request, 'users/portal/my_notifications.html', context)
 
 
 # === Borrower Web Portal Views ===
@@ -569,17 +604,22 @@ class StaffBookListView(StaffRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        queryset = super().get_queryset().prefetch_related('authors', 'categories').annotate(
-            copy_count=Count('copies'),
-            has_available_copies=Case(
-                When(copies__status='Available', then=True),
-                default=False,
-                output_field=BooleanField()
-            )
-        ).distinct()
+        queryset = Book.objects.all()
+        queryset = queryset.annotate(
+            copy_count=Count('copies')
+        )
+        available_copies_subquery = BookCopy.objects.filter(
+            book=OuterRef('pk'),
+            status='Available'
+        )
+        queryset = queryset.annotate(
+            has_available_copies=Exists(available_copies_subquery)
+        )
+
+        queryset = queryset.prefetch_related('authors', 'categories')
 
         search_term = self.request.GET.get('search', '').strip()
-        category_filter = self.request.GET.get('category', '').strip()
+        category_id_filter = self.request.GET.get('category', '').strip()
         availability_filter = self.request.GET.get('availability', '').strip()
 
         if search_term:
@@ -591,8 +631,8 @@ class StaffBookListView(StaffRequiredMixin, ListView):
                 Q(publisher__icontains=search_term)
             )
         
-        if category_filter:
-            queryset = queryset.filter(categories__id=category_filter)
+        if category_id_filter:
+            queryset = queryset.filter(categories__id=category_id_filter)
             
         if availability_filter:
             if availability_filter == 'available':
@@ -600,7 +640,7 @@ class StaffBookListView(StaffRequiredMixin, ListView):
             elif availability_filter == 'unavailable':
                 queryset = queryset.filter(has_available_copies=False)
 
-        return queryset.order_by('title')
+        return queryset.order_by('title').distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

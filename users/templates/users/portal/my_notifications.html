@@ -1,0 +1,193 @@
+{% extends "portal/portal_base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+{% load i18n %} {# For using {% trans ... %} if needed #}
+
+{% block portal_title %}{{ page_title|default:"My Notifications" }}{% endblock %}
+
+{% block portal_content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">{{ page_title }}</h1>
+        {% if notifications_page.object_list %}
+        <button type="button" id="mark-all-page-notifications-read" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-check2-all"></i> Mark all as read
+        </button>
+        {% endif %}
+    </div>
+
+    {% if notifications_page.object_list %}
+        <div class="list-group shadow-sm">
+            {% for notification in notifications_page %}
+            <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-light fw-bold{% endif %}" id="notification-item-{{ notification.id }}">
+                <div class="d-flex w-100 justify-content-between">
+                    <p class="mb-1">
+                        {% if notification.notification_type == 'BORROW_APPROVED' %}
+                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                        {% elif notification.notification_type == 'BORROW_REJECTED' %}
+                            <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                        {% elif notification.notification_type == 'DUE_REMINDER' %}
+                            <i class="bi bi-alarm-fill text-warning me-2"></i>
+                        {% elif notification.notification_type == 'OVERDUE_ALERT' %}
+                            <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>
+                        {% elif notification.notification_type == 'RETURN_CONFIRMED' %}
+                            <i class="bi bi-journal-check text-primary me-2"></i>
+                        {% elif notification.notification_type == 'FINE_ISSUED' %}
+                            <i class="bi bi-cash-coin text-danger me-2"></i>
+                        {% else %}
+                            <i class="bi bi-info-circle-fill text-info me-2"></i>
+                        {% endif %}
+                        {{ notification.message }}
+                    </p>
+                    <small class="text-muted">{{ notification.timestamp|timesince }} ago</small>
+                </div>
+                <small class="text-muted">{{ notification.timestamp|date:"F d, Y, P" }}</small>
+                {% if not notification.is_read %}
+                <button class="btn btn-sm btn-link p-0 float-end mark-single-notification-read" data-notification-id="{{ notification.id }}" title="Mark as read">
+                    <i class="bi bi-check-circle"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Pagination #}
+        {% if notifications_page.has_other_pages %}
+            <nav aria-label="Page navigation notifications" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if notifications_page.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ notifications_page.previous_page_number }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="True">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    {% for i in notifications_page.paginator.page_range %}
+                        {% if notifications_page.number == i %}
+                            <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if notifications_page.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ notifications_page.next_page_number }}">Next</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="True">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            <i class="bi bi-bell-slash-fill h3 d-block mb-2"></i>
+            You have no notifications.
+        </div>
+    {% endif %}
+</div>
+
+{% block page_specific_scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const apiBaseUrl = '/api/notifications/'; // From books/api_urls.py
+
+    // Function to get CSRF token
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+
+    // Mark all notifications on this page as read
+    const markAllPageButton = document.getElementById('mark-all-page-notifications-read');
+    if (markAllPageButton) {
+        markAllPageButton.addEventListener('click', function() {
+            fetch(apiBaseUrl + 'mark-all-read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.detail) {
+                    // console.log(data.detail);
+                    // Visually update all items on the current page
+                    document.querySelectorAll('.list-group-item-action.list-group-item-light').forEach(item => {
+                        item.classList.remove('list-group-item-light', 'fw-bold');
+                        const button = item.querySelector('.mark-single-notification-read');
+                        if (button) button.remove();
+                    });
+                    // Potentially update the navbar badge too, if visible
+                    updateNavbarBadgeCount(0); 
+                }
+            })
+            .catch(error => console.error('Error marking all as read:', error));
+        });
+    }
+
+    // Mark a single notification as read
+    document.querySelectorAll('.mark-single-notification-read').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.dataset.notificationId;
+            fetch(apiBaseUrl + notificationId + '/mark-read/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.id) {
+                    const item = document.getElementById('notification-item-' + data.id);
+                    if (item) {
+                        item.classList.remove('list-group-item-light', 'fw-bold');
+                        this.remove();
+                    }
+                    fetchUnreadCountAndUpdateBadge(); 
+                }
+            })
+            .catch(error => console.error('Error marking single notification as read:', error));
+        });
+    });
+
+    function updateNavbarBadgeCount(count) {
+        const badge = document.getElementById('notification-unread-badge');
+        const countSpan = document.getElementById('notification-unread-count');
+        if (badge && countSpan) {
+            countSpan.textContent = count;
+            if (count > 0) {
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    function fetchUnreadCountAndUpdateBadge() {
+        fetch(apiBaseUrl + 'unread-count/', {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (typeof data.unread_count !== 'undefined') {
+                updateNavbarBadgeCount(data.unread_count);
+            }
+        })
+        .catch(error => console.error('Error fetching unread count:', error));
+    }
+    fetchUnreadCountAndUpdateBadge();
+});
+</script>
+{% endblock %}
+{% endblock portal_content %}

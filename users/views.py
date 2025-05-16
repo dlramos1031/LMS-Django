@@ -73,7 +73,6 @@ def user_register_view(request):
 
 
 def user_login_view(request):
-    print("Is user logged in?", request.user.is_authenticated)
     if request.user.is_authenticated:
         if is_staff_user(request.user):
             return redirect('books:dashboard_home')
@@ -547,6 +546,7 @@ class UserLoginAPIView(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.objects.get_or_create(user=user)
+        print(f"Token: {token.key}")
         user_data = UserSerializer(user, context=self.get_serializer_context()).data
         return Response({
             'token': token.key,
