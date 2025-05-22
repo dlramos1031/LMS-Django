@@ -169,6 +169,20 @@
                 <input type="date" name="due_date" id="id_due_date_request" class="form-control" required>
                 <small class="form-text text-muted">Standard loan period is typically 2 weeks.</small>
               </div>
+              
+              {% if available_book_copies_for_selection %}
+              <div class="mb-3">
+                <label for="id_book_copy_request" class="form-label">Select Specific Copy (Optional):</label>
+                <select name="book_copy_id" id="id_book_copy_request" class="form-select">
+                  <option value="">Assign automatically (earliest available)</option>
+                  {% for copy in available_book_copies_for_selection %}
+                    <option value="{{ copy.id }}">Copy ID: {{ copy.copy_id }} (Acquired: {{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              {% else %}
+                <p class_alias="text-muted"><small>No specific copies listed for selection; one will be assigned if available.</small></p>
+              {% endif %}
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -179,9 +193,18 @@
       </div>
     </div>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dateInputModal = document.getElementById('id_due_date_request');
-        if (dateInputModal) { /* ... your datepicker script ... */ }
-    });
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInputModal = document.getElementById('id_due_date_request');
+            if (dateInputModal) {
+                const today = new Date();
+                const tomorrow = new Date(today);
+                tomorrow.setDate(today.getDate() + 1);
+                const twoWeeksFromTomorrow = new Date(tomorrow);
+                twoWeeksFromTomorrow.setDate(tomorrow.getDate() + 14);
+    
+                dateInputModal.min = tomorrow.toISOString().split('T')[0]; // Set min date to tomorrow
+                dateInputModal.value = twoWeeksFromTomorrow.toISOString().split('T')[0]; // Default to 2 weeks from tomorrow
+            }
+        });
     </script>
 {% endif %}

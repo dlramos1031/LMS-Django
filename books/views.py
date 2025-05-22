@@ -87,13 +87,22 @@ class BookViewSet(viewsets.ModelViewSet):
     """API endpoint for books."""
     queryset = Book.objects.all().prefetch_related('authors', 'categories', 'copies').order_by('title')
     serializer_class = BookSerializer
-    permission_classes = [IsLibrarianOrAdminPermission]
     lookup_field = 'isbn'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = BookFilter
     search_fields = ['title', 'isbn', 'authors__name', 'categories__name', 'description', 'publisher']
     ordering_fields = ['title', 'publication_date', 'total_borrows', 'date_added_to_system']
     ordering = ['title']
+    
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'retrieve', 'available_copies_list']:
+            permission_classes = [permissions.IsAuthenticated]
+        else:
+            permission_classes = [IsLibrarianOrAdminPermission]
+        return [permission() for permission in permission_classes]
 
     @action(detail=True, methods=['get'], url_path='available-copies', permission_classes=[permissions.IsAuthenticated])
     def available_copies_list(self, request, isbn=None):
@@ -125,7 +134,6 @@ class BookCopyViewSet(viewsets.ModelViewSet):
 class BorrowingViewSet(viewsets.ModelViewSet):
     """API endpoint for borrowing records."""
     serializer_class = BorrowingSerializer
-    permission_classes = [IsLibrarianOrAdminPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = {
         'status': ['exact', 'in'],
@@ -141,58 +149,28 @@ class BorrowingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_authenticated: # Should be caught by permission_classes but good practice
+        if not user.is_authenticated:
             return Borrowing.objects.none()
         if user.role in ['LIBRARIAN', 'ADMIN'] or user.is_staff:
             return Borrowing.objects.all().select_related('borrower', 'book_copy__book')
         return Borrowing.objects.filter(borrower=user).select_related('borrower', 'book_copy__book')
 
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'retrieve', 'create']:
+            permission_classes = [permissions.IsAuthenticated]
+        elif self.action in ['update', 'partial_update', 'destroy', 'return_book']:
+            permission_classes = [IsLibrarianOrAdminPermission]
+        else:
+            permission_classes = [permissions.IsAuthenticated] 
+        return [permission() for permission in permission_classes]
+
     def perform_create(self, serializer):
         """Handles creation of a borrowing record, potentially a request or direct loan."""
-        borrower = self.request.user
-        if 'borrower' in serializer.validated_data and \
-           (self.request.user.role in ['LIBRARIAN', 'ADMIN'] or self.request.user.is_staff):
-            borrower = serializer.validated_data['borrower']
-        elif not (self.request.user.role in ['LIBRARIAN', 'ADMIN'] or self.request.user.is_staff) and \
-             'borrower' in serializer.validated_data and serializer.validated_data['borrower'] != self.request.user:
-            raise serializers.ValidationError(_("You can only request books for yourself."))
-        elif (self.request.user.role in ['LIBRARIAN', 'ADMIN'] or self.request.user.is_staff) and \
-             'borrower' not in serializer.validated_data and 'book_copy' in serializer.validated_data:
-             pass
-
-        book_copy_instance = serializer.validated_data['book_copy']
-        if book_copy_instance.status != 'Available':
-            raise serializers.ValidationError(
-                _("This book copy (%(copy_id)s) is not available for borrowing. Its status is %(status)s.") %
-                {'copy_id': book_copy_instance.copy_id, 'status': book_copy_instance.get_status_display()}
-            )
-
-        requested_due_date = serializer.validated_data.get('due_date')
-        status_val = 'REQUESTED'
-        due_date_val = requested_due_date or (timezone.now() + datetime.timedelta(days=14))
-
-        # Staff might directly create an 'ACTIVE' loan via API
-        if self.request.user.role in ['LIBRARIAN', 'ADMIN'] or self.request.user.is_staff:
-            if 'status' in serializer.validated_data: # Allow staff to set status
-                 status_val = serializer.validated_data['status']
-
-        instance = serializer.save(borrower=borrower, due_date=due_date_val, status=status_val)
-
-        if instance.status == 'ACTIVE':
-            book_copy_instance.status = 'On Loan'
-            book_copy_instance.save(update_fields=['status'])
-            Notification.objects.create(
-                recipient=borrower,
-                notification_type='BORROW_APPROVED',
-                message=_(f"The book '{book_copy_instance.book.title}' has been issued. Due: {instance.due_date.strftime('%Y-%m-%d')}.")
-            )
-        elif instance.status == 'REQUESTED':
-             Notification.objects.create( # Assuming you have a BORROW_REQUESTED type
-                recipient=borrower,
-                notification_type='BORROW_REQUESTED',
-                message=_(f"Your request for '{book_copy_instance.book.title}' has been submitted.")
-            )
-        return instance # serializer.save returns the instance
+        instance = serializer.save()
+        return instance
 
     @action(detail=True, methods=['post'], permission_classes=[IsLibrarianOrAdminPermission], url_path='return-book')
     def return_book(self, request, pk=None):
@@ -207,11 +185,17 @@ class BorrowingViewSet(viewsets.ModelViewSet):
         book_copy_instance.status = 'Available'
         book_copy_instance.save(update_fields=['status'])
 
-        if borrowing_record.due_date.date() < borrowing_record.return_date.date():
+        if isinstance(borrowing_record.due_date, datetime):
+            due_date_as_date = borrowing_record.due_date.date()
+        else:
+            due_date_as_date = borrowing_record.due_date
+
+        if borrowing_record.return_date.date() > due_date_as_date:
             borrowing_record.status = 'RETURNED_LATE'
-            overdue_days = (borrowing_record.return_date.date() - borrowing_record.due_date.date()).days
-            if overdue_days > 0: # Ensure positive fine
-                borrowing_record.fine_amount = overdue_days * 1.00 # Example fine
+            overdue_days = (borrowing_record.return_date.date() - due_date_as_date).days
+            if overdue_days > 0: 
+                fine_rate = Decimal(str(settings.FINE_RATE_PER_DAY_OVERDUE))
+                borrowing_record.fine_amount = Decimal(overdue_days) * fine_rate
         else:
             borrowing_record.status = 'RETURNED'
         borrowing_record.save()
@@ -221,6 +205,19 @@ class BorrowingViewSet(viewsets.ModelViewSet):
             message=_(f"Your loan for '{book_copy_instance.book.title}' has been returned.")
         )
         return Response(BorrowingSerializer(borrowing_record, context={'request': request}).data)
+    
+    @action(detail=True, methods=['post'], url_path='cancel-request', permission_classes=[permissions.IsAuthenticated])
+    def cancel_request(self, request, pk=None):
+        borrowing = self.get_object()
+        if borrowing.borrower != request.user:
+            return Response({'detail': 'You do not have permission to cancel this request.'}, status=status.HTTP_403_FORBIDDEN)
+        if borrowing.status != 'REQUESTED':
+            return Response({'detail': 'Only active requests (status "REQUESTED") can be cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        borrowing.status = 'CANCELLED'
+        borrowing.save(update_fields=['status'])
+
+        return Response({'detail': 'Borrow request cancelled successfully.'}, status=status.HTTP_200_OK)
 
 
 class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
@@ -340,6 +337,7 @@ class BookPortalDetailView(DetailView):
             ).first() # Get the specific instance if it exists
             context['active_or_pending_borrowing_for_this_book'] = active_or_pending_borrowing
             context['has_active_or_pending_request'] = active_or_pending_borrowing is not None
+            context['available_book_copies_for_selection'] = book_instance.copies.filter(status='Available').order_by('date_acquired', 'id')
             
             can_borrow = book_instance.available_copies_count > 0 and not context['has_active_or_pending_request']
             context['can_reserve_this_book'] = book_instance.available_copies_count == 0 and not context['has_active_or_pending_request']
@@ -447,6 +445,7 @@ def portal_create_borrow_request_view(request):
     """
     book_isbn = request.POST.get('book_isbn')
     requested_due_date_str = request.POST.get('due_date')
+    selected_book_copy_id = request.POST.get('book_copy_id')
 
     if not request.user.is_authenticated or request.user.is_staff:
         messages.error(request, _("Only registered borrowers can request to borrow books."))
@@ -460,20 +459,26 @@ def portal_create_borrow_request_view(request):
 
     book = get_object_or_404(Book, isbn=book_isbn)
 
-    existing_request_or_loan = Borrowing.objects.filter(
+    if Borrowing.objects.filter(
         borrower=request.user,
         book_copy__book=book,
         status__in=['REQUESTED', 'ACTIVE', 'OVERDUE']
-    ).exists()
-
-    if existing_request_or_loan:
+    ).exists():
         messages.warning(request, _(f"You already have an active loan or pending request for '{book.title}'."))
         return redirect('books:portal_book_detail', isbn=book_isbn)
 
-    available_copy = BookCopy.objects.filter(book=book, status='Available').first()
+    target_copy = None
+    if selected_book_copy_id:
+        try:
+            target_copy = BookCopy.objects.get(id=selected_book_copy_id, book=book, status='Available')
+        except BookCopy.DoesNotExist:
+            messages.error(request, _(f"The specific copy you selected is no longer available or invalid. Please try again."))
+            return redirect('books:portal_book_detail', isbn=book_isbn)
+    else:
+        target_copy = BookCopy.objects.filter(book=book, status='Available').order_by('date_acquired', 'id').first()
 
-    if not available_copy:
-        messages.error(request, _(f"Sorry, no copies of '{book.title}' are currently available to request. Please try reserving or check back later."))
+    if not target_copy:
+        messages.error(request, _(f"Sorry, no copies of '{book.title}' are currently available to request. Please try again later."))
         return redirect('books:portal_book_detail', isbn=book_isbn)
 
     try:
@@ -496,11 +501,9 @@ def portal_create_borrow_request_view(request):
     try:
         Borrowing.objects.create(
             borrower=request.user,
-            book_copy=available_copy, # Assign the found available copy
-            # request_date is auto_now_add
-            due_date=due_date, # User's preferred due date
+            book_copy=target_copy,
+            due_date=due_date,
             status='REQUESTED'
-            # issue_date will be set by staff upon approval
         )
         # Optionally, you could mark the available_copy as 'RESERVED_FOR_REQUEST' temporarily
         # available_copy.status = 'Reserved' # Or a new status 'PendingApproval'
@@ -509,9 +512,8 @@ def portal_create_borrow_request_view(request):
         # For now, we assume staff will see multiple requests if copies are available and pick.
         # Or, only one request per copy. A better system might lock the copy during request.
 
-        messages.success(request, _(f"Your request to borrow '{book.title}' (Copy ID: {available_copy.copy_id}) has been submitted. Please await staff approval. You requested to return it by {due_date.strftime('%B %d, %Y')}."))
-        # Redirect to "My Borrowings" or "My Pending Requests" page
-        return redirect('books:portal_book_detail', isbn=book_isbn) 
+        messages.success(request, _(f"Your request for '{book.title}' (Copy ID: {target_copy.copy_id}) has been submitted."))
+        return redirect('users:my_borrowings')
 
     except Exception as e:
         messages.error(request, _(f"An error occurred while submitting your request: {e}"))
