@@ -16,6 +16,10 @@ urlpatterns = [
     path('borrowing/cancel/<int:borrowing_id>/', views.borrower_cancel_request_view, name='portal_borrowing_cancel'),
     path('borrowing/renew/<int:borrowing_id>/', views.renew_book_view, name='portal_borrow_renew'),
 
+    # Favorite Views (Web)
+    path('my-favorites/', views.MyFavoritesListView.as_view(), name='my_favorites'),
+    path('book/<str:isbn>/toggle-favorite/', views.FavoriteToggleView.as_view(), name='toggle_favorite'),
+
     # Staff Dashboard
     path('dashboard/', views.staff_dashboard_home_view, name='dashboard_home'),
 

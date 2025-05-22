@@ -1,43 +1,55 @@
 {% load static %}
 {% load bootstrap5 %}
+{% load i18n %}
 
 {# This template expects 'book', 'view_context', 'back_url', and conditional flags like #}
 {# 'can_edit_this_object', 'can_manage_copies', 'has_active_or_pending_request', etc. to be in the context #}
+{# And now also 'is_favorite_book' for portal view #}
 
 <div class="row g-4 g-lg-5">
     <div class="col-md-4">
         {% if book.cover_image %}
-            <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow-sm mb-3" alt="{{ book.title }} cover" style="max-height: 500px; width: 100%; object-fit: cover;">
+            <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow-sm mb-3" alt="{{ book.title }} {% trans "cover" %}" style="max-height: 500px; width: 100%; object-fit: cover;">
         {% else %}
             <div class="bg-light border rounded d-flex flex-column align-items-center justify-content-center text-muted mb-3" style="height: 400px; border-style: dashed!important;">
                 <i class="bi bi-image-alt h1"></i>
-                <small>No Cover Available</small>
+                <small>{% trans "No Cover Available" %}</small>
             </div>
         {% endif %}
 
         {% if view_context == 'portal' and user.is_authenticated and not user.is_staff and active_or_pending_borrowing_for_this_book %}
             <div class="alert alert-info mt-3">
                 <i class="bi bi-info-circle-fill me-1"></i>
-                You have an active loan or pending request for this book. 
-                <a href="{% url 'books:portal_borrowing_detail' borrowing_id=active_or_pending_borrowing_for_this_book.id %}" class="alert-link">View Details</a>.
+                {% trans "You have an active loan or pending request for this book." %} 
+                <a href="{% url 'books:portal_borrowing_detail' borrowing_id=active_or_pending_borrowing_for_this_book.id %}" class="alert-link">{% trans "View Details" %}</a>.
             </div>
         {% endif %}
 
         {# --- ACTION BUTTONS --- #}
         {% if user.is_authenticated %}
             {% if view_context == 'portal' and not user.is_staff %} {# Borrower context #}
-                {% if has_active_or_pending_request %}
-                    <button class="btn btn-secondary w-100 mb-2" disabled><i class="bi bi-clock-history"></i> Request Pending / Borrowing Active</button>
-                {% elif can_borrow_this_book %}
-                    <button class="btn btn-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#borrowBookModal"><i class="bi bi-book-half"></i> Request to Borrow</button>
-                {% else %}
-                     <button class="btn btn-outline-secondary w-100 mb-2" disabled>Not Currently Available</button>
-                {% endif %}
-                {# Favorite button for borrowers - placeholder #}
-                {# <button class="btn btn-outline-danger w-100"><i class="bi bi-heart{% if is_favorite_book %}-fill{% endif %}"></i> {% if is_favorite_book %}Favorited{% else %}Add to Favorites{% endif %}</button> #}
+                <div class="d-grid gap-2"> {# Using d-grid for stacked buttons #}
+                    {% if has_active_or_pending_request %}
+                        <button class="btn btn-secondary mb-2" disabled><i class="bi bi-clock-history"></i> {% trans "Request Pending / Borrowing Active" %}</button>
+                    {% elif can_borrow_this_book %}
+                        <button class="btn btn-success mb-2" data-bs-toggle="modal" data-bs-target="#borrowBookModal"><i class="bi bi-book-half"></i> {% trans "Request to Borrow" %}</button>
+                    {% else %}
+                         <button class="btn btn-outline-secondary mb-2" disabled>{% trans "Not Currently Available" %}</button>
+                    {% endif %}
+
+                    {# Favorite Toggle Button #}
+                    <form action="{% url 'books:toggle_favorite' isbn=book.isbn %}" method="post" class="d-grid">
+                        {% csrf_token %}
+                        {% if is_favorite_book %}
+                            <button type="submit" class="btn btn-danger"><i class="bi bi-heart-fill"></i> {% trans "Unfavorite" %}</button>
+                        {% else %}
+                            <button type="submit" class="btn btn-outline-danger"><i class="bi bi-heart"></i> {% trans "Add to Favorites" %}</button>
+                        {% endif %}
+                    </form>
+                </div>
             {% endif %}
         {% elif view_context == 'portal' %} {# Unauthenticated user in portal #}
-            <a href="{% url 'users:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline-primary w-100 mb-2">Login to Borrow or Reserve</a>
+            <a href="{% url 'users:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-outline-primary w-100 mb-2">{% trans "Login to Borrow or Favorite" %}</a>
         {% endif %}
     </div>
 
@@ -45,7 +57,7 @@
         <h1 class="display-5 mb-1">{{ book.title }}</h1>
          {% if book.authors.all %}
              <p class="lead text-muted mb-3">
-                 By
+                 {% trans "By" %}
                  {% for author in book.authors.all %}
                      <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_author_detail' pk=author.pk %}{% else %}{% url 'books:portal_author_detail' pk=author.pk %}{% endif %}" class="text-decoration-none">{{ author.name }}</a>{% if not forloop.last %}, {% endif %}
                  {% endfor %}
@@ -53,35 +65,34 @@
          {% endif %}
          <div class="mb-3">
              {% for cat in book.categories.all %}
-                 <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_category_detail' pk=cat.pk %}{% else %}{% url 'books:portal_category_detail' pk=cat.pk %}{% endif %}" class="badge bg-info text-dark me-1 text-decoration-none">{{ cat.name }}</a>
+                 <a href="{% if view_context == 'dashboard' %}{% url 'books:dashboard_category_detail' pk=cat.pk %}{% else %}{% url 'books:portal_category_detail' pk=cat.pk %}{% endif %}" class="badge bg-info-subtle text-info-emphasis me-1 text-decoration-none">{{ cat.name }}</a>
              {% endfor %}
          </div>
-        {# ... Other book details: ISBN, Publisher, Edition, Pages, Description, Availability ... #}
-        <p class="mb-2"><strong>ISBN-13:</strong> {{ book.isbn }}</p>
-        {% if book.publisher %}<p class="mb-2"><strong>Publisher:</strong> {{ book.publisher }}{% if book.publication_date %}, {{ book.publication_date|date:"Y" }}{% endif %}</p>{% endif %}
-        {% if book.edition %}<p class="mb-2"><strong>Edition:</strong> {{ book.edition }}</p>{% endif %}
-        {% if book.page_count %}<p class="mb-2"><strong>Pages:</strong> {{ book.page_count }}</p>{% endif %}
+        <p class="mb-2"><strong>{% trans "ISBN-13" %}:</strong> {{ book.isbn }}</p>
+        {% if book.publisher %}<p class="mb-2"><strong>{% trans "Publisher" %}:</strong> {{ book.publisher }}{% if book.publication_date %}, {{ book.publication_date|date:"Y" }}{% endif %}</p>{% endif %}
+        {% if book.edition %}<p class="mb-2"><strong>{% trans "Edition" %}:</strong> {{ book.edition }}</p>{% endif %}
+        {% if book.page_count %}<p class="mb-2"><strong>{% trans "Pages" %}:</strong> {{ book.page_count }}</p>{% endif %}
         
-        <h5 class="mt-4">Description</h5>
-        <p class="text-muted" style="white-space: pre-wrap;">{{ book.description|linebreaksbr|default:"No description available." }}</p>
+        <h5 class="mt-4">{% trans "Description" %}</h5>
+        <p class="text-muted" style="white-space: pre-wrap;">{{ book.description|linebreaksbr|default:_("No description available.") }}</p>
 
-        <h5 class="mt-4">Availability</h5>
+        <h5 class="mt-4">{% trans "Availability" %}</h5>
         <p>
             {% if book.available_copies_count > 0 %}
-                <span class="badge bg-success fs-6">{{ book.available_copies_count }} cop{{ book.available_copies_count|pluralize:"y,ies" }} available</span>
+                <span class="badge bg-success fs-6">{{ book.available_copies_count }} {% trans "cop" %}{{ book.available_copies_count|pluralize:_("y,ies") }} {% trans "available" %}</span>
             {% else %}
-                <span class="badge bg-danger fs-6">Currently unavailable</span>
+                <span class="badge bg-danger fs-6">{% trans "Currently unavailable" %}</span>
             {% endif %}
-            <small class="text-muted ms-2">({{ book.copies.count }} total physical cop{{ book.copies.count|pluralize:"y,ies"}} in library)</small>
+            <small class="text-muted ms-2">({{ book.copies.count }} {% trans "total physical cop" %}{{ book.copies.count|pluralize:_("y,ies")}} {% trans "in library" %})</small>
         </p>
 
         {% if view_context == 'dashboard' %}
             {# Dashboard specific sections like list of all copies and active loans for this book #}
-            <h5 class="mt-4">Copies in Library ({{ all_book_copies.count }})</h5>
+            <h5 class="mt-4">{% trans "Copies in Library" %} ({{ all_book_copies.count }})</h5>
             {% if all_book_copies %}
             <div class="table-responsive" style="max-height: 200px;">
                 <table class="table table-sm table-striped">
-                    <thead><tr><th>Copy ID</th><th>Status</th><th>Acquired</th></tr></thead>
+                    <thead><tr><th>{% trans "Copy ID" %}</th><th>{% trans "Status" %}</th><th>{% trans "Acquired" %}</th></tr></thead>
                     <tbody>
                     {% for copy in all_book_copies %}
                     <tr>
@@ -94,29 +105,28 @@
                 </table>
             </div>
             {% else %}
-            <p class="text-muted">No physical copies registered for this title.</p>
+            <p class="text-muted">{% trans "No physical copies registered for this title." %}</p>
             {% endif %}
 
-            {# Pending and Active Borrows for this Book Title #}
-            <h5 class="mt-4">Current Circulation Status for "{{ book.title }}"</h5>
+            <h5 class="mt-4">{% trans "Current Circulation Status for" %} "{{ book.title }}"</h5>
             {% if current_book_borrowings %}
             <div class="table-responsive" style="max-height: 400px;">
                 <table class="table table-sm table-striped table-hover">
                     <thead class="table-light sticky-top">
                         <tr>
-                            <th>Borrow ID</th>
-                            <th>Borrower</th>
-                            <th>Copy ID</th>
-                            <th>Status</th>
-                            <th>Requested On / Issued On</th>
-                            <th>Due Date</th>
-                            <th>Actions</th>
+                            <th>{% trans "Borrow ID" %}</th>
+                            <th>{% trans "Borrower" %}</th>
+                            <th>{% trans "Copy ID" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Requested On / Issued On" %}</th>
+                            <th>{% trans "Due Date" %}</th>
+                            <th>{% trans "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for borrowing in current_book_borrowings %}
                         <tr>
-                            <td><a href="{% url 'books:dashboard_borrowing_detail' borrowing_id=borrowing_item.id %}">#{{ borrowing_item.id }}</a></td>
+                            <td><a href="{% url 'books:dashboard_borrowing_detail' borrowing_id=borrowing.id %}">#{{ borrowing.id }}</a></td>
                             <td>
                                 <a href="{% url 'users:dashboard_user_detail' pk=borrowing.borrower.pk %}">
                                     {{ borrowing.borrower.username }}
@@ -128,14 +138,22 @@
                                     {{ borrowing.get_status_display }}
                                 </span>
                             </td>
-                            <td>{{ borrowing.issue_date|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if borrowing.status == 'REQUESTED' %}
+                                    {{ borrowing.request_date|date:"Y-m-d H:i" }}
+                                {% elif borrowing.issue_date %}
+                                    {{ borrowing.issue_date|date:"Y-m-d H:i" }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>{{ borrowing.due_date|date:"Y-m-d" }}</td>
                             <td>
                                 {% if borrowing.status == 'REQUESTED' %}
-                                    <a href="{% url 'books:dashboard_approve_request' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-success py-0 px-1 me-1" title="Approve"><i class="bi bi-check-lg"></i></a>
-                                    <a href="{% url 'books:dashboard_reject_request' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Reject"><i class="bi bi-x-lg"></i></a>
+                                    <a href="{% url 'books:dashboard_approve_request' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-success py-0 px-1 me-1" title="{% trans "Approve" %}"><i class="bi bi-check-lg"></i></a>
+                                    <a href="{% url 'books:dashboard_reject_request' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="{% trans "Reject" %}"><i class="bi bi-x-lg"></i></a>
                                 {% elif borrowing.status == 'ACTIVE' or borrowing.status == 'OVERDUE' %}
-                                    <a href="{% url 'books:dashboard_mark_loan_returned' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-info py-0 px-1" title="Mark Returned"><i class="bi bi-arrow-return-left"></i></a>
+                                    <a href="{% url 'books:dashboard_mark_loan_returned' borrowing_id=borrowing.id %}" class="btn btn-sm btn-outline-info py-0 px-1" title="{% trans "Mark Returned" %}"><i class="bi bi-arrow-return-left"></i></a>
                                 {% endif %}
                             </td>
                         </tr>
@@ -144,67 +162,67 @@
                 </table>
             </div>
             {% else %}
-                <p class="text-muted">No pending requests or active loans for this book title currently.</p>
+                <p class="text-muted">{% trans "No pending requests or active loans for this book title currently." %}</p>
             {% endif %}
         {% endif %} {# End of dashboard specific sections #}
     </div>
 </div>
 
+{# Borrow Book Modal - this remains the same as before #}
 {% if view_context == 'portal' and user.is_authenticated and not user.is_staff and can_borrow_this_book %}
     {# ... Your existing borrowBookModal HTML ... #}
     <div class="modal fade" id="borrowBookModal" tabindex="-1" aria-labelledby="borrowBookModalLabel" aria-hidden="true">
       <div class="modal-dialog">
         <div class="modal-content">
-          <form method="post" action="{% url 'books:portal_borrow_request' %}"> {# URL for borrow request #}
+          <form method="post" action="{% url 'books:portal_borrow_request' %}">
             {% csrf_token %}
             <input type="hidden" name="book_isbn" value="{{ book.isbn }}">
             <div class="modal-header">
-              <h5 class="modal-title" id="borrowBookModalLabel">Request to Borrow: {{ book.title }}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <h5 class="modal-title" id="borrowBookModalLabel">{% trans "Request to Borrow:" %} {{ book.title }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans "Close" %}"></button>
             </div>
             <div class="modal-body">
-              <p>You are requesting to borrow "{{ book.title }}".</p>
+              <p>{% blocktrans with book_title=book.title %}You are requesting to borrow "{{ book_title }}".{% endblocktrans %}</p>
               <div class="mb-3">
-                <label for="id_due_date_request" class="form-label">Preferred Due Date:</label>
+                <label for="id_due_date_request" class="form-label">{% trans "Preferred Due Date:" %}</label>
                 <input type="date" name="due_date" id="id_due_date_request" class="form-control" required>
-                <small class="form-text text-muted">Standard loan period is typically 2 weeks.</small>
+                <small class="form-text text-muted">{% trans "Standard loan period is typically 2 weeks." %}</small>
               </div>
-              
               {% if available_book_copies_for_selection %}
               <div class="mb-3">
-                <label for="id_book_copy_request" class="form-label">Select Specific Copy (Optional):</label>
+                <label for="id_book_copy_request" class="form-label">{% trans "Select Specific Copy (Optional):" %}</label>
                 <select name="book_copy_id" id="id_book_copy_request" class="form-select">
-                  <option value="">Assign automatically (earliest available)</option>
+                  <option value="">{% trans "Assign automatically (earliest available)" %}</option>
                   {% for copy in available_book_copies_for_selection %}
-                    <option value="{{ copy.id }}">Copy ID: {{ copy.copy_id }} (Acquired: {{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }})</option>
+                    <option value="{{ copy.id }}">{% trans "Copy ID:" %} {{ copy.copy_id }} ({% trans "Acquired:" %} {{ copy.date_acquired|date:"Y-m-d"|default:"N/A" }})</option>
                   {% endfor %}
                 </select>
               </div>
               {% else %}
-                <p class_alias="text-muted"><small>No specific copies listed for selection; one will be assigned if available.</small></p>
+                <p class="text-muted"><small>{% trans "No specific copies listed for selection; one will be assigned if available." %}</small></p>
               {% endif %}
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-primary">Confirm Borrow Request</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+              <button type="submit" class="btn btn-primary">{% trans "Confirm Borrow Request" %}</button>
             </div>
           </form>
         </div>
       </div>
     </div>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const dateInputModal = document.getElementById('id_due_date_request');
-            if (dateInputModal) {
-                const today = new Date();
-                const tomorrow = new Date(today);
-                tomorrow.setDate(today.getDate() + 1);
-                const twoWeeksFromTomorrow = new Date(tomorrow);
-                twoWeeksFromTomorrow.setDate(tomorrow.getDate() + 14);
-    
-                dateInputModal.min = tomorrow.toISOString().split('T')[0]; // Set min date to tomorrow
-                dateInputModal.value = twoWeeksFromTomorrow.toISOString().split('T')[0]; // Default to 2 weeks from tomorrow
-            }
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInputModal = document.getElementById('id_due_date_request');
+        if (dateInputModal) {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            const twoWeeksFromTomorrow = new Date(tomorrow);
+            twoWeeksFromTomorrow.setDate(tomorrow.getDate() + 14);
+
+            dateInputModal.min = tomorrow.toISOString().split('T')[0]; 
+            dateInputModal.value = twoWeeksFromTomorrow.toISOString().split('T')[0];
+        }
+    });
     </script>
 {% endif %}

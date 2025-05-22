@@ -1,60 +1,194 @@
 {% extends "portal/portal_base.html" %}
 {% load static %}
+{% load i18n %}
 {% load bootstrap5 %}
 
-{% block portal_title %}Book Catalog{% endblock %}
+{% block portal_title %}
+    {% if selected_category_name %}
+        {{ selected_category_name }} - 
+    {% endif %}
+    {{ page_title }}
+{% endblock portal_title %}
 
 {% block portal_content %}
-<div class="container py-4">
-    <div class="row mb-4">
-        <div class="col">
-            <h1 class="display-6">Explore Our Collection</h1>
-        </div>
-    </div>
-
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <form method="get" action="{% url 'books:portal_catalog' %}">
-                <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Search by title, author, ISBN..." value="{{ search_term|default:'' }}">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+<div class="row gx-lg-4"> 
+    <aside class="col-lg-3">
+        <div class="sticky-top pt-3" style="top: 1rem;"> 
+            <div class="card rounded-3 border-light shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-semibold">{% trans "Categories" %}</h5>
                 </div>
-            </form>
-        </div>
-        <div class="col-md-4">
-            <form method="get" id="categoryFilterForm" action="{% url 'books:portal_catalog' %}">
-                 {% if search_term %} {# Preserve search term when filtering by category #}
-                    <input type="hidden" name="q" value="{{ search_term|default:'' }}">
-                {% endif %}
-                <select name="category" class="form-select" onchange="document.getElementById('categoryFilterForm').submit();">
-                    <option value="">All Categories</option>
-                    {% for cat in categories %}
-                        <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category_id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;"> <a href="{% url 'books:portal_catalog' %}{% if search_term %}?q={{ search_term|urlencode }}{% endif %}" 
+                       class="list-group-item list-group-item-action border-0 py-2 {% if not selected_category_id %}active text-white{% else %}text-body-secondary{% endif %}">
+                       <i class="bi bi-list-ul me-2 align-middle"></i>{% trans "All Categories" %}
+                    </a>
+                    {% for category_item in all_categories %}
+                        <a href="{% url 'books:portal_catalog' %}?category={{ category_item.id }}{% if search_term %}&q={{ search_term|urlencode }}{% endif %}" 
+                           class="list-group-item list-group-item-action border-0 py-2 {% if selected_category_id == category_item.id|stringformat:"s" %}active text-white{% else %}text-body-secondary{% endif %}">
+                           <i class="bi bi-tag me-2 align-middle"></i>{{ category_item.name }}
+                        </a>
                     {% endfor %}
-                </select>
-            </form>
-        </div>
-    </div>
-
-    {% if books %}
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-            {% for book_item in books %} {# Ensure your BookPortalCatalogView uses 'books' as context_object_name #}
-                <div class="col">
-                    {% include "books/portal/_book_card.html" with book=book_item %}
                 </div>
-            {% endfor %}
-        </div>
+            </div>
 
-        {% include "dashboard/_includes/pagination_component.html" with page_obj=page_obj url_name="books:portal_catalog" %}
-
-    {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-bookshelf h1 text-muted mb-3"></i>
-            <p class="lead">No books found matching your criteria.</p>
-            {% if search_term or selected_category_id %}
-                <a href="{% url 'books:portal_catalog' %}" class="btn btn-outline-secondary">Clear Filters & Search</a>
+            {% if user.is_authenticated and recent_active_borrows %}
+            <div class="card rounded-3 border-light shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0 fw-semibold">{% trans "Recently Borrowed" %}</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for book in recent_active_borrows %}
+                        <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="list-group-item list-group-item-action border-0 py-2 text-body-secondary">
+                            <div class="d-flex w-100 justify-content-start align-items-center">
+                                {% if book.cover_image %}
+                                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" style="width: 30px; height: 45px; object-fit: cover; margin-right: 10px; border-radius: 2px;">
+                                {% else %}
+                                    <div style="width: 30px; height: 45px; background-color: #f0f0f0; margin-right: 10px; display:flex; align-items:center; justify-content:center; border-radius: 2px;">
+                                        <i class="bi bi-book small"></i>
+                                    </div>
+                                {% endif %}
+                                <div style="line-height: 1.2;">
+                                    <small class="fw-medium d-block text-truncate">{{ book.title|truncatechars:30 }}</small>
+                                    {% if book.authors.all %}
+                                        <small class="text-muted d-block text-truncate">
+                                            {% for author in book.authors.all|slice:":1" %}{{ author.name|truncatechars:25 }}{% endfor %}{% if book.authors.all.count > 1 %} et al.{% endif %}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                     <a href="{% url 'users:my_borrowings' %}" class="list-group-item list-group-item-action text-center border-0 py-2 bg-light-subtle">
+                        <small class="text-primary fw-medium">{% trans "View All My Borrowings" %} <i class="bi bi-arrow-right-short"></i></small>
+                    </a>
+                </div>
+            </div>
             {% endif %}
-        </div>
-    {% endif %}
+            </div>
+    </aside>
+
+    <main class="col-lg-9 pt-3">
+        <header class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom flex-wrap">
+            <h1 class="h2 fw-bold text-dark mb-0">
+                {% if selected_category_name %}
+                    {{ selected_category_name }}
+                {% else %}
+                    {{ page_title }}
+                {% endif %}
+            </h1>
+            <form method="get" action="{% url 'books:portal_catalog' %}" class="d-flex ms-auto my-2 my-lg-0" style="width: 100%; max-width: 320px;">
+                {% if selected_category_id %}
+                    <input type="hidden" name="category" value="{{ selected_category_id }}">
+                {% endif %}
+                <div class="input-group">
+                    <input class="form-control" type="search" name="q" value="{{ search_term|default:'' }}" placeholder="{% trans "Search title, author, ISBN..." %}" aria-label="{% trans "Search" %}">
+                    <button class="btn btn-primary" type="submit" aria-label="{% trans "Submit search" %}"><i class="bi bi-search"></i></button>
+                </div>
+            </form>
+        </header>
+
+        {% if user.is_authenticated and home_favorite_books %}
+        <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 fw-semibold text-dark"><i class="bi bi-heart-fill text-danger me-2"></i>{% trans "Your Recent Favorites" %}</h2>
+                {% if home_favorite_books.count > 0 or user.favorite_books|length > SECTION_ITEM_LIMIT %} 
+                     <a href="{% url 'books:my_favorites' %}" class="btn btn-sm btn-outline-primary">{% trans "View All" %} <i class="bi bi-chevron-right"></i></a>
+                {% endif %}
+            </div>
+            {% if home_favorite_books %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-3 g-3"> 
+                    {% for book in home_favorite_books %}
+                        <div class="col d-flex align-items-stretch">
+                            {% include "books/portal/_book_card.html" with book=book view_context="portal_home_favorites" card_size="small" %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                 {% endif %}
+        </section>
+        {% endif %}
+
+        {% if newly_added_books %}
+        <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 fw-semibold text-dark"><i class="bi bi-stars text-warning me-2"></i>{% trans "Newly Added" %}</h2>
+            </div>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-3 g-3">
+                {% for book in newly_added_books %}
+                    <div class="col d-flex align-items-stretch">
+                        {% include "books/portal/_book_card.html" with book=book view_context="portal_newly_added" card_size="small" %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if recommended_books %}
+        <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                 <h2 class="h4 fw-semibold text-dark"><i class="bi bi-lightbulb-fill text-info me-2"></i>{% trans "Recommendations" %}</h2>
+            </div>
+            {% if recommended_books.count > 0 %} 
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-3 g-3">
+                    {% for book in recommended_books %} 
+                        <div class="col d-flex align-items-stretch">
+                            {% include "books/portal/_book_card.html" with book=book view_context="portal_recommendations" card_size="small" %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %} <div class="alert alert-light text-center border-light shadow-sm rounded-3 py-4">
+                    <i class="bi bi-magic fs-1 text-info-emphasis mb-2 d-block"></i>
+                    <p class="mb-1 text-body-secondary">{% trans "We're working on personalized recommendations!" %}</p>
+                    <p class="mb-0 small text-muted">{% trans "The more you explore, the better they'll get." %}</p>
+                </div>
+            {% endif %}
+        </section>
+        {% endif %}
+        
+        <section>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h4 fw-semibold text-dark">
+                    {% if selected_category_name %}
+                        {% blocktrans with category_name=selected_category_name %}{{ category_name }}{% endblocktrans %}
+                    {% else %}
+                        {% trans "All Books" %}
+                    {% endif %}
+                </h2>
+                <small class="text-muted">
+                    {% blocktrans count book_count=paginator.count %}1 item{% plural %}{{ book_count }} items{% endblocktrans %}
+                </small>
+            </div>
+
+            {% if books %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-3 g-4"> 
+                    {% for book in books %}
+                        <div class="col d-flex align-items-stretch">
+                            {% include "books/portal/_book_card.html" with book=book view_context="portal_catalog_list" %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if is_paginated %}
+                    <div class="mt-5 d-flex justify-content-center">
+                         {% include "books/includes/pagination.html" with page_obj=page_obj other_params=other_query_params %}
+                    </div>
+                {% endif %}
+            {% elif search_term %}
+                <div class="alert alert-warning text-center py-5 shadow-sm rounded-3">
+                    <i class="bi bi-search-heart fs-1 text-warning-emphasis mb-3 d-block"></i>
+                    <p class="mb-1 h5">{% blocktrans with query=search_term %}No results for "<strong>{{ query }}</strong>".{% endblocktrans %}</p>
+                    <p class="text-body-secondary">{% trans "Try checking your spelling or using different keywords." %}</p>
+                </div>
+            {% else %}
+                 <div class="alert alert-secondary text-center py-5 shadow-sm rounded-3">
+                    <i class="bi bi-bookshelf fs-1 text-secondary-emphasis mb-3 d-block"></i>
+                    <p class="mb-1 h5">{% trans "No books found in this section." %}</p>
+                    {% if not selected_category_id %}
+                    <p class="text-body-secondary">{% trans "The library catalog appears to be empty at the moment." %}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
+    </main>
 </div>
 {% endblock portal_content %}

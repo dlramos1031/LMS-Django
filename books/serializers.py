@@ -40,7 +40,7 @@ class BookCopySerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = BookCopy
-        fields = ['id', 'copy_id', 'status', 'book', 'date_acquired', 'condition_notes']
+        fields = ['id', 'copy_id', 'status', 'book_id', 'date_acquired', 'condition_notes']
 
 class BookMinimalSerializer(serializers.ModelSerializer):
     authors = AuthorSerializer(many=True, read_only=True)
@@ -52,11 +52,14 @@ class BookCopyDetailSerializer(serializers.ModelSerializer):
     """
     A more detailed serializer for BookCopy, which includes nested Book information.
     """
-    book = BookMinimalSerializer(read_only=True)
-
+    book = serializers.StringRelatedField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
     class Meta:
         model = BookCopy
-        fields = ['id', 'copy_id', 'status', 'book', 'date_acquired', 'condition_notes']
+        fields = [
+            'id', 'copy_id', 'status', 'status_display', 'book', 
+            'date_acquired', 'condition_notes'
+        ]
 
 class BookSerializer(serializers.ModelSerializer):
     """
@@ -66,7 +69,8 @@ class BookSerializer(serializers.ModelSerializer):
     """
     authors = AuthorSerializer(many=True, read_only=True)
     categories = CategorySerializer(many=True, read_only=True)
-    
+    is_favorite = serializers.SerializerMethodField()
+
     author_ids = serializers.PrimaryKeyRelatedField(
         queryset=Author.objects.all(), 
         source='authors',
@@ -93,9 +97,16 @@ class BookSerializer(serializers.ModelSerializer):
             'description', 'cover_image', 
             'categories', 'category_ids',
             'total_borrows', 'date_added_to_system', 'last_updated',
-            'available_copies_count'
+            'available_copies_count', 'is_favorite'
         ]
-
+    
+    def get_is_favorite(self, obj):
+        user = self.context['request'].user
+        if user and user.is_authenticated:
+            if not hasattr(user, 'favorite_books') or not isinstance(user.favorite_books, list):
+                return False
+            return any(fav_item.get('isbn') == obj.isbn for fav_item in user.favorite_books)
+        return False
 
 # Borrowing related serializers
 

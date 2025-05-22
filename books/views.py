@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q, F, Count, Case, When, Exists, OuterRef
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from datetime import datetime
 from time import time
 from uuid import uuid4
@@ -23,6 +23,7 @@ from datetime import date
 from rest_framework import viewsets, permissions, status, generics, serializers, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
 # User-related imports
@@ -252,6 +253,99 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             notification.save(update_fields=['is_read'])
         return Response(NotificationSerializer(notification, context={'request': request}).data)
 
+
+# --- API Views for Favorites Feature ---
+
+class ToggleFavoriteAPIView(APIView):
+    """
+    API view to toggle a book's favorite status for the logged-in user.
+    Expects a POST request to /api/books/<isbn>/toggle-favorite/
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, isbn, format=None):
+        user = request.user
+        book = get_object_or_404(Book, isbn=isbn)
+
+        if not hasattr(user, 'favorite_books') or not isinstance(user.favorite_books, list):
+            user.favorite_books = [] # Initialize if attribute doesn't exist or is not a list
+
+        is_currently_favorited = False
+        # Check if the book is already in favorites
+        for fav_item in user.favorite_books:
+            if fav_item.get('isbn') == book.isbn:
+                is_currently_favorited = True
+                break
+        
+        if is_currently_favorited:
+            # Remove from favorites
+            user.favorite_books = [fav for fav in user.favorite_books if fav.get('isbn') != book.isbn]
+            new_favorite_status = False
+            action_message = _("'{title}' removed from your favorites.").format(title=book.title)
+        else:
+            # Add to favorites with timestamp
+            user.favorite_books.append({
+                "isbn": book.isbn,
+                "favorited_at": timezone.now().isoformat()
+            })
+            new_favorite_status = True
+            action_message = _("'{title}' added to your favorites.").format(title=book.title)
+
+        user.save(update_fields=['favorite_books'])
+        
+        return Response({
+            'status': 'success',
+            'message': action_message,
+            'is_favorite': new_favorite_status,
+            'isbn': book.isbn
+        }, status=status.HTTP_200_OK)
+
+class ListFavoriteBooksAPIView(APIView):
+    """
+    API view to list all favorite books for the logged-in user.
+    Sorts by newest favorited first.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, format=None):
+        user = request.user
+        
+        if not hasattr(user, 'favorite_books') or not isinstance(user.favorite_books, list):
+            favorite_items = []
+        else:
+            favorite_items = user.favorite_books
+
+        # Sort favorites by 'favorited_at' timestamp in descending order (newest first)
+        # Handle items that might be missing 'favorited_at' by placing them at the end or using a default past date
+        def get_sort_key(item):
+            timestamp_str = item.get('favorited_at')
+            if timestamp_str:
+                try:
+                    return timezone.datetime.fromisoformat(timestamp_str)
+                except ValueError: # Handle cases where timestamp might be malformed
+                    return timezone.datetime.min.replace(tzinfo=timezone.utc) # or timezone.datetime.min
+            return timezone.datetime.min.replace(tzinfo=timezone.utc) # Default for items without a timestamp
+
+        sorted_favorites = sorted(favorite_items, key=get_sort_key, reverse=True)
+        
+        favorite_isbns = [fav.get('isbn') for fav in sorted_favorites if fav.get('isbn')]
+        
+        # Fetch book objects in the order of sorted_favorites
+        # This preserves the sort order based on 'favorited_at'
+        # We use a CASE WHEN to order by the list of ISBNs
+        if favorite_isbns:
+            preserved_order = Case(*[When(isbn=isbn, then=pos) for pos, isbn in enumerate(favorite_isbns)])
+            favorite_books_queryset = Book.objects.filter(isbn__in=favorite_isbns).order_by(preserved_order)
+        else:
+            favorite_books_queryset = Book.objects.none()
+            
+        # Serialize the book data
+        # Pass the request to the serializer context so 'is_favorite' can be determined (it will be true for all these)
+        serializer = BookSerializer(favorite_books_queryset, many=True, context={'request': request})
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 @login_required
 def my_notifications_view(request):
     # Ensure this view is only for borrowers, or adjust logic as needed
@@ -282,38 +376,129 @@ def my_notifications_view(request):
 # === Borrower Web Portal Views ===
 
 class BookPortalCatalogView(ListView):
-    """Displays a paginated list of books for borrowers."""
     model = Book
     template_name = 'books/portal/catalog.html'
     context_object_name = 'books'
-    paginate_by = 12
+    paginate_by = 12 
 
     def get_queryset(self):
-        queryset = super().get_queryset().prefetch_related('authors', 'categories').annotate(
-            num_available_copies=Count('copies', filter=Q(copies__status='Available'))
+        queryset = super().get_queryset().prefetch_related(
+            'authors', 'categories', 'copies'
         )
-        query = self.request.GET.get('q')
-        category_id = self.request.GET.get('category')
+        
+        query_term = self.request.GET.get('q', '').strip()
+        category_id_str = self.request.GET.get('category', '').strip()
 
-        if query:
+        if query_term:
             queryset = queryset.filter(
-                Q(title__icontains=query) |
-                Q(authors__name__icontains=query) |
-                Q(categories__name__icontains=query) |
-                Q(isbn__iexact=query)
+                Q(title__icontains=query_term) |
+                Q(authors__name__icontains=query_term) |
+                Q(isbn__iexact=query_term)
             ).distinct()
-        if category_id:
-            queryset = queryset.filter(categories__id=category_id)
+
+        if category_id_str:
+            try:
+                category_id = int(category_id_str)
+                queryset = queryset.filter(categories__id=category_id)
+            except ValueError:
+                pass 
+        
         return queryset.order_by('title')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['categories'] = Category.objects.all().order_by('name')
+        user = self.request.user
+
         context['page_title'] = _("Library Catalog")
         context['search_term'] = self.request.GET.get('q', '')
-        context['selected_category_id'] = self.request.GET.get('category', '')
-        return context
+        context['all_categories'] = Category.objects.all().order_by('name')
+        
+        selected_category_id_str = self.request.GET.get('category', '')
+        context['selected_category_id'] = selected_category_id_str
+        context['selected_category_name'] = None
+        if selected_category_id_str:
+            try:
+                selected_category = Category.objects.get(id=int(selected_category_id_str))
+                context['selected_category_name'] = selected_category.name
+                context['page_title'] = selected_category.name
+            except (Category.DoesNotExist, ValueError):
+                pass 
 
+        SECTION_ITEM_LIMIT = 6
+
+        # Home Favorites Section
+        if user.is_authenticated:
+            if hasattr(user, 'favorite_books') and isinstance(user.favorite_books, list):
+                def get_sort_key(item):
+                    timestamp_str = item.get('favorited_at')
+                    if timestamp_str:
+                        try: return timezone.datetime.fromisoformat(timestamp_str)
+                        except ValueError: return timezone.datetime.min.replace(tzinfo=timezone.utc)
+                    return timezone.datetime.min.replace(tzinfo=timezone.utc)
+                sorted_favorites = sorted(user.favorite_books, key=get_sort_key, reverse=True)
+                home_favorite_isbns = [fav.get('isbn') for fav in sorted_favorites[:SECTION_ITEM_LIMIT] if fav.get('isbn')]
+                
+                if home_favorite_isbns:
+                    preserved_order = Case(*[When(isbn=isbn, then=pos) for pos, isbn in enumerate(home_favorite_isbns)])
+                    context['home_favorite_books'] = Book.objects.filter(isbn__in=home_favorite_isbns).prefetch_related('authors').order_by(preserved_order)
+                else:
+                    context['home_favorite_books'] = Book.objects.none()
+            else:
+                context['home_favorite_books'] = Book.objects.none()
+        else:
+            context['home_favorite_books'] = Book.objects.none()
+
+        # Newly Added Books Section
+        context['newly_added_books'] = Book.objects.all().prefetch_related('authors').order_by('-date_added_to_system')[:SECTION_ITEM_LIMIT]
+
+        # Recommendations Section
+        excluded_isbns = set()
+        if context.get('home_favorite_books'):
+            excluded_isbns.update([b.isbn for b in context['home_favorite_books']])
+        if context.get('newly_added_books'):
+            excluded_isbns.update([b.isbn for b in context['newly_added_books']])
+        
+        context['recommended_books'] = Book.objects.exclude(
+            isbn__in=list(excluded_isbns)
+        ).prefetch_related('authors').order_by('-total_borrows', '?')[:SECTION_ITEM_LIMIT]
+
+        # --- Recent Active Borrows (Corrected for Book Primary Key) ---
+        if user.is_authenticated:
+            recent_active_borrowings_qs = Borrowing.objects.filter(
+                borrower=user, status__in=['ACTIVE', 'OVERDUE']
+            ).select_related(
+                'book_copy__book' 
+            ).order_by('-issue_date')[:3]
+
+            # Use .isbn as the primary key for Book model
+            book_isbns_for_recent_borrows = [
+                b.book_copy.book.isbn for b in recent_active_borrowings_qs 
+                if b.book_copy and b.book_copy.book
+            ]
+            
+            if book_isbns_for_recent_borrows:
+                books_with_authors_map = {
+                    book.isbn: book for book in Book.objects.filter(
+                        isbn__in=book_isbns_for_recent_borrows
+                    ).prefetch_related('authors')
+                }
+                context['recent_active_borrows'] = [
+                    books_with_authors_map.get(b.book_copy.book.isbn) 
+                    for b in recent_active_borrowings_qs 
+                    if b.book_copy and b.book_copy.book and b.book_copy.book.isbn in books_with_authors_map
+                ]
+            else:
+                context['recent_active_borrows'] = []
+        else:
+            context['recent_active_borrows'] = []
+        # --- End Recent Active Borrows Correction ---
+
+        query_params = self.request.GET.copy()
+        if 'page' in query_params:
+            del query_params['page']
+        context['other_query_params'] = query_params.urlencode()
+        
+        return context
 class BookPortalDetailView(DetailView):
     model = Book
     template_name = 'books/portal/book_detail.html'
@@ -324,17 +509,25 @@ class BookPortalDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         book_instance = self.get_object()
+        user = self.request.user
 
         context['page_title'] = book_instance.title
         context['view_context'] = 'portal'
 
+        # Check if the book is favorited by the current user
+        is_favorite_book = False
+        if user.is_authenticated:
+            if hasattr(user, 'favorite_books') and isinstance(user.favorite_books, list):
+                is_favorite_book = any(fav_item.get('isbn') == book_instance.isbn for fav_item in user.favorite_books)
+        context['is_favorite_book'] = is_favorite_book
+
         # Borrower-specific flags and data
-        if self.request.user.is_authenticated and not self.request.user.is_staff:
+        if user.is_authenticated and not user.is_staff:
             active_or_pending_borrowing = Borrowing.objects.filter(
-                borrower=self.request.user,
-                book_copy__book=book_instance, # Filter for the current book title
+                borrower=user,
+                book_copy__book=book_instance,
                 status__in=['REQUESTED', 'ACTIVE', 'OVERDUE']
-            ).first() # Get the specific instance if it exists
+            ).first()
             context['active_or_pending_borrowing_for_this_book'] = active_or_pending_borrowing
             context['has_active_or_pending_request'] = active_or_pending_borrowing is not None
             context['available_book_copies_for_selection'] = book_instance.copies.filter(status='Available').order_by('date_acquired', 'id')
@@ -342,20 +535,12 @@ class BookPortalDetailView(DetailView):
             can_borrow = book_instance.available_copies_count > 0 and not context['has_active_or_pending_request']
             context['can_reserve_this_book'] = book_instance.available_copies_count == 0 and not context['has_active_or_pending_request']
             context['can_borrow_this_book'] = can_borrow
-            
-            # TODO: Implement favorite logic if desired
-            # context['is_favorite_book'] = Favorite.objects.filter(user=self.request.user, book=book_instance).exists()
-            context['is_favorite_book'] = False # Placeholder
-        else: # For guests or staff viewing portal page (staff won't typically use portal actions)
+        else:
             context['has_active_or_pending_request'] = False
             context['can_borrow_this_book'] = book_instance.available_copies_count > 0
             context['can_reserve_this_book'] = book_instance.available_copies_count == 0
-            context['is_favorite_book'] = False
 
         context['back_url'] = reverse_lazy('books:portal_catalog')
-        
-        # Common details needed by the template
-        # context['available_book_copies'] is used by the borrow modal in the template currently
         context['available_book_copies'] = book_instance.copies.filter(status='Available')
 
         first_category = book_instance.categories.first()
@@ -367,6 +552,80 @@ class BookPortalDetailView(DetailView):
                                            .distinct()[:4]
         return context
 
+class FavoriteToggleView(LoginRequiredMixin, View):
+    """
+    Handles toggling the favorite status of a book for a logged-in user.
+    Expects a POST request from a form.
+    """
+    def post(self, request, isbn):
+        user = request.user
+        book = get_object_or_404(Book, isbn=isbn)
+
+        if not hasattr(user, 'favorite_books') or not isinstance(user.favorite_books, list):
+            user.favorite_books = []
+
+        is_currently_favorited = False
+        # Check if the book is already in favorites
+        for fav_item in user.favorite_books:
+            if fav_item.get('isbn') == book.isbn:
+                is_currently_favorited = True
+                break
+        
+        if is_currently_favorited:
+            user.favorite_books = [fav for fav in user.favorite_books if fav.get('isbn') != book.isbn]
+            messages.success(request, _("'{title}' has been removed from your favorites.").format(title=book.title))
+        else:
+            user.favorite_books.append({
+                "isbn": book.isbn,
+                "favorited_at": timezone.now().isoformat()
+            })
+            messages.success(request, _("'{title}' has been added to your favorites.").format(title=book.title))
+        
+        user.save(update_fields=['favorite_books'])
+        
+        # Redirect back to the referring page or the book detail page
+        # referrer = request.META.get('HTTP_REFERER', reverse('books:portal_book_detail', kwargs={'isbn': isbn}))
+        return redirect(reverse('books:portal_book_detail', kwargs={'isbn': isbn}))
+
+
+# New View for Listing User's Favorite Books (Web)
+class MyFavoritesListView(LoginRequiredMixin, ListView):
+    """
+    Displays a list of books favorited by the logged-in user.
+    """
+    model = Book
+    template_name = 'books/portal/my_favorites.html' # Create this template
+    context_object_name = 'favorite_books'
+    paginate_by = 10 # Optional pagination
+
+    def get_queryset(self):
+        user = self.request.user
+        if not hasattr(user, 'favorite_books') or not isinstance(user.favorite_books, list) or not user.favorite_books:
+            return Book.objects.none()
+
+        def get_sort_key(item):
+            timestamp_str = item.get('favorited_at')
+            if timestamp_str:
+                try:
+                    return timezone.datetime.fromisoformat(timestamp_str)
+                except ValueError:
+                    return timezone.datetime.min.replace(tzinfo=timezone.utc)
+            return timezone.datetime.min.replace(tzinfo=timezone.utc)
+
+        sorted_favorites_data = sorted(user.favorite_books, key=get_sort_key, reverse=True)
+        ordered_isbns = [fav_item['isbn'] for fav_item in sorted_favorites_data if fav_item.get('isbn')]
+
+        if not ordered_isbns:
+            return Book.objects.none()
+
+        # Preserve the order based on 'favorited_at'
+        preserved_order = Case(*[When(isbn=isbn, then=pos) for pos, isbn in enumerate(ordered_isbns)])
+        return Book.objects.filter(isbn__in=ordered_isbns).order_by(preserved_order)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = _('My Favorite Books')
+        return context
 
 class PortalAuthorDetailView(DetailView):
     model = Author

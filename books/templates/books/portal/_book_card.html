@@ -1,41 +1,147 @@
 {% load static %}
+{% load i18n %}
 {% load bootstrap5 %}
 
-<div class="card h-100 shadow-sm book-card">
-    <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="text-decoration-none text-dark">
-        {% if book.cover_image %}
-            <img src="{{ book.cover_image.url }}" class="card-img-top" alt="{{ book.title }} cover" style="height: 200px; object-fit: cover; border-top-left-radius: var(--bs-card-inner-border-radius); border-top-right-radius: var(--bs-card-inner-border-radius);">
-        {% else %}
-            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px; border-top-left-radius: var(--bs-card-inner-border-radius); border-top-right-radius: var(--bs-card-inner-border-radius);">
-                <i class="bi bi-book h1 text-muted"></i>
-            </div>
-        {% endif %}
+<div class="card h-100 shadow-sm book-card {% if card_size == 'small' %}book-card-sm{% endif %} d-flex flex-column">
+    <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="text-decoration-none d-block book-card-image-link">
+        <div class="book-card-img-container">
+            {% if book.cover_image %}
+                <img src="{{ book.cover_image.url }}" class="book-card-img" alt="{{ book.title }} {% trans "cover" %}">
+            {% else %}
+                <div class="book-card-img book-card-img-placeholder d-flex align-items-center justify-content-center text-muted">
+                    <i class="bi bi-book h1"></i>
+                </div>
+            {% endif %}
+        </div>
     </a>
-    <div class="card-body d-flex flex-column">
-        <h5 class="card-title h6">
-            <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="text-decoration-none stretched-link book-title-link">{{ book.title|truncatechars:50 }}</a>
+    <div class="card-body d-flex flex-column p-2">
+        <h5 class="card-title h6 mb-1 book-card-title">
+            <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="text-decoration-none stretched-link book-title-link" title="{{ book.title }}">
+                {{ book.title }}
+            </a>
         </h5>
         {% if book.authors.all %}
-            <small class="text-muted card-text">
-                By:
-                {% for author in book.authors.all|slice:":2" %}
-                    {{ author.name }}{% if not forloop.last %}, {% endif %}
+            <small class="text-muted card-text mb-2 font-monospace fs-sm book-card-author">
+                {% trans "By:" %}
+                {% for author in book.authors.all|slice:":1" %}
+                    {{ author.name }}
                 {% endfor %}
-                {% if book.authors.all|length > 2 %}
+                {% if book.authors.all.count > 1 %}
                     et al.
                 {% endif %}
             </small>
+        {% else %}
+            <small class="text-muted card-text mb-2 font-monospace fs-sm book-card-author">&nbsp;</small>
         {% endif %}
-        <div class="mt-auto pt-2">
+        
+        <div class="mt-auto pt-1 book-card-badge-footer">
             {% if book.available_copies_count > 0 %}
-                <span class="badge bg-success">Available ({{ book.num_available_copies }})</span>
+                <span class="badge bg-success-subtle text-success-emphasis rounded-pill px-2 py-1 fs-sm">
+                    <i class="bi bi-check-circle me-1"></i>{% trans "Available" %} ({{ book.available_copies_count }})
+                </span>
             {% else %}
-                <span class="badge bg-danger">Unavailable</span>
+                <span class="badge bg-danger-subtle text-danger-emphasis rounded-pill px-2 py-1 fs-sm">
+                    <i class="bi bi-x-circle me-1"></i>{% trans "Unavailable" %}
+                </span>
             {% endif %}
         </div>
     </div>
-    {# Optional: Add a footer for quick actions if needed, though details page is better #}
-    {# <div class="card-footer bg-transparent border-0 text-center"> #}
-    {# <a href="{% url 'books:portal_book_detail' isbn=book.isbn %}" class="btn btn-sm btn-outline-primary w-100">View Details</a> #}
-    {# </div> #}
 </div>
+
+<style>
+    .book-card {
+        display: flex; /* Already here, good for flex-column behavior */
+        flex-direction: column;
+        background-color: #fff;
+        border-radius: var(--bs-card-border-radius, 0.375rem);
+        overflow: hidden; /* Crucial: prevent children from expanding the card visually */
+        width: 100%; /* Explicitly tell card to take full width of its .col parent */
+    }
+
+    .book-card-image-link {
+        display: block; /* Makes the <a> tag behave like a div for layout */
+        width: 100%; /* Make link take full width of card */
+    }
+
+    .book-card-img-container {
+        width: 100%; /* Takes full width of the parent <a> tag */
+        height: 180px; /* FIXED HEIGHT FOR IMAGE AREA - Adjust as needed */
+        background-color: #e9ecef; /* Softer placeholder background */
+        position: relative; 
+        overflow: hidden; /* Ensure image doesn't spill out */
+        border-top-left-radius: var(--bs-card-border-radius, 0.375rem); /* Match card's rounding */
+        border-top-right-radius: var(--bs-card-border-radius, 0.375rem);
+    }
+
+    .book-card-sm .book-card-img-container {
+        height: 150px; /* Shorter height for "small" cards */
+    }
+
+    .book-card-img {
+        display: block;
+        width: 100%;   /* Image fills 100% width of its container */
+        height: 100%;  /* Image fills 100% height of its container */
+        object-fit: cover; /* Scales image to maintain aspect ratio while filling dimensions, crops if necessary */
+    }
+    
+    .book-card-img-placeholder {
+        width: 100%;
+        height: 100%;
+        /* d-flex align-items-center justify-content-center text-muted are good for centering the icon */
+    }
+
+    .book-card .card-body {
+        flex-grow: 1; 
+        display: flex;
+        flex-direction: column;
+        padding: 0.65rem;
+        width: 100%; /* Ensure card body also tries to use full width */
+        box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    }
+    
+    .book-card-sm .card-body {
+        padding: 0.5rem;
+    }
+
+    .book-card-title {
+        height: 2.4em; 
+        line-height: 1.2em;
+        overflow: hidden; /* Necessary for line clamping to work with -webkit-box */
+        margin-bottom: 0.2rem;
+        /* width: 100%; Ensure title area doesn't shrink if text is short. Flex will handle this mostly. */
+    }
+
+    .book-card-title a {
+        color: var(--bs-body-color); 
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        /* word-break: break-all; /* Uncomment if you have very long unbreakable words causing overflow */
+    }
+    .book-card-title a:hover {
+        color: var(--bs-primary);
+    }
+
+    .book-card-author {
+        height: 1.2em; 
+        line-height: 1.2em;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        text-overflow: ellipsis;
+        margin-bottom: 0.4rem;
+        font-size: 0.75rem; 
+        /* width: 100%; */
+    }
+    
+    .book-card-badge-footer {
+        /* mt-auto takes care of pushing it down */
+    }
+    .book-card .fs-sm {
+        font-size: 0.7rem;
+    }
+
+</style>

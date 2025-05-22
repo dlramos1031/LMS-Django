@@ -1,0 +1,38 @@
+{% extends "portal/portal_base.html" %} {% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "My Favorite Books" %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">{% trans "My Favorite Books" %}</h1>
+            <hr class="mb-4">
+
+            {% if favorite_books %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                    {% for book in favorite_books %}
+                        <div class="col d-flex align-items-stretch">
+                            {% include "books/portal/_book_card.html" with book=book view_context="portal_favorites_list" %} </div>
+                    {% endfor %}
+                </div>
+
+                {% if is_paginated %}
+                    {% include "books/includes/pagination.html" with page_obj=page_obj %} {% endif %}
+            {% else %}
+                <div class="alert alert-info text-center" role="alert">
+                    <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                    <p class="mb-0">{% trans "You haven't added any books to your favorites yet." %}</p>
+                    <p><a href="{% url 'books:portal_catalog' %}" class="alert-link">{% trans "Explore the catalog" %}</a> {% trans "to find books you might like!" %}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{# Add any specific JS for this page if needed #}
+{% endblock %}

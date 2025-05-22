@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 class CustomUser(AbstractUser):
     """
@@ -8,13 +9,6 @@ class CustomUser(AbstractUser):
     This model includes specific roles for the Library Management System (Borrower, Librarian, Admin)
     and additional information fields, especially for borrowers.
     """
-
-    # Django's AbstractUser already provides:
-    # username, email, password, first_name, last_name, 
-    # is_staff (boolean, for admin site access), 
-    # is_active (boolean, can login), 
-    # date_joined.
-    # This class will utilize the existing first_name and last_name fields.
     middle_initial = models.CharField(
         _('middle initial'), 
         max_length=10, 
@@ -82,6 +76,12 @@ class CustomUser(AbstractUser):
         blank=True,
         null=True,
         help_text=_("Upload a profile picture (optional).")
+    )
+    favorite_books = models.JSONField(
+        _("Favorite Books"),
+        default=list,
+        blank=True,
+        help_text=_("List of favorite book ISBNs with timestamps.")
     )
 
     BORROWER_TYPE_CHOICES = (
@@ -151,6 +151,26 @@ class CustomUser(AbstractUser):
     def __str__(self):
         """String representation of the CustomUser model."""
         return self.username
+
+    def add_favorite(self, book_isbn):
+        if not isinstance(self.favorite_books, list):
+            self.favorite_books = []
+        self.favorite_books = [fav for fav in self.favorite_books if fav.get('isbn') != book_isbn]
+        self.favorite_books.append({
+            "isbn": book_isbn,
+            "favorited_at": timezone.now().isoformat()
+        })
+    
+    def remove_favorite(self, book_isbn):
+        if not isinstance(self.favorite_books, list):
+            self.favorite_books = []
+            return
+        self.favorite_books = [fav for fav in self.favorite_books if fav.get('isbn') != book_isbn]
+
+    def is_book_favorited(self, book_isbn):
+        if not isinstance(self.favorite_books, list):
+            return False
+        return any(fav.get('isbn') == book_isbn for fav in self.favorite_books)
 
     class Meta:
         verbose_name = _('User')
