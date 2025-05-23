@@ -24,13 +24,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-y-cp0uq&+&yeh6mfe^q17()t7qp^8-06aoy-9%1#2=1d9tu52c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # Allowed IP Addresses:
 # 10.0.2.2 = Android Emulator
 # 127.0.0.1 = Website (e.g. https://127.0.0.1:8000/login/)
 # 192.168.197.211 = Actual Phone (Wireless LAN Adapter Wi-Fi) 
-ALLOWED_HOSTS = ['10.0.2.2', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['dlramos1031.pythonanywhere.com', '127.0.0.1', 'localhost']
 
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:8000',
