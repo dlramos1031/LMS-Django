@@ -50,7 +50,6 @@ urlpatterns = [
 
     # Circulation Management (Staff)
     path('dashboard/circulation/issue/', views.staff_issue_book_view, name='dashboard_circulation_issue'),
-    path('dashboard/circulation/return/', views.staff_return_book_view, name='dashboard_circulation_return'),
     path('dashboard/circulation/pending/', views.StaffPendingRequestsView.as_view(), name='dashboard_pending_requests'),
     path('dashboard/circulation/pending/approve/<int:borrowing_id>/', views.staff_approve_request_view, name='dashboard_approve_request'),
     path('dashboard/circulation/pending/reject/<int:borrowing_id>/', views.staff_reject_request_view, name='dashboard_reject_request'),

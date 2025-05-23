@@ -27,13 +27,12 @@ pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pycryptodome==3.4.3
 pyparsing==3.2.3
-Pyrebase==3.0.27
 python-dotenv==1.1.0
 python-jwt==2.0.1
 python-snappy==0.7.3
 pytz==2025.2
-requests
-requests-toolbelt
+requests==2.32.3
+requests-toolbelt==0.7.0
 rsa==4.9.1
 six==1.17.0
 soupsieve==2.6
@@ -42,3 +41,4 @@ typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
 whitenoise==6.9.0
+winkerberos==0.12.2

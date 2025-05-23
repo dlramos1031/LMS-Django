@@ -46,20 +46,9 @@ class BookMinimalSerializer(serializers.ModelSerializer):
     authors = AuthorSerializer(many=True, read_only=True)
     class Meta:
         model = Book
-        fields = ['isbn', 'title', 'cover_image', 'authors']
-
-class BookCopyDetailSerializer(serializers.ModelSerializer):
-    """
-    A more detailed serializer for BookCopy, which includes nested Book information.
-    """
-    book = serializers.StringRelatedField()
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    class Meta:
-        model = BookCopy
         fields = [
-            'id', 'copy_id', 'status', 'status_display', 'book', 
-            'date_acquired', 'condition_notes'
-        ]
+            'isbn', 'title', 'cover_image', 'authors'
+            ]
 
 class BookSerializer(serializers.ModelSerializer):
     """
@@ -108,6 +97,17 @@ class BookSerializer(serializers.ModelSerializer):
             return any(fav_item.get('isbn') == obj.isbn for fav_item in user.favorite_books)
         return False
 
+class BookCopyDetailSerializer(serializers.ModelSerializer):
+    """
+    A more detailed serializer for BookCopy, which includes nested Book information.
+    """
+    book = BookSerializer(read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    class Meta:
+        model = BookCopy
+        fields = [
+            'id', 'copy_id', 'status', 'status_display', 'book', 'date_acquired', 'condition_notes'
+        ]
 # Borrowing related serializers
 
 class BorrowerMinimalSerializer(serializers.ModelSerializer):
@@ -151,11 +151,11 @@ class BorrowingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Borrowing
         fields = (
-            'id', 'borrower', 'book_copy', 'issue_date', 'due_date', 'return_date',
+            'id', 'borrower', 'book_copy', 'request_date', 'issue_date', 'due_date', 'return_date',
             'status', 'fine_amount', 'notes_by_librarian',
             'book_isbn_for_request', 'book_copy_id', 'borrower_id'
         )
-        read_only_fields = ('id', 'issue_date', 'return_date', 'fine_amount', 'notes_by_librarian')
+        read_only_fields = ('id', 'request_date', 'issue_date', 'status', 'fine_amount', 'notes_by_librarian')
 
     def validate(self, data):
         user = self.context['request'].user

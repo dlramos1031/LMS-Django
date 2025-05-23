@@ -182,24 +182,22 @@ class BorrowingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         borrowing_record.return_date = timezone.now()
+        borrowing_record.save(update_fields=['return_date'])
         book_copy_instance = borrowing_record.book_copy
         book_copy_instance.status = 'Available'
         book_copy_instance.save(update_fields=['status'])
-
-        if isinstance(borrowing_record.due_date, datetime):
-            due_date_as_date = borrowing_record.due_date.date()
-        else:
-            due_date_as_date = borrowing_record.due_date
+        due_date_as_date = borrowing_record.due_date
 
         if borrowing_record.return_date.date() > due_date_as_date:
             borrowing_record.status = 'RETURNED_LATE'
             overdue_days = (borrowing_record.return_date.date() - due_date_as_date).days
-            if overdue_days > 0: 
+            try:
                 fine_rate = Decimal(str(settings.FINE_RATE_PER_DAY_OVERDUE))
                 borrowing_record.fine_amount = Decimal(overdue_days) * fine_rate
+            except Exception as e:
+                print(f"CRITICAL ERROR calculating fine: {e}")
         else:
             borrowing_record.status = 'RETURNED'
-        borrowing_record.save()
         Notification.objects.create(
             recipient=borrowing_record.borrower,
             notification_type='RETURN_CONFIRMED',
@@ -1383,18 +1381,6 @@ def staff_issue_book_view(request):
     }
     return render(request, 'books/dashboard/circulation/issue_book.html', context)
 
-@login_required
-@user_passes_test(is_staff_user)
-def staff_return_book_view(request):
-    """Allows staff to mark a borrowed book copy as returned."""
-    # form = ReturnBookForm(request.POST or None)
-    # if request.method == 'POST' and form.is_valid():
-    #     ... implement logic ...
-    #     return redirect('books:dashboard_active_loans')
-    # context = {'form': form, 'page_title': _('Return Book')}
-    context = {'page_title': _('Return Book')} # Placeholder
-    return render(request, 'books/dashboard/circulation/return_book.html', context)
-
 class StaffPendingRequestsView(StaffRequiredMixin, ListView):
     """
     Displays a list of borrow requests that are pending staff approval.
@@ -1711,29 +1697,25 @@ def staff_mark_loan_returned_view(request, borrowing_id):
     loan = get_object_or_404(Borrowing, id=borrowing_id, status__in=['ACTIVE', 'OVERDUE'])
     book_copy_instance = loan.book_copy
 
-    loan.actual_return_date = timezone.now() # Set the actual return time
+    loan.return_date = timezone.now() # Set the actual return time
 
     fine_amount_calculated = Decimal('0.00')
     fine_message_segment = ""
 
-    # Check if the book is returned late
-    # Ensure due_date is a date object for comparison with actual_return_date.date()
-    if isinstance(loan.due_date, datetime): # If due_date is datetime object
-        due_date_as_date = loan.due_date.date()
-    else: # If due_date is already a date object
-        due_date_as_date = loan.due_date
+    due_date_as_date = loan.due_date
 
-    if loan.actual_return_date.date() > due_date_as_date:
+    if loan.return_date.date() > due_date_as_date:
         loan.status = 'RETURNED_LATE'
-        overdue_days = (loan.actual_return_date.date() - due_date_as_date).days
+        overdue_days = (loan.return_date.date() - due_date_as_date).days
         if overdue_days > 0:
-            # Use Decimal for currency calculations
-            fine_rate = Decimal(str(settings.FINE_RATE_PER_DAY_OVERDUE))
-            fine_amount_calculated = Decimal(overdue_days) * fine_rate
-            loan.fine_amount = fine_amount_calculated
-            fine_message_segment = _(f" A fine of ${fine_amount_calculated:.2f} has been applied for {overdue_days} day(s) overdue.")
-        else: # Should not happen if actual_return_date.date() > due_date_as_date, but good for safety
-            loan.fine_amount = Decimal('0.00')
+            try:
+                fine_rate = Decimal(str(settings.FINE_RATE_PER_DAY_OVERDUE))
+                fine_amount_calculated = Decimal(overdue_days) * fine_rate
+                loan.fine_amount = fine_amount_calculated
+                fine_message_segment = _(f" A fine of ${fine_amount_calculated:.2f} has been applied for {overdue_days} day(s) overdue.")
+            except Exception as e:
+                print(f"Error calculating fine for borrowing ID {loan.id}: {e}")
+                messages.warning(request, _("The book was marked as returned late, but there was an issue calculating the fine. Please check system settings."))
     else:
         loan.status = 'RETURNED'
         loan.fine_amount = Decimal('0.00')
