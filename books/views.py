@@ -8,7 +8,7 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q, F, Count, Case, When, Exists, OuterRef
+from django.db.models import Q, F, Count, Case, When, Exists, OuterRef, ExpressionWrapper, fields
 from django.urls import reverse_lazy, reverse
 from datetime import datetime
 from time import time
@@ -641,6 +641,63 @@ class PortalAuthorDetailView(DetailView):
         context['back_url'] = self.request.META.get('HTTP_REFERER', reverse_lazy('books:portal_catalog'))
         return context
     
+@login_required
+# @user_passes_test(is_staff_user) # Or your specific staff check decorator
+def library_reports_view(request):
+    # Overall Statistics
+    total_book_titles = Book.objects.count()
+    total_book_copies = BookCopy.objects.count()
+    total_borrowers = CustomUser.objects.filter(role='BORROWER').count()
+    active_loans_count = Borrowing.objects.filter(status='ACTIVE').count()
+    overdue_loans_count = Borrowing.objects.filter(status='OVERDUE').count()
+    pending_requests_count = Borrowing.objects.filter(status='REQUESTED').count()
+
+    # Most Popular Books (Top 10)
+    popular_books = Book.objects.order_by('-total_borrows')[:10]
+
+    # Most Active Borrowers (Top 5 by loan count)
+    active_borrowers = CustomUser.objects.filter(role='BORROWER') \
+        .annotate(loan_count=Count('borrowings', filter=Q(borrowings__status__in=['ACTIVE', 'RETURNED', 'RETURNED_LATE', 'OVERDUE']))) \
+        .filter(loan_count__gt=0) \
+        .order_by('-loan_count')[:5]
+
+    # Books by Category
+    categories_summary = Category.objects.annotate(
+        book_title_count=Count('books', distinct=True),
+        total_copies_count=Count('books__copies')
+    ).order_by('-book_title_count')
+
+    # Recently Added Books (Last 5)
+    recently_added_books = Book.objects.order_by('-date_added_to_system')[:5]
+
+    # Overdue Loans List
+    now = timezone.now().date()
+    overdue_loans_list = Borrowing.objects.filter(status='OVERDUE', due_date__lt=now) \
+        .select_related('book_copy__book', 'borrower') \
+        .annotate(
+            days_overdue=ExpressionWrapper(now - F('due_date'), output_field=fields.DurationField())
+        ).order_by('due_date')
+
+    # Convert days_overdue (Timedelta) to integer days for display
+    for loan in overdue_loans_list:
+        loan.days_overdue = loan.days_overdue.days
+
+
+    context = {
+        'page_title': 'Library Reports',
+        'total_book_titles': total_book_titles,
+        'total_book_copies': total_book_copies,
+        'total_borrowers': total_borrowers,
+        'active_loans_count': active_loans_count,
+        'overdue_loans_count': overdue_loans_count,
+        'pending_requests_count': pending_requests_count,
+        'popular_books': popular_books,
+        'active_borrowers': active_borrowers,
+        'categories_summary': categories_summary,
+        'recently_added_books': recently_added_books,
+        'overdue_loans_list': overdue_loans_list,
+    }
+    return render(request, 'books/dashboard/library_reports.html', context)
 
 class StaffAuthorDetailView(StaffRequiredMixin, DetailView):
     model = Author
@@ -1740,7 +1797,6 @@ def staff_mark_loan_returned_view(request, borrowing_id):
     )
     messages.success(request, full_notification_message)
     
-    # Redirect to active loans, or perhaps borrowing history if preferred
     return redirect('books:dashboard_active_loans')
 
 

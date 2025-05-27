@@ -1,0 +1,226 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+
+{% block dashboard_page_title %}Library Reports{% endblock %}
+
+{% block dashboard_page_title_main %}Library Statistics & Reports{% endblock %}
+
+{% block dashboard_page_actions %}
+    {# Add any actions like 'Download PDF' or 'Print Report' here if needed in the future #}
+    <button class="btn btn-sm btn-outline-secondary" onclick="window.print();">
+        <i class="bi bi-printer"></i> Print Report
+    </button>
+{% endblock %}
+
+{% block dashboard_content_main %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bar-chart-line-fill me-2"></i>Overall Library Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Book Titles</h6>
+                                <p class="card-text fs-4 fw-bold">{{ total_book_titles|default:"N/A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Total Physical Copies</h6>
+                                <p class="card-text fs-4 fw-bold">{{ total_book_copies|default:"N/A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Registered Borrowers</h6>
+                                <p class="card-text fs-4 fw-bold">{{ total_borrowers|default:"N/A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Active Loans</h6>
+                                <p class="card-text fs-4 fw-bold text-success">{{ active_loans_count|default:"N/A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Overdue Loans</h6>
+                                <p class="card-text fs-4 fw-bold text-danger">{{ overdue_loans_count|default:"N/A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-lg-2 mb-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Pending Requests</h6>
+                                <p class="card-text fs-4 fw-bold text-warning">{{ pending_requests_count|default:"N/A" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Most Popular Books (Top 10)</h5>
+            </div>
+            <div class="card-body">
+                {% if popular_books %}
+                <ul class="list-group list-group-flush">
+                    {% for book in popular_books %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{% url 'books:dashboard_book_detail' isbn=book.isbn %}">{{ book.title }}</a>
+                        <span class="badge bg-primary rounded-pill">{{ book.total_borrows }} borrows</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No borrowing data available to determine popular books.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-check-fill me-2"></i>Most Active Borrowers (Top 5)</h5>
+            </div>
+            <div class="card-body">
+                {% if active_borrowers %}
+                <ul class="list-group list-group-flush">
+                    {% for borrower_stat in active_borrowers %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                      <a href="{% url 'users:dashboard_borrower_detail' pk=borrower_stat.pk %}">{{ borrower_stat.username }} ({{ borrower_stat.get_full_name|default:"N/A" }})</a>
+                        <span class="badge bg-success rounded-pill">{{ borrower_stat.loan_count }} loans</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No borrowing data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-tags-fill me-2"></i>Book Count by Category</h5>
+            </div>
+            <div class="card-body">
+                {% if categories_summary %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th class="text-center">Book Titles</th>
+                                <th class="text-center">Total Copies</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category_stat in categories_summary %}
+                            <tr>
+                                <td><a href="{% url 'books:dashboard_category_detail' pk=category_stat.id %}">{{ category_stat.name }}</a></td>
+                                <td class="text-center">{{ category_stat.book_title_count }}</td>
+                                <td class="text-center">{{ category_stat.total_copies_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No category data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-book-half me-2"></i>Recently Added Book Titles (Last 5)</h5>
+            </div>
+            <div class="card-body">
+                {% if recently_added_books %}
+                <ul class="list-group list-group-flush">
+                    {% for book in recently_added_books %}
+                    <li class="list-group-item">
+                        <a href="{% url 'books:dashboard_book_detail' isbn=book.isbn %}">{{ book.title }}</a>
+                        <small class="text-muted d-block">Added on: {{ book.date_added_to_system|date:"Y-m-d" }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">No books recently added.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Current Overdue Loans</h5>
+            </div>
+            <div class="card-body">
+                {% if overdue_loans_list %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Book Title</th>
+                                <th>Copy ID</th>
+                                <th>Borrower</th>
+                                <th>Due Date</th>
+                                <th>Days Overdue</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in overdue_loans_list %}
+                            <tr class="table-danger">
+                                <td><a href="{% url 'books:dashboard_book_detail' isbn=loan.book_copy.book.isbn %}">{{ loan.book_copy.book.title }}</a></td>
+                                <td>{{ loan.book_copy.copy_id }}</td>
+                                <td><a href="{% url 'users:dashboard_borrower_detail' pk=loan.borrower.pk %}">{{ loan.borrower.username }}</a></td>
+                                <td>{{ loan.due_date|date:"Y-m-d" }}</td>
+                                <td>{{ loan.days_overdue }}</td>
+                                <td>
+                                    <a href="{% url 'books:dashboard_borrowing_detail' borrowing_id=loan.id %}" class="btn btn-sm btn-outline-primary py-0 px-1" title="View Loan Details">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </a>
+                                    {# Add other actions if needed, e.g., send reminder #}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-success" role="alert">
+                  <i class="bi bi-check-circle-fill me-2"></i>No books are currently overdue.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock dashboard_content_main %}

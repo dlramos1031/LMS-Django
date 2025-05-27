@@ -22,7 +22,7 @@ urlpatterns = [
 
     # Staff Dashboard
     path('dashboard/', views.staff_dashboard_home_view, name='dashboard_home'),
-
+    path('dashboard/reports/', views.library_reports_view, name='dashboard_library_reports'),
     # Book & Collection Management (Staff)
     path('dashboard/books/', views.StaffBookListView.as_view(), name='dashboard_book_list'),
     path('dashboard/books/add/', views.StaffBookCreateView.as_view(), name='dashboard_book_add'),

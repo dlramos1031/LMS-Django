@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 import os
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,17 +28,32 @@ SECRET_KEY = 'django-insecure-y-cp0uq&+&yeh6mfe^q17()t7qp^8-06aoy-9%1#2=1d9tu52c
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# EMAIL CONFIGURATION
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST') # e.g., 'smtp.example.com'
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587)) # Default to 587 if not set
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD') # Store this securely!
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost') # Default sender
+
+# Ensure only one of EMAIL_USE_TLS or EMAIL_USE_SSL is True
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    raise ValueError("EMAIL_USE_TLS and EMAIL_USE_SSL are mutually exclusive, only one can be True.")
+
 # Allowed IP Addresses:
 # 10.0.2.2 = Android Emulator
 # 127.0.0.1 = Website (e.g. https://127.0.0.1:8000/login/)
 # 192.168.197.211 = Actual Phone (Wireless LAN Adapter Wi-Fi) 
-ALLOWED_HOSTS = ['dlramos1031.pythonanywhere.com', '127.0.0.1', 'localhost', '10.0.2.2']
+ALLOWED_HOSTS = ['dlramos1031.pythonanywhere.com', '127.0.0.1', 'localhost', '10.0.2.2', '192.168.137.1']
 
 CSRF_TRUSTED_ORIGINS = [
     'https://dlramos1031.pythonanywhere.com',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://10.0.2.2:8000',
+    'http://192.168.137.1:8000',
 ]
 
 # Application definition

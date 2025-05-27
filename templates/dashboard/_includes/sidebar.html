@@ -5,6 +5,11 @@
             <i class="bi bi-house-door-fill"></i> Overview
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link {% if 'dashboard_library_reports' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'books:dashboard_library_reports' %}">
+            <i class="bi bi-file-earmark-bar-graph"></i> Reports
+        </a>
+    </li>
 
     <li class="nav-item sidebar-heading"><span>Borrow Management</span></li>
     <li class="nav-item">
@@ -50,20 +55,6 @@
     <li class="nav-item">
         <a class="nav-link {% if 'dashboard_staff' in request.resolver_match.view_name %}active{% endif %}" href="{% url 'users:dashboard_staff_list' %}">
             <i class="bi bi-person-badge"></i> Manage Staff
-        </a>
-    </li>
-    {% endif %}
-
-    {% if request.user.role == 'ADMIN' or request.user.is_superuser %}
-    <li class="nav-item sidebar-heading"><span>Administration</span></li>
-    <li class="nav-item">
-        <a class="nav-link {% if 'dashboard_system_config' in request.resolver_match.view_name %}active{% endif %}" href="#"> {# TODO: Link to system config page #}
-            <i class="bi bi-gear"></i> System Configuration
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav_link {% if 'dashboard_reports' in request.resolver_match.view_name %}active{% endif %}" href="#"> {# TODO: Link to reports page #}
-            <i class="bi bi-file-earmark-bar-graph"></i> Reports
         </a>
     </li>
     {% endif %}

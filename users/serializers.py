@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'username', 'email', 
             'first_name', 'last_name', 'middle_initial', 'suffix', 'full_name',
-            'role', 'borrower_id_label', 'borrower_id_value', 
+            'role', 'borrower_id_label', 'borrower_id_value', 'profile_picture',
             'physical_address', 'birth_date', 'phone_number', 'borrower_type', 
             'date_joined', 'last_login', 'is_active'
         )
